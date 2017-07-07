@@ -16,7 +16,7 @@ cur = db.cursor()
 cur.execute('select code from institutions')
 all_colleges = [x[0] for x in cur.fetchall()]
 
-all_files = ['CUNY_Courses/{}'.format(x) for x in os.listdir('CUNY_Courses') if x.endswith('.csv')]
+all_files = [x for x in os.listdir('.') if x.endswith('.csv')]
 # Find most recent catalog, requisite, and attribute files; be sure they all
 # have the same date.
 latest_cat = '0000-00-00'
@@ -62,12 +62,9 @@ db.commit()
 # Build dictionary of course requisites; key is (institution, discipline, course_number)
 with open(req_file, newline='') as csvfile:
   req_reader = csv.reader(csvfile)
-  cols = None
   requisites = {}
-  debug = 0
+  cols = None
   for row in req_reader:
-    debug += 1
-    if args.debug: print(debug)
     if cols == None:
       row[0] = row[0].replace('\ufeff', '')
       if 'Institution' == row[0]:
@@ -81,10 +78,57 @@ with open(req_file, newline='') as csvfile:
                row[cols.index('catalog')])
         requisites[key] = value
 if args.debug: print(len(requisites, 'requisites'))
-# The query files are all ordered by institution, so courses can be processed sequentially
-for college in all_colleges:
-  if args.debug: print(college)
 
+# The query files are all ordered by institution, so courses can be processed sequentially
+db.execute('delete from courses')
+with open(cat_file, newline='') as csvfile:
+  cat_reader = csv.reader(csvfile)
+  cols = None
+  for row in cat_reader:
+    if cols == None:
+      row[0] = row[0].replace('\ufeff', '')
+      if 'Institution' == row[0]:
+        cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
+    else:
+      # Skip inactive and administrative courses; insert others
+      if row[cols.index('crse_catalog_status')] == 'A' and \
+         row[cols.index('approved')] == 'A' and \
+         row[cols.index('schedule_course')] == 'Y':
+        course_id = row[cols.index('course_id')]
+        college = row[cols.index('institution')]
+        cuny_subject = row[cols.index('subject_external_area')]
+        discipline = row[cols.index('subject')]
+        number = row[cols.index('catalog_number')]
+        title = row[cols.index('long_course_title')].replace("'", "’")
+        catalog_component = row[cols.index('catalog_course_component')]
+        hours = row[cols.index('contact_hours')]
+        credits = row[cols.index('progress_units')]
+        designation = row[cols.index('designation')]
+        requisite_str = 'None'
+        if (college, discipline, number) in requisites.keys():
+          requisite_str = requisites[(college, discipline, number)].replace("'", "’")
+        description = row[cols.index('descr')].replace("'", "’")
+        career = row[cols.index('career')]
+        q = """
+          insert or ignore into courses values(
+          {}, '{}', '{}', '{}', '{}', '{}', '{:0.1f}',
+          '{:0.1f}', '{}', '{}', '{}', '{}')""".format(
+          course_id,
+          college,
+          cuny_subject,
+          discipline,
+          number,
+          title,
+          float(hours),
+          float(credits),
+          requisite_str,
+          designation,
+          description,
+          career)
+        db.execute(q)
+
+db.execute("update institutions set date_updated='{}'".format(latest_cat))
+db.commit()
 
 
 
