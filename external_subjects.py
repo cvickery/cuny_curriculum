@@ -16,7 +16,7 @@ with open('QNS_QCCV_EXTERNAL_SUBJECT_TBL.csv') as csvfile:
     else:
       q = """insert into external_subjects values('{}', '{}')""".format(
           row[cols.index('external_subject_area')],
-          row[cols.index('description')].replace("'", "’"))
+          row[cols.index('description')].replace("'", "’P"))
       cur.execute(q)
   db.commit()
   db.close()
