@@ -24,13 +24,13 @@ latest_req = '0000-00-00'
 latest_att = '0000-00-00'
 for file in all_files:
   mdate = date.fromtimestamp(os.lstat(file).st_mtime).strftime('%Y-%m-%d')
-  if re.search('cat', file, re.I) and mdate > latest_cat:
+  if re.search('catalog_np', file, re.I) and mdate > latest_cat:
     latest_cat = mdate
     cat_file = file
-  if re.search('req', file, re.I) and mdate > latest_req:
+  if re.search('requisites_np', file, re.I) and mdate > latest_req:
     latest_req = mdate
     req_file = file
-  if re.search('att', file, re.I) and mdate > latest_att:
+  if re.search('attributes_np', file, re.I) and mdate > latest_att:
     latest_att = mdate
     att_file = file
 if not ((latest_cat != '0000-00-00') and (latest_cat == latest_req) and (latest_req == latest_att)):
@@ -41,7 +41,7 @@ if not ((latest_cat != '0000-00-00') and (latest_cat == latest_req) and (latest_
 if args.debug: print(latest_cat)
 
 # Update the attributes table for all colleges
-db.execute("delete from attributes")
+db.execute("delete from course_attributes")
 with open(att_file, newline='') as csvfile:
   att_reader = csv.reader(csvfile)
   cols = None
@@ -51,7 +51,7 @@ with open(att_file, newline='') as csvfile:
       if 'Institution' == row[0]:
         cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
     else:
-      q = ("insert into attributes values ('{}', '{}', '{}', '{}')".format(
+      q = ("insert into course_attributes values ('{}', '{}', '{}', '{}')".format(
           row[cols.index('course_id')],
           row[cols.index('institution')],
           row[cols.index('course_attribute')],
