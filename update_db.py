@@ -91,8 +91,8 @@ with open(cat_file, newline='') as csvfile:
         cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
     else:
       # Skip inactive and administrative courses; insert others
-      if row[cols.index('crse_catalog_status')] == 'A' and \
-         row[cols.index('approved')] == 'A' and \
+      #   2017-04-12: Retain inactive courses
+      if row[cols.index('approved')] == 'A' and \
          row[cols.index('schedule_course')] == 'Y':
         course_id = row[cols.index('course_id')]
         college = row[cols.index('institution')]
@@ -109,10 +109,11 @@ with open(cat_file, newline='') as csvfile:
           requisite_str = requisites[(college, discipline, number)].replace("'", "’")
         description = row[cols.index('descr')].replace("'", "’")
         career = row[cols.index('career')]
+        status = row[cols.index('crse_catalog_status')]
         q = """
           insert or ignore into courses values(
           {}, '{}', '{}', '{}', '{}', '{}', '{:0.1f}',
-          '{:0.1f}', '{}', '{}', '{}', '{}')""".format(
+          '{:0.1f}', '{}', '{}', '{}', '{}', '{}')""".format(
           course_id,
           college,
           cuny_subject,
@@ -124,104 +125,10 @@ with open(cat_file, newline='') as csvfile:
           requisite_str,
           designation,
           description,
-          career)
+          career,
+          status)
         db.execute(q)
 
 db.execute("update institutions set date_updated='{}'".format(latest_cat))
 db.commit()
-
-
-
-exit()
-
-# Arrange files by college; use the catalog file to identify the college
-# for catalog in all_files:
-#   if 'catalog' in catalog.lower():
-#     match = re.search(' (\w+)\.csv', catalog)
-#     college = match.group(1)
-#     files = [x for x in all_files if college in x]
-
-#     # Replace all attributes for this college
-#     print('{}'.format(college))
-#     db.execute("delete from attributes where institution = '{}'".format(college))
-#     with open('CUNY_Courses/{}'.format(files[0]), newline='') as csvfile:
-#       attr_reader = csv.reader(csvfile)
-#       cols = None
-#       for row in attr_reader:
-#         if cols == None:
-#           row[0] = row[0].replace('\ufeff', '')
-#           if 'Institution' == row[0]:
-#             cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
-#         else:
-#           q = ("insert into attributes values ('{}', '{}', '{}', '{}')".format(
-#               row[cols.index('course_id')],
-#               row[cols.index('institution')],
-#               row[cols.index('course_attribute')],
-#               row[cols.index('course_attribute_value')]))
-#           db.execute(q)
-#     db.commit()
-    # # Build dictionary of course requisites; key is (discipline, course_number)
-    # with open('CUNY_Courses/{}'.format(files[2]), newline='') as csvfile:
-    #   reqs_reader = csv.reader(csvfile)
-    #   cols = None
-    #   requisites = {}
-    #   for row in reqs_reader:
-    #     if cols == None:
-    #       row[0] = row[0].replace('\ufeff', '')
-    #       if 'Institution' == row[0]:
-    #         cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
-    #     else:
-    #       # discipline and course number are called subject and catalog
-    #       value = row[cols.index('descr_of_pre_co-requisites')].strip()
-    #       if value != '':
-    #         key = (row[cols.index('subject')], row[cols.index('catalog')])
-    #         requisites[key] = row[cols.index('descr_of_pre_co-requisites')]
-
-# Clear this college's entries from the db
-db.execute("delete from courses where institution = '{}'".format(college))
-with open('CUNY_Courses/{}'.format(files[1]), newline='') as csvfile:
-  cat_reader = csv.reader(csvfile)
-  cols = None
-  for row in cat_reader:
-    if cols == None:
-      row[0] = row[0].replace('\ufeff', '')
-      if 'Institution' == row[0]:
-        cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
-    else:
-      # Skip inactive and administrative courses; insert others
-      if row[cols.index('crse_catalog_status')] == 'A' and \
-         row[cols.index('approved')] == 'A' and \
-         row[cols.index('schedule_course')] == 'Y':
-        course_id = row[cols.index('course_id')]
-        cuny_subject = row[cols.index('subject_external_area')]
-        discipline = row[cols.index('subject')]
-        number = row[cols.index('catalog_number')]
-        title = row[cols.index('long_course_title')].replace("'", "’")
-        catalog_component = row[cols.index('catalog_course_component')]
-        hours = row[cols.index('contact_hours')]
-        credits = row[cols.index('progress_units')]
-        designation = row[cols.index('designation')]
-        requisite_str = 'None'
-        if (discipline, number) in requisites.keys():
-          requisite_str = requisites[(discipline, number)].replace("'", "’")
-        description = row[cols.index('descr')].replace("'", "’")
-        career = row[cols.index('career')]
-        q = """
-          insert or ignore into courses values(
-          {}, '{}', '{}', '{}', '{}', '{}', '{:0.1f}',
-          '{:0.1f}', '{}', '{}', '{}', '{}')""".format(
-          course_id,
-          college,
-          cuny_subject,
-          discipline,
-          number,
-          title,
-          float(hours),
-          float(credits),
-          requisite_str,
-          designation,
-          description,
-          career)
-        db.execute(q)
-    db.commit()
 
