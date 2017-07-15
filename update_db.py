@@ -11,7 +11,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--debug', '-d', action='store_true')
 args = parser.parse_args()
 
-db = sqlite3.connect('courses.db')
+db = sqlite3.connect('cuny_catalog.db')
 cur = db.cursor()
 cur.execute('select code from institutions')
 all_colleges = [x[0] for x in cur.fetchall()]
@@ -77,10 +77,11 @@ with open(req_file, newline='') as csvfile:
                row[cols.index('subject')],
                row[cols.index('catalog')])
         requisites[key] = value
-if args.debug: print(len(requisites, 'requisites'))
+if args.debug: print('{:,} requisites'.format(len(requisites)))
 
 # The query files are all ordered by institution, so courses can be processed sequentially
 db.execute('delete from courses')
+num_courses = 0
 with open(cat_file, newline='') as csvfile:
   cat_reader = csv.reader(csvfile)
   cols = None
@@ -128,7 +129,12 @@ with open(cat_file, newline='') as csvfile:
           career,
           status)
         db.execute(q)
-
+        num_courses += 1
+if args.debug:
+  print('inserted or ignored {:,} courses'.format(num_courses))
+  cur.execute('select count(*) from courses')
+  num_found = cur.fetchone()[0]
+  print('{:,} retained; {:,} duplicates ignored'.format(num_found, num_courses - num_found))
 db.execute("update institutions set date_updated='{}'".format(latest_cat))
 db.commit()
 
