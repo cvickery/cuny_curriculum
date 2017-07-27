@@ -13,5 +13,7 @@ CREATE TABLE courses (
   designation text references designations,
   description text,
   career text references careers,
-  status text,
-  primary key (course_id, status))
+  course_status text,
+  discipline_status text,
+  can_schedule text,
+  primary key (course_id, course_status))

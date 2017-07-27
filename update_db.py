@@ -80,6 +80,7 @@ with open(req_file, newline='') as csvfile:
 if args.debug: print('{:,} requisites'.format(len(requisites)))
 
 # The query files are all ordered by institution, so courses can be processed sequentially
+# (But that doesn't really matter.)
 db.execute('delete from courses')
 num_courses = 0
 with open(cat_file, newline='') as csvfile:
@@ -92,44 +93,49 @@ with open(cat_file, newline='') as csvfile:
         cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
     else:
       # Skip inactive and administrative courses; insert others
-      #   2017-04-12: Retain inactive courses
-      if row[cols.index('approved')] == 'A' and \
-         row[cols.index('schedule_course')] == 'Y':
-        course_id = row[cols.index('course_id')]
-        college = row[cols.index('institution')]
-        cuny_subject = row[cols.index('subject_external_area')]
-        discipline = row[cols.index('subject')]
-        number = row[cols.index('catalog_number')]
-        title = row[cols.index('long_course_title')].replace("'", "’")
-        catalog_component = row[cols.index('catalog_course_component')]
-        hours = row[cols.index('contact_hours')]
-        credits = row[cols.index('progress_units')]
-        designation = row[cols.index('designation')]
-        requisite_str = 'None'
-        if (college, discipline, number) in requisites.keys():
-          requisite_str = requisites[(college, discipline, number)].replace("'", "’")
-        description = row[cols.index('descr')].replace("'", "’")
-        career = row[cols.index('career')]
-        status = row[cols.index('crse_catalog_status')]
-        q = """
-          insert or ignore into courses values(
-          {}, '{}', '{}', '{}', '{}', '{}', '{:0.1f}',
-          '{:0.1f}', '{}', '{}', '{}', '{}', '{}')""".format(
-          course_id,
-          college,
-          cuny_subject,
-          discipline,
-          number,
-          title,
-          float(hours),
-          float(credits),
-          requisite_str,
-          designation,
-          description,
-          career,
-          status)
-        db.execute(q)
-        num_courses += 1
+      #   2017-07-12: Retain inactive courses
+      #   2017-07-26: Retain all courses!
+      # if row[cols.index('approved')] == 'A' and \
+      #    row[cols.index('schedule_course')] == 'Y':
+      course_id = row[cols.index('course_id')]
+      institution = row[cols.index('institution')]
+      cuny_subject = row[cols.index('subject_external_area')]
+      discipline = row[cols.index('subject')]
+      number = row[cols.index('catalog_number')]
+      title = row[cols.index('long_course_title')].replace("'", "’")
+      catalog_component = row[cols.index('catalog_course_component')]
+      hours = row[cols.index('contact_hours')]
+      credits = row[cols.index('progress_units')]
+      designation = row[cols.index('designation')]
+      requisite_str = 'None'
+      if (institution, discipline, number) in requisites.keys():
+        requisite_str = requisites[(institution, discipline, number)].replace("'", "’")
+      description = row[cols.index('descr')].replace("'", "’")
+      career = row[cols.index('career')]
+      course_status = row[cols.index('crse_catalog_status')]
+      discipline_status = row[cols.index('subject_eff_status')]
+      can_schedule = row[cols.index('schedule_course')]
+      q = """
+        insert or ignore into courses values(
+        {}, '{}', '{}', '{}', '{}', '{}', '{:0.1f}',
+        '{:0.1f}', '{}', '{}', '{}', '{}', '{}', '{}', '{}')""".format(
+        course_id,
+        institution,
+        cuny_subject,
+        discipline,
+        number,
+        title,
+        float(hours),
+        float(credits),
+        requisite_str,
+        designation,
+        description,
+        career,
+        course_status,
+        discipline_status,
+        can_schedule)
+      db.execute(q)
+      num_courses += 1
 if args.debug:
   print('inserted or ignored {:,} courses'.format(num_courses))
   cur.execute('select count(*) from courses')
