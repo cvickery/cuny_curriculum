@@ -1,9 +1,6 @@
 Icon*
 .DS_STORE
 *.csv
-
-/out.txt
-
-/t/
-
-/cuny_catalog.db
+out.txt
+/t/*
+cuny_catalog.db
