@@ -4,6 +4,7 @@ CREATE TABLE courses (
   course_id number,
   institution text references institutions,
   cuny_subject text references cuny_subjects,
+  department text references departments,
   discipline text,
   number text,
   title text,

@@ -3,7 +3,7 @@
 import sqlite3
 import csv
 
-db = sqlite3.connect('courses.db')
+db = sqlite3.connect('cuny_catalog.db')
 cur = db.cursor()
 cur.execute('delete from cuny_subjects')
 with open('QNS_QCCV_EXTERNAL_SUBJECT_TBL.csv') as csvfile:

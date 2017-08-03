@@ -3,7 +3,7 @@
 import sqlite3
 import csv
 
-db = sqlite3.connect('courses.db')
+db = sqlite3.connect('cuny_catalog.db')
 cur = db.cursor()
 cur.execute('delete from careers')
 with open('ACAD_CAREER_TBL.csv') as csvfile:

@@ -4,7 +4,7 @@
 import sqlite3
 import csv
 
-db = sqlite3.connect('courses.db')
+db = sqlite3.connect('cuny_catalog.db')
 cur = db.cursor()
 cur.execute('delete from attribute_descriptions')
 with open('SR742A___CRSE_ATTRIBUTE_VALUE.csv') as csvfile:

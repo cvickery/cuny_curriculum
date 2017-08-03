@@ -8,7 +8,7 @@ import os
 all_files = [x for x in os.listdir('.') if x.startswith('QNS_CV_TRNS_INTERNAL_RULS_SHRT')]
 the_file = sorted(all_files, reverse=True)[0]
 print(the_file)
-db = sqlite3.connect('courses.db')
+db = sqlite3.connect('cuny_catalog.db')
 cur = db.cursor()
 cur.execute('delete from transfer_rules')
 with open(the_file) as csvfile:

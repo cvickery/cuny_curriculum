@@ -100,6 +100,7 @@ with open(cat_file, newline='') as csvfile:
       course_id = row[cols.index('course_id')]
       institution = row[cols.index('institution')]
       cuny_subject = row[cols.index('subject_external_area')]
+      department = row[cols.index('acad_org')]
       discipline = row[cols.index('subject')]
       number = row[cols.index('catalog_number')]
       title = row[cols.index('long_course_title')].replace("'", "’")
@@ -117,11 +118,12 @@ with open(cat_file, newline='') as csvfile:
       can_schedule = row[cols.index('schedule_course')]
       q = """
         insert or ignore into courses values(
-        {}, '{}', '{}', '{}', '{}', '{}', '{:0.1f}',
+        {}, '{}', '{}', '{}', '{}', '{}', '{}', '{:0.1f}',
         '{:0.1f}', '{}', '{}', '{}', '{}', '{}', '{}', '{}')""".format(
         course_id,
         institution,
         cuny_subject,
+        department,
         discipline,
         number,
         title,
