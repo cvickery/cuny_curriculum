@@ -2,7 +2,8 @@
 drop table if exists pending_evaluations;
 create table pending_evaluations (
 token text primary key,
-evaluations text
+evaluations text,
+timestamp datetime default current_timestamp
 );
 
 -- Events and Event-Types schemata.
