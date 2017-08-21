@@ -1,6 +1,6 @@
 # Clear and re-populate the transfer_rules table.
 
-import sqlite3
+import psycopg2
 import csv
 import os
 
@@ -8,9 +8,17 @@ import os
 all_files = [x for x in os.listdir('.') if x.startswith('QNS_CV_TRNS_INTERNAL_RULS_SHRT')]
 the_file = sorted(all_files, reverse=True)[0]
 print(the_file)
-db = sqlite3.connect('cuny_catalog.db')
+db = psycopg2.connect('dbname=cuny_courses')
 cur = db.cursor()
-cur.execute('delete from transfer_rules')
+cur.execute('drop table if exists transfer_rules')
+cur.execute("""
+    create table transfer_rules (
+      source_course_id integer references courses,
+      destination_course_id integer references courses,
+      primary key (source_course_id, destination_course_id))
+    """)
+bad_ids = [110506, 111889, 117910, 111890]
+num_rules = 0
 with open(the_file) as csvfile:
   csv_reader = csv.reader(csvfile)
   cols = None
@@ -19,9 +27,20 @@ with open(the_file) as csvfile:
       row[0] = row[0].replace('\ufeff', '')
       cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
     else:
-      q = """insert or ignore into transfer_rules values({}, {})""".format(
-          row[cols.index('source_course_id')],
-          row[cols.index('destination_course_id')])
+      src_id = int(row[cols.index('source_course_id')])
+      dst_id = int(row[cols.index('destination_course_id')])
+      if src_id in bad_ids or dst_id in bad_ids: continue
+      q = """
+          insert into transfer_rules values({}, {})
+          on conflict(source_course_id, destination_course_id) do nothing
+          """.format(
+          src_id,
+          dst_id)
       cur.execute(q)
+      num_rules += 1
+  cur.execute('select count(*) from transfer_rules')
+  num_inserted = cur.fetchone()[0]
+  num_ignored = num_rules - num_inserted
+  print('Given {} transfer rules: kept {}; rejected {}.'.format(num_rules, num_inserted, num_ignored))
   db.commit()
   db.close()

@@ -3,7 +3,7 @@ drop table if exists pending_evaluations;
 create table pending_evaluations (
 token text primary key,
 evaluations text,
-timestamp datetime default current_timestamp
+timestamp float
 );
 
 -- Events and Event-Types schemata.
@@ -15,14 +15,14 @@ abbr text primary key,
 description text);
 
 create table events (
-id integer primary key autoincrement,
+id serial primary key,
 src_id integer,
 dest_id integer,
 event_type text,
 who text,
 what text,
 at real default (datetime('now','localtime')),
-foreign key (event_type) references event_types(abbr)
+foreign key (event_type) references event_types(abbr),
 foreign key (src_id, dest_id) references transfer_rules(source_course_id, destination_course_id)
 );
 

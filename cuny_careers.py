@@ -1,11 +1,20 @@
-# Clear and re-populate the careers table.
+  # Clear and re-populate the careers table.
 
-import sqlite3
+import psycopg2
 import csv
 
-db = sqlite3.connect('cuny_catalog.db')
+db = psycopg2.connect('dbname=cuny_courses')
 cur = db.cursor()
-cur.execute('delete from careers')
+cur.execute('drop table if exists cuny_careers cascade')
+cur.execute(
+    """
+    create table cuny_careers (
+    institution text references institutions,
+    career text,
+    description text,
+    is_graduate boolean,
+    primary key (institution, career))
+    """)
 with open('ACAD_CAREER_TBL.csv') as csvfile:
   csv_reader = csv.reader(csvfile)
   cols = None
@@ -16,7 +25,7 @@ with open('ACAD_CAREER_TBL.csv') as csvfile:
     else:
       is_graduate = 0
       if row[cols.index('graduate')] == 'Y': is_graduate = 1
-      q = """insert into careers values('{}', '{}', '{}', {})""".format(
+      q = """insert into cuny_careers values('{}', '{}', '{}', cast({} as boolean))""".format(
           row[cols.index('institution')],
           row[cols.index('career')],
           row[cols.index('descr')],

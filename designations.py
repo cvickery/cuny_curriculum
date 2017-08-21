@@ -1,11 +1,16 @@
 # Clear and re-populate the (requirement) designations table.
 
-import sqlite3
+import psycopg2
 import csv
 
-db = sqlite3.connect('cuny_catalog.db')
+db = psycopg2.connect('dbname=cuny_courses')
 cur = db.cursor()
-cur.execute('delete from designations')
+cur.execute('drop table if exists designations cascade')
+cur.execute("""
+    create table designations (
+    designation text primary key,
+    description text)
+    """)
 with open('QCCV_RQMNT_DESIG_TBL.csv') as csvfile:
   csv_reader = csv.reader(csvfile)
   cols = None
@@ -18,5 +23,6 @@ with open('QCCV_RQMNT_DESIG_TBL.csv') as csvfile:
           row[cols.index('designation')],
           row[cols.index('formal_description')].replace('l&Q', 'l & Q').replace('eR', 'e R'))
       cur.execute(q)
+  cur.execute("insert into designations values ('', 'No Designation')")
   db.commit()
   db.close()

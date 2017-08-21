@@ -1,11 +1,17 @@
 # Clear and re-populate the cuny_subjects table.
 
-import sqlite3
+import psycopg2
 import csv
 
-db = sqlite3.connect('cuny_catalog.db')
+db = psycopg2.connect('dbname=cuny_courses')
 cur = db.cursor()
-cur.execute('delete from cuny_subjects')
+cur.execute('drop table if exists cuny_subjects cascade')
+cur.execute("""
+  create table cuny_subjects (
+  area text primary key,
+  description text
+  )
+  """)
 with open('QNS_QCCV_EXTERNAL_SUBJECT_TBL.csv') as csvfile:
   csv_reader = csv.reader(csvfile)
   cols = None

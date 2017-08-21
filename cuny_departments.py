@@ -4,7 +4,7 @@ from datetime import date
 import re
 import os
 
-import sqlite3
+import psycopg2
 import csv
 
 # Find the most recent list of CUNY Academic Organizations
@@ -19,9 +19,14 @@ for file in all_files:
     latest_org = mdate
     org_file = file
 
-db = sqlite3.connect('cuny_catalog.db')
+db = psycopg2.connect('dbname=cuny_courses')
 cur = db.cursor()
-cur.execute('delete from cuny_departments')
+cur.execute('drop table if exists cuny_departments cascade')
+cur.execute("""
+  create table cuny_departments (
+  department text primary key,
+  description text)
+  """)
 with open(org_file) as csvfile:
   csv_reader = csv.reader(csvfile)
   cols = None

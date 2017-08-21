@@ -1,11 +1,19 @@
 # Clear and re-populate the (course) attributes table.
 
-import sqlite3
+import psycopg2
 import csv
 
-db = sqlite3.connect('cuny_catalog.db')
+db = psycopg2.connect('dbname=cuny_courses')
 cur = db.cursor()
-cur.execute('delete from attributes')
+cur.execute('drop table if exists attributes')
+cur.execute(
+    """
+    create table attributes (
+      attribute_name text,
+      attribute_value text,
+      description text,
+      primary key (attribute_name, attribute_value))
+    """)
 with open('SR742A___CRSE_ATTRIBUTE_VALUE.csv') as csvfile:
   csv_reader = csv.reader(csvfile)
   cols = None

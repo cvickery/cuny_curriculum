@@ -1,5 +1,4 @@
-from openpyxl import load_workbook
-import sqlite3
+import psycopg2
 import csv
 import argparse
 
@@ -9,9 +8,10 @@ import re
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--debug', '-d', action='store_true')
+parser.add_argument('--report', '-r', action='store_true')
 args = parser.parse_args()
 
-db = sqlite3.connect('cuny_catalog.db')
+db = psycopg2.connect('dbname=cuny_courses')
 cur = db.cursor()
 cur.execute('select code from institutions')
 all_colleges = [x[0] for x in cur.fetchall()]
@@ -38,10 +38,10 @@ if not ((latest_cat != '0000-00-00') and (latest_cat == latest_req) and (latest_
   for d, file in [[latest_att, att_file], [latest_cat, cat_file], [latest_req, req_file]]:
     print('  {} {}'.format(date.fromtimestamp(os.lstat(file).st_mtime).strftime('%Y-%m-%d'), file))
     exit()
-if args.debug: print(latest_cat)
+if args.report: print('Catalog query is {} ({})'.format(cat_file, latest_cat ))
 
 # Update the attributes table for all colleges
-db.execute("delete from course_attributes")
+cur.execute("delete from course_attributes")
 with open(att_file, newline='') as csvfile:
   att_reader = csv.reader(csvfile)
   cols = None
@@ -56,7 +56,7 @@ with open(att_file, newline='') as csvfile:
           row[cols.index('institution')],
           row[cols.index('course_attribute')],
           row[cols.index('course_attribute_value')]))
-      db.execute(q)
+      cur.execute(q)
 db.commit()
 
 # Build dictionary of course requisites; key is (institution, discipline, course_number)
@@ -79,10 +79,9 @@ with open(req_file, newline='') as csvfile:
         requisites[key] = value
 if args.debug: print('{:,} requisites'.format(len(requisites)))
 
-# The query files are all ordered by institution, so courses can be processed sequentially
-# (But that doesn't really matter.)
-db.execute('delete from courses')
+# Now process the rows from the courses query.
 num_courses = 0
+skipped = 0
 with open(cat_file, newline='') as csvfile:
   cat_reader = csv.reader(csvfile)
   cols = None
@@ -103,7 +102,10 @@ with open(cat_file, newline='') as csvfile:
       department = row[cols.index('acad_org')]
       discipline = row[cols.index('subject')]
       number = row[cols.index('catalog_number')]
-      title = row[cols.index('long_course_title')].replace("'", "’")
+      title = row[cols.index('long_course_title')].replace("'", "’")\
+                                                  .replace('\r', '')\
+                                                  .replace('\n', ' ')\
+                                                  .replace('( ', '(')
       catalog_component = row[cols.index('catalog_course_component')]
       hours = row[cols.index('contact_hours')]
       credits = row[cols.index('progress_units')]
@@ -117,9 +119,11 @@ with open(cat_file, newline='') as csvfile:
       discipline_status = row[cols.index('subject_eff_status')]
       can_schedule = row[cols.index('schedule_course')]
       q = """
-        insert or ignore into courses values(
+        insert into courses values (
         {}, '{}', '{}', '{}', '{}', '{}', '{}', '{:0.1f}',
-        '{:0.1f}', '{}', '{}', '{}', '{}', '{}', '{}', '{}')""".format(
+        '{:0.1f}', '{}', '{}', '{}', '{}', '{}', '{}', '{}')
+        on conflict(course_id) do nothing
+        """.format(
         course_id,
         institution,
         cuny_subject,
@@ -136,13 +140,27 @@ with open(cat_file, newline='') as csvfile:
         course_status,
         discipline_status,
         can_schedule)
-      db.execute(q)
+      if department == 'PEES-BKL' or department == 'SOC-YRK':
+        skipped += 1
+        if args.debug:
+          print('Skipping {} {} {} {} {} {} {} {:0.1f} {:0.1f}'.format(course_id,
+                                                                       institution,
+                                                                       cuny_subject,
+                                                                       department,
+                                                                       discipline,
+                                                                       number,
+                                                                       title,
+                                                                       float(hours),
+                                                                       float(credits)))
+        continue
+      cur.execute(q)
       num_courses += 1
-if args.debug:
-  print('inserted or ignored {:,} courses'.format(num_courses))
+if args.report:
+  print('Inserted or ignored {:,} courses.'.format(num_courses))
   cur.execute('select count(*) from courses')
   num_found = cur.fetchone()[0]
-  print('{:,} retained; {:,} duplicates ignored'.format(num_found, num_courses - num_found))
-db.execute("update institutions set date_updated='{}'".format(latest_cat))
+  print('  {:,} retained; {:,} duplicates ignored'.format(num_found, num_courses - num_found))
+  print('Skipped {} courses.'.format(skipped))
+cur.execute("update institutions set date_updated='{}'".format(latest_cat))
 db.commit()
-
+db.close()
