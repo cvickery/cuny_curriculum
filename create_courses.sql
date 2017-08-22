@@ -1,4 +1,4 @@
-DROP TABLE IF EXISTS courses;
+DROP TABLE IF EXISTS courses cascade;
 
 CREATE TABLE courses (
   course_id integer primary key,

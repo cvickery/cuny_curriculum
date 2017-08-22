@@ -21,7 +21,7 @@ dest_id integer,
 event_type text,
 who text,
 what text,
-at real default (datetime('now','localtime')),
+at timestamp default current_timestamp,
 foreign key (event_type) references event_types(abbr),
 foreign key (src_id, dest_id) references transfer_rules(source_course_id, destination_course_id)
 );

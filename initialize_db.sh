@@ -36,15 +36,16 @@ python3 populate_courses.py --report >> out
 echo done.
 
 echo -n CREATE TABLE transfer_rules...
+psql cuny_courses < evaluation_states.sql
 python3 transfer_rules.py >> out
 echo done.
 
 echo -n CREATE TABLE sessions...
-psql cuny_courses < sessions.sql >> out
+psql cuny_courses < sessions.sql
 echo done.
 
 echo CREATE TABLE pending_evaluations...
 echo CREATE TABLE event_types...
 echo -n CREATE TABLE events...
-psql cuny_courses < evaluations.sql >> out
+psql cuny_courses < evaluations.sql
 echo done.

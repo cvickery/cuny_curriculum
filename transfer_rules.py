@@ -10,14 +10,16 @@ the_file = sorted(all_files, reverse=True)[0]
 print(the_file)
 db = psycopg2.connect('dbname=cuny_courses')
 cur = db.cursor()
-cur.execute('drop table if exists transfer_rules')
+cur.execute('drop table if exists transfer_rules cascade')
 cur.execute("""
     create table transfer_rules (
       source_course_id integer references courses,
       destination_course_id integer references courses,
+      status integer default 0 references transfer_rule_status,
       primary key (source_course_id, destination_course_id))
     """)
-known_bad_ids = [int(id) for id in open('known_bad_ids')]
+
+known_bad_ids = [int(id) for id in open('known_bad_ids.txt')]
 num_rules = 0
 with open(the_file) as csvfile:
   csv_reader = csv.reader(csvfile)
