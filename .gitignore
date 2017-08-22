@@ -12,3 +12,5 @@ cuny_catalog.db
 /dupe_report.txt
 
 /dupe_report.txt
+bad_ones
+known_bad_ids.txt

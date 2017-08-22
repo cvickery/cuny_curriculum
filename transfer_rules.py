@@ -17,7 +17,7 @@ cur.execute("""
       destination_course_id integer references courses,
       primary key (source_course_id, destination_course_id))
     """)
-bad_ids = [110506, 111889, 117910, 111890]
+known_bad_ids = [int(id) for id in open('known_bad_ids')]
 num_rules = 0
 with open(the_file) as csvfile:
   csv_reader = csv.reader(csvfile)
@@ -29,7 +29,14 @@ with open(the_file) as csvfile:
     else:
       src_id = int(row[cols.index('source_course_id')])
       dst_id = int(row[cols.index('destination_course_id')])
-      if src_id in bad_ids or dst_id in bad_ids: continue
+      # cur.execute("select course_id from courses where course_id = '{}'".format(src_id))
+      # result = cur.fetchall()
+      # if len(result) < 1: print(src_id)
+      # cur.execute("select course_id from courses where course_id = '{}'".format(dst_id))
+      # result = cur.fetchall()
+      # if len(result) < 1: print(dst_id)
+      # continue
+      if src_id in known_bad_ids or dst_id in known_bad_ids: continue
       q = """
           insert into transfer_rules values({}, {})
           on conflict(source_course_id, destination_course_id) do nothing
