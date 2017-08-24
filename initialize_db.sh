@@ -31,7 +31,7 @@ python3 cuny_departments.py >> out
 echo done.
 
 echo -n CREATE TABLE courses...
-psql cuny_courses < create_courses.sql >> out
+psql cuny_courses < create_courses.sql
 python3 populate_courses.py --report >> out
 echo done.
 
