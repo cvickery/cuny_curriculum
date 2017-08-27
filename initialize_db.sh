@@ -2,12 +2,15 @@
 
 # Run the sequence of sql and python scripts to create and initialize the cuny_courses database.
 
+dropdb cuny_courses
+createdb cuny_courses
+
 echo -n CREATE TABLE institutions...
-psql cuny_courses < institutions.sql > out
+psql cuny_courses < institutions.sql
 echo done.
 
 echo -n CREATE TABLE cuny_subjects...
-python3 cuny_subjects.py >> out
+python3 cuny_subjects.py > out
 echo done.
 
 echo -n CREATE TABLE cuny_careers...
@@ -23,7 +26,7 @@ python3 attributes.py >> out
 echo done.
 
 echo -n CREATE TABLE course_attributes...
-psql cuny_courses < course_attributes.sql >> out
+psql cuny_courses < course_attributes.sql
 echo done.
 
 echo -n CREATE TABLE cuny_departments...

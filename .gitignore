@@ -14,3 +14,11 @@ cuny_catalog.db
 /dupe_report.txt
 bad_ones
 known_bad_ids.txt
+
+/proxy.out
+
+/cuny_restore.log
+
+/local_restore.log
+
+/cuny_courses.sql

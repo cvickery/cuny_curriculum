@@ -3,8 +3,7 @@ create table institutions (
   code text primary key,
   prompt text,
   name text,
-  date_updated date default now(),
-  domain text default '');
+  date_updated date default now());
 --                                code     prompt            name
 insert into institutions values ('BAR01', 'Baruch',         'Baruch College');
 insert into institutions values ('BCC01', 'Bronx',          'Bronx Community College');
