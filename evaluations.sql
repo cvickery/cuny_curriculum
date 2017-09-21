@@ -2,8 +2,9 @@
 drop table if exists pending_evaluations;
 create table pending_evaluations (
 token text primary key,
+email text,
 evaluations text,
-timestamp float
+when_entered timestamptz default now()
 );
 
 -- Events and Event-Types schemata.
@@ -12,7 +13,9 @@ drop table if exists event_types;
 
 create table event_types (
 abbr text primary key,
-description text);
+bitmask integer,
+description text,
+foreign key (bitmask) references transfer_rule_status);
 
 create table events (
 id serial primary key,
@@ -21,16 +24,16 @@ dest_id integer,
 event_type text,
 who text,
 what text,
-at timestamp default current_timestamp,
+event_time timestamptz default now(),
 foreign key (event_type) references event_types(abbr),
 foreign key (src_id, dest_id) references transfer_rules(source_course_id, destination_course_id)
 );
 
 -- Populate event_types
-insert into event_types (abbr, description) values ('send-ok', 'Sender Approve');
-insert into event_types (abbr, description) values ('send-err', 'Sender Problem');
-insert into event_types (abbr, description) values ('recv-ok', 'Receiver Approve');
-insert into event_types (abbr, description) values ('recv-err', 'Receiver Problem');
-insert into event_types (abbr, description) values ('other', 'Other');
-insert into event_types (abbr, description) values ('resolve-ok', 'Kept');
-insert into event_types (abbr, description) values ('resolve-drop', 'Deleted');
+insert into event_types (abbr, bitmask, description) values ('src-ok', 1, 'Sender Approve');
+insert into event_types (abbr, bitmask, description) values ('dest-ok', 2, 'Receiver Approve');
+insert into event_types (abbr, bitmask, description) values ('src-not-ok', 4, 'Sender Problem');
+insert into event_types (abbr, bitmask, description) values ('dest-not-ok', 8, 'Receiver Problem');
+insert into event_types (abbr, bitmask, description) values ('other', 16, 'Other');
+insert into event_types (abbr, bitmask, description) values ('resolve-keep', 32, 'Keep Rule');
+insert into event_types (abbr, bitmask, description) values ('resolve-drop', 64, 'Delete Rule');
