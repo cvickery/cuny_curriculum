@@ -28,3 +28,11 @@ known_bad_ids.txt
 /External_Organizations.xlsx
 
 /New_Unsaved_Query_1799.xlsx
+
+/queries/
+
+/init.log
+
+/skipped_courses.log
+
+/test_transfer_rules.py

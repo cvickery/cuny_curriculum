@@ -11,7 +11,7 @@ cur.execute("""
     designation text primary key,
     description text)
     """)
-with open('QCCV_RQMNT_DESIG_TBL.csv') as csvfile:
+with open('./queries/QCCV_RQMNT_DESIG_TBL.csv') as csvfile:
   csv_reader = csv.reader(csvfile)
   cols = None
   for row in csv_reader:

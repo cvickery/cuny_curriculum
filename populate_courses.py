@@ -16,14 +16,14 @@ cur = db.cursor()
 cur.execute('select code from institutions')
 all_colleges = [x[0] for x in cur.fetchall()]
 
-all_files = [x for x in os.listdir('.') if x.endswith('.csv')]
+all_files = [x for x in os.listdir('./queries/') if x.endswith('.csv')]
 # Find most recent catalog, requisite, and attribute files; be sure they all
 # have the same date.
 latest_cat = '0000-00-00'
 latest_req = '0000-00-00'
 latest_att = '0000-00-00'
 for file in all_files:
-  mdate = date.fromtimestamp(os.lstat(file).st_mtime).strftime('%Y-%m-%d')
+  mdate = date.fromtimestamp(os.lstat('./queries/' + file).st_mtime).strftime('%Y-%m-%d')
   if re.search('catalog_np', file, re.I) and mdate > latest_cat:
     latest_cat = mdate
     cat_file = file
@@ -36,13 +36,13 @@ for file in all_files:
 if not ((latest_cat != '0000-00-00') and (latest_cat == latest_req) and (latest_req == latest_att)):
   print('*** FILE DATES DO NOT MATCH ***')
   for d, file in [[latest_att, att_file], [latest_cat, cat_file], [latest_req, req_file]]:
-    print('  {} {}'.format(date.fromtimestamp(os.lstat(file).st_mtime).strftime('%Y-%m-%d'), file))
+    print('  {} {}'.format(date.fromtimestamp(os.lstat('./queries/' + file).st_mtime).strftime('%Y-%m-%d'), file))
     exit()
 if args.report: print('Catalog query is {} ({})'.format(cat_file, latest_cat ))
 
 # Update the attributes table for all colleges
 cur.execute("delete from course_attributes")
-with open(att_file, newline='') as csvfile:
+with open('./queries/' + att_file, newline='') as csvfile:
   att_reader = csv.reader(csvfile)
   cols = None
   for row in att_reader:
@@ -60,7 +60,7 @@ with open(att_file, newline='') as csvfile:
 db.commit()
 
 # Build dictionary of course requisites; key is (institution, discipline, course_number)
-with open(req_file, newline='') as csvfile:
+with open('./queries/' + req_file, newline='') as csvfile:
   req_reader = csv.reader(csvfile)
   requisites = {}
   cols = None
@@ -80,9 +80,10 @@ with open(req_file, newline='') as csvfile:
 if args.debug: print('{:,} requisites'.format(len(requisites)))
 
 # Now process the rows from the courses query.
+skip_log = open('./skipped_courses.log', 'w')
 num_courses = 0
 skipped = 0
-with open(cat_file, newline='') as csvfile:
+with open('./queries/' + cat_file, newline='') as csvfile:
   cat_reader = csv.reader(csvfile)
   cols = None
   for row in cat_reader:
@@ -142,19 +143,19 @@ with open(cat_file, newline='') as csvfile:
         can_schedule)
       if department == 'PEES-BKL' or department == 'SOC-YRK':
         skipped += 1
-        if args.debug:
-          print('Skipping {} {} {} {} {} {} {} {:0.1f} {:0.1f}'.format(course_id,
-                                                                       institution,
-                                                                       cuny_subject,
-                                                                       department,
-                                                                       discipline,
-                                                                       number,
-                                                                       title,
-                                                                       float(hours),
-                                                                       float(credits)))
+        skip_log.write('Skipping {} {} {} {} {} {} {} {:0.1f} {:0.1f}\n'.format(course_id,
+                                                                               institution,
+                                                                               cuny_subject,
+                                                                               department,
+                                                                               discipline,
+                                                                               number,
+                                                                               title,
+                                                                               float(hours),
+                                                                               float(credits)))
         continue
       cur.execute(q)
       num_courses += 1
+skip_log.close()
 if args.report:
   print('Inserted or ignored {:,} courses.'.format(num_courses))
   cur.execute('select count(*) from courses')

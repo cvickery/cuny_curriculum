@@ -15,7 +15,7 @@ cur.execute(
     is_graduate boolean,
     primary key (institution, career))
     """)
-with open('ACAD_CAREER_TBL.csv') as csvfile:
+with open('./queries/ACAD_CAREER_TBL.csv') as csvfile:
   csv_reader = csv.reader(csvfile)
   cols = None
   for row in csv_reader:

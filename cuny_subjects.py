@@ -12,7 +12,7 @@ cur.execute("""
   description text
   )
   """)
-with open('QNS_QCCV_EXTERNAL_SUBJECT_TBL.csv') as csvfile:
+with open('./queries/QNS_QCCV_EXTERNAL_SUBJECT_TBL.csv') as csvfile:
   csv_reader = csv.reader(csvfile)
   cols = None
   for row in csv_reader:
