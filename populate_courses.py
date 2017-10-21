@@ -38,7 +38,9 @@ if not ((latest_cat != '0000-00-00') and (latest_cat == latest_req) and (latest_
   for d, file in [[latest_att, att_file], [latest_cat, cat_file], [latest_req, req_file]]:
     print('  {} {}'.format(date.fromtimestamp(os.lstat('./queries/' + file).st_mtime).strftime('%Y-%m-%d'), file))
     exit()
-if args.report: print('Catalog query is {} ({})'.format(cat_file, latest_cat ))
+if args.report:
+  print("""Catalog file\t{} ({})\nRequisites file\t{} ({})\nAttributes file\t{} ({})
+        """.format(cat_file, latest_cat, req_file, latest_req, att_file, latest_att  ))
 
 # Update the attributes table for all colleges
 cur.execute("delete from course_attributes")

@@ -26,7 +26,6 @@ with open('./queries/SR742A___CRSE_ATTRIBUTE_VALUE.csv') as csvfile:
           row[cols.index('crse_attr')],
           row[cols.index('crsatr_val')],
           row[cols.index('formal_description')].replace('\'', '’'))
-      print(q)
       cur.execute(q)
   db.commit()
   db.close()

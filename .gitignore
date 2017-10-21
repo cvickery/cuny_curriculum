@@ -36,3 +36,5 @@ known_bad_ids.txt
 /skipped_courses.log
 
 /test_transfer_rules.py
+
+/init_psql.log
