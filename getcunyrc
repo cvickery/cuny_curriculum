@@ -1,0 +1,3 @@
+open --user CVickery --env-password sftp://st-edge.cuny.edu
+cd ERP_Queens
+mget -EO /Users/vickery/Desktop/Drive/Curriculum_Management_System/CUNY_Courses QNS_*
