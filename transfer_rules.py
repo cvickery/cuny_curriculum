@@ -46,27 +46,43 @@ if args.generate:
           if cursor.rowcount == 0:
             bad_set.add(src_id)
             baddies.write('{} src\n'.format(src_id))
-          else:
-            if src_id == 105967: print('found src {}'.format(src_id))
         if dst_id not in bad_set:
           cursor.execute("select course_id from courses where course_id = {}".format(dst_id))
           if cursor.rowcount == 0:
             bad_set.add(dst_id)
             baddies.write('{} dst\n'.format(dst_id))
-          else:
-            if dst_id == 105967: print('found dst {}'.format(dst_id))
   baddies.close()
 else:
+  conflicts = open('conflicts.log', 'w')
   cursor.execute('drop table if exists transfer_rules cascade')
   cursor.execute("""
       create table transfer_rules (
         source_course_id integer references courses,
+        source_institution text references institutions,
+        source_discipline text,
+        source_catalog_number text,
+        equivalency_group integer,
+        equivalency_seq integer,
+        min_source_units integer,
+        max_source_units integer,
+        min_gpa real,
+        max_gpa real,
+        priority integer,
         destination_course_id integer references courses,
+        destination_institution text references institutions,
+        destination_discipline text,
+        destination_catalog_number text,
+        taken_destination_units real,
+        min_destination_units real,
+        max_destination_units real,
         status integer default 0 references transfer_rule_status,
-        primary key (source_course_id, destination_course_id))
+        primary key (source_course_id, equivalency_group, destination_course_id))
       """)
 
   known_bad_ids = [int(id.split(' ')[0]) for id in open('known_bad_ids.txt')]
+  known_institutions = ['BAR01', 'BCC01', 'BKL01', 'BMC01', 'CSI01', 'CTY01', 'GRD01', 'HOS01',
+                        'HTR01', 'JJC01', 'KCC01', 'LAG01', 'LAW01', 'LEH01', 'MEC01', 'MED01',
+                        'NCC01', 'NYT01', 'QCC01', 'QNS01', 'SPH01', 'SPS01', 'YRK01']
   num_rules = 0
   num_conflicts = 0
   with open('./queries/' + the_file) as csvfile:
@@ -82,20 +98,67 @@ else:
         if args.progress and row_num % 10000 == 0: print('row {}\r'.format(row_num),
                                                          end='',
                                                          file=sys.stderr)
+        source_institution = row[cols.index('source_institution')]
+        destination_institution = row[cols.index('destination_institution')]
         src_id = int(row[cols.index('source_course_id')])
         dst_id = int(row[cols.index('destination_course_id')])
+        group = int(row[cols.index('src_equivalency_component')])
+        sequence = int(row[cols.index('equivalency_sequence_num')])
+        priority = int(row[cols.index('transfer_priority')])
         if src_id in known_bad_ids or dst_id in known_bad_ids:
           continue
-
+        if source_institution not in known_institutions:
+          conflicts.write('Unknown institution: {}'.format(source_institution))
+          continue
+        if destination_institution not in known_institutions:
+          conflicts.write('Unknown institution: {}\n'.format(destination_institution))
+          continue
         q = """
-            insert into transfer_rules values({}, {})
-            on conflict(source_course_id, destination_course_id) do nothing
+            insert into transfer_rules values(
+            {}, -- source_course_id integer references courses,
+            '{}', -- source_institution text references institutions,
+            '{}', -- source_discipline text,
+            '{}', -- source_catalog_number text,
+            {}, -- equivalency_group integer,
+            {}, -- equivalency_seq integer,
+            {}, -- min_source_units integer,
+            {}, -- max_source_units integer,
+            {}, -- min_gpa real,
+            {}, -- max_gpa real,
+            {}, -- priority integer,
+            {}, -- destination_course_id integer references courses,
+            '{}', -- destination_institution text references institutions,
+            '{}', -- destination_discipline text,
+            '{}', -- destination_catalog_number text,
+            {}, -- taken_destination_units real,
+            {}, -- min_destination_units real,
+            {}  -- max_destination_units real,
+            )
+            on conflict(source_course_id, equivalency_group, destination_course_id) do nothing
             """.format(
             src_id,
-            dst_id)
+            source_institution,
+            row[cols.index('source_discipline')],
+            row[cols.index('source_catalog_num')],
+            group,
+            sequence,
+            float(row[cols.index('src_min_units')]),
+            float(row[cols.index('src_max_units')]),
+            float(row[cols.index('min_grade_pts')]),
+            float(row[cols.index('max_grade_pts')]),
+            priority,
+            dst_id,
+            destination_institution,
+            row[cols.index('destination_discipline')],
+            row[cols.index('destination_catalog_num')],
+            float(row[cols.index('units_taken')]),
+            float(row[cols.index('dest_min_units')]),
+            float(row[cols.index('dest_max_units')]))
         cursor.execute(q)
         num_rules += 1
-        num_conflicts += (1 - cursor.rowcount)
+        if cursor.rowcount == 0:
+          num_conflicts += 1
+          conflicts.write('{:06} {} {} {} {:06}\n'.format(src_id, group, sequence, priority, dst_id))
     if args.report:
       cursor.execute('select count(*) from transfer_rules')
       num_inserted = cursor.fetchone()[0]
@@ -106,3 +169,4 @@ else:
                                                                                    num_conflicts))
     db.commit()
     db.close()
+    conflicts.close()

@@ -38,3 +38,5 @@ known_bad_ids.txt
 /test_transfer_rules.py
 
 /init_psql.log
+
+/conflicts.log
