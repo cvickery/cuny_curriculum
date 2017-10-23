@@ -40,3 +40,7 @@ known_bad_ids.txt
 /init_psql.log
 
 /conflicts.log
+
+/mondays_at_seven.txt
+
+/query_downloads/
