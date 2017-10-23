@@ -61,13 +61,13 @@ else:
         source_institution text references institutions,
         source_discipline text,
         source_catalog_number text,
+        priority integer,
         equivalency_group integer,
         equivalency_seq integer,
-        min_source_units integer,
-        max_source_units integer,
+        min_source_units real,
+        max_source_units real,
         min_gpa real,
         max_gpa real,
-        priority integer,
         destination_course_id integer references courses,
         destination_institution text references institutions,
         destination_discipline text,
@@ -76,7 +76,7 @@ else:
         min_destination_units real,
         max_destination_units real,
         status integer default 0 references transfer_rule_status,
-        primary key (source_course_id, equivalency_group, destination_course_id))
+        primary key (source_course_id, priority, equivalency_group, destination_course_id))
       """)
 
   known_bad_ids = [int(id.split(' ')[0]) for id in open('known_bad_ids.txt')]
@@ -108,7 +108,7 @@ else:
         if src_id in known_bad_ids or dst_id in known_bad_ids:
           continue
         if source_institution not in known_institutions:
-          conflicts.write('Unknown institution: {}'.format(source_institution))
+          conflicts.write('Unknown institution: {}\n'.format(source_institution))
           continue
         if destination_institution not in known_institutions:
           conflicts.write('Unknown institution: {}\n'.format(destination_institution))
@@ -119,13 +119,13 @@ else:
             '{}', -- source_institution text references institutions,
             '{}', -- source_discipline text,
             '{}', -- source_catalog_number text,
+            {}, -- priority integer,
             {}, -- equivalency_group integer,
             {}, -- equivalency_seq integer,
-            {}, -- min_source_units integer,
-            {}, -- max_source_units integer,
+            {}, -- min_source_units real,
+            {}, -- max_source_units real,
             {}, -- min_gpa real,
             {}, -- max_gpa real,
-            {}, -- priority integer,
             {}, -- destination_course_id integer references courses,
             '{}', -- destination_institution text references institutions,
             '{}', -- destination_discipline text,
@@ -134,19 +134,19 @@ else:
             {}, -- min_destination_units real,
             {}  -- max_destination_units real,
             )
-            on conflict(source_course_id, equivalency_group, destination_course_id) do nothing
+            on conflict(source_course_id, equivalency_group, priority, destination_course_id) do nothing
             """.format(
             src_id,
             source_institution,
             row[cols.index('source_discipline')],
             row[cols.index('source_catalog_num')],
+            priority,
             group,
             sequence,
             float(row[cols.index('src_min_units')]),
             float(row[cols.index('src_max_units')]),
             float(row[cols.index('min_grade_pts')]),
             float(row[cols.index('max_grade_pts')]),
-            priority,
             dst_id,
             destination_institution,
             row[cols.index('destination_discipline')],
@@ -158,7 +158,48 @@ else:
         num_rules += 1
         if cursor.rowcount == 0:
           num_conflicts += 1
-          conflicts.write('{:06} {} {} {} {:06}\n'.format(src_id, group, sequence, priority, dst_id))
+          conflicts.write(
+          '++ {:06} {:5} {:7} {:8} {:2} {:3} {:2} {:6.3} {:6.3} {:6.3} {:6.3} {:06} {:5} {:5} {:8}\n'.format(
+                                                          src_id,
+                                                          source_institution,
+                                                          row[cols.index('source_discipline')],
+                                                          row[cols.index('source_catalog_num')],
+                                                          priority,
+                                                          group,
+                                                          sequence,
+                                                          float(row[cols.index('src_min_units')]),
+                                                          float(row[cols.index('src_max_units')]),
+                                                          float(row[cols.index('min_grade_pts')]),
+                                                          float(row[cols.index('max_grade_pts')]),
+                                                          dst_id,
+                                                          destination_institution,
+                                                          row[cols.index('destination_discipline')],
+                                                          row[cols.index('destination_catalog_num')]
+                                                          )
+          )
+          cursor.execute("""select * from transfer_rules
+                            where source_course_id = {}
+                              and priority = {}
+                              and equivalency_group = {}
+                              and destination_course_id = {}
+                         """.format(src_id, priority, group, dst_id))
+          for row in cursor.fetchall():
+            conflicts.write ('-- {:06} {:5} {:7} {:8} {:2} {:3} {:2} {:6.3} {:6.3} {:6.3} {:6.3} {:06} {:5} {:5}\n'.format(
+                                                                                      row[0],
+                                                                                      row[1],
+                                                                                      row[2],
+                                                                                      row[3],
+                                                                                      row[4],
+                                                                                      row[5],
+                                                                                      row[6],
+                                                                                      row[7],
+                                                                                      row[8],
+                                                                                      row[9],
+                                                                                      row[10],
+                                                                                      row[11],
+                                                                                      row[12],
+                                                                                      row[13],
+                                                                                      row[14]))
     if args.report:
       cursor.execute('select count(*) from transfer_rules')
       num_inserted = cursor.fetchone()[0]
