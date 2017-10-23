@@ -19,14 +19,17 @@ foreign key (bitmask) references transfer_rule_status);
 
 create table events (
 id serial primary key,
-src_id integer,
-dest_id integer,
+source_course_id integer,
+destination_course_id integer,
+rule_priority integer,
+rule_group integer,
 event_type text,
 who text,
 what text,
 event_time timestamptz default now(),
 foreign key (event_type) references event_types(abbr),
-foreign key (src_id, dest_id) references transfer_rules(source_course_id, destination_course_id)
+foreign key (source_course_id, rule_priority, rule_group, destination_course_id)
+  references transfer_rules(source_course_id, rule_priority, rule_group, destination_course_id)
 );
 
 -- Populate event_types

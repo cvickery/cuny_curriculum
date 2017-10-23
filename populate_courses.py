@@ -82,7 +82,7 @@ with open('./queries/' + req_file, newline='') as csvfile:
 if args.debug: print('{:,} requisites'.format(len(requisites)))
 
 # Now process the rows from the courses query.
-skip_log = open('./skipped_courses.log', 'w')
+skip_log = open('./skipped_courses.{}.log'.format(os.getenv('HOSTNAME').split('.')[0]), 'w')
 num_courses = 0
 skipped = 0
 with open('./queries/' + cat_file, newline='') as csvfile:

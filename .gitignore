@@ -44,3 +44,13 @@ known_bad_ids.txt
 /mondays_at_seven.txt
 
 /query_downloads/
+
+/conflicts.cvlaptop.log
+
+/init.cvlaptop.log
+
+/init_psql.cvlaptop.log
+
+/known_bad_ids.cvlaptop.log
+
+/skipped_courses.cvlaptop.log
