@@ -33,13 +33,19 @@ if args.generate:
     row_num = 0
     for row in csv_reader:
       row_num += 1
-      if args.progress and row_num % 10000 == 0: print('row {}\r'.format(row_num),
-                                                       end='',
-                                                       file=sys.stderr)
+      if args.progress and row_num % 10000 == 0:
+        print('row {}\r'.format(row_num), end='', file=sys.stderr)
       if cols == None:
         row[0] = row[0].replace('\ufeff', '')
         cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
+        if args.debug:
+          print(cols)
+          for col in cols:
+            print('{} = {}; '.format(col, cols.index(col), end = ''))
+          print()
       else:
+        if len(row) != len(cols):
+          print('\nrow {} len(cols) = {} but len(rows) = {}'.format(row_num, len(cols), len(row)))
         source_course_id = int(row[cols.index('source_course_id')])
         destination_course_id = int(row[cols.index('destination_course_id')])
         if source_course_id not in bad_set:
@@ -94,6 +100,11 @@ else:
       if cols == None:
         row[0] = row[0].replace('\ufeff', '')
         cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
+        if args.debug:
+          print(cols)
+          for col in cols:
+            print('{} = {}; '.format(col, cols.index(col), end = ''))
+            print()
       else:
         row_num += 1
         if args.progress and row_num % 10000 == 0: print('row {}\r'.format(row_num),
