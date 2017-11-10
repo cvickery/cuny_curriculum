@@ -54,3 +54,13 @@ known_bad_ids.txt
 /known_bad_ids.cvlaptop.log
 
 /skipped_courses.cvlaptop.log
+
+/conflicts.babbage.log
+
+/init.babbage.log
+
+/init_psql.babbage.log
+
+/known_bad_ids.babbage.log
+
+/skipped_courses.babbage.log
