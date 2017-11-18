@@ -79,7 +79,7 @@ else:
         destination_institution text references institutions,
         destination_discipline text,
         destination_catalog_number text,
-        taken_destination_units real,
+        transfer_credits real,
         min_destination_units real,
         max_destination_units real,
         status integer default 0 references transfer_rule_status,
@@ -142,7 +142,7 @@ else:
             '{}', -- destination_institution text references institutions,
             '{}', -- destination_discipline text,
             '{}', -- destination_catalog_number text,
-            {}, -- taken_destination_units real,
+            {}, -- transfer_credits real,
             {}, -- min_destination_units real,
             {}  -- max_destination_units real,
             )
