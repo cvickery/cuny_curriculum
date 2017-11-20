@@ -6,7 +6,7 @@ CREATE TABLE courses (
   cuny_subject text references cuny_subjects,
   department text references cuny_departments,
   discipline text,
-  number text,
+  catalog_number text,
   title text,
   hours text,
   credits text,

@@ -104,7 +104,7 @@ with open('./queries/' + cat_file, newline='') as csvfile:
       cuny_subject = row[cols.index('subject_external_area')]
       department = row[cols.index('acad_org')]
       discipline = row[cols.index('subject')]
-      number = row[cols.index('catalog_number')]
+      catalog_number = row[cols.index('catalog_number')]
       title = row[cols.index('long_course_title')].replace("'", "’")\
                                                   .replace('\r', '')\
                                                   .replace('\n', ' ')\
@@ -114,8 +114,8 @@ with open('./queries/' + cat_file, newline='') as csvfile:
       credits = row[cols.index('progress_units')]
       designation = row[cols.index('designation')]
       requisite_str = 'None'
-      if (institution, discipline, number) in requisites.keys():
-        requisite_str = requisites[(institution, discipline, number)].replace("'", "’")
+      if (institution, discipline, catalog_number) in requisites.keys():
+        requisite_str = requisites[(institution, discipline, catalog_number)].replace("'", "’")
       description = row[cols.index('descr')].replace("'", "’")
       career = row[cols.index('career')]
       course_status = row[cols.index('crse_catalog_status')]
@@ -132,7 +132,7 @@ with open('./queries/' + cat_file, newline='') as csvfile:
         cuny_subject,
         department,
         discipline,
-        number,
+        catalog_number,
         title,
         float(hours),
         float(credits),
@@ -150,7 +150,7 @@ with open('./queries/' + cat_file, newline='') as csvfile:
                                                                                cuny_subject,
                                                                                department,
                                                                                discipline,
-                                                                               number,
+                                                                               catalog_number,
                                                                                title,
                                                                                float(hours),
                                                                                float(credits)))
