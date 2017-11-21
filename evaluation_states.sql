@@ -7,10 +7,10 @@ drop table if exists transfer_rule_status cascade;
 
 -- Enumerate descriptions for all bits
 insert into transfer_rule_status values (0, 'Not Evaluated');
-insert into transfer_rule_status values (1, 'Sender Approve');
-insert into transfer_rule_status values (2, 'Receiver Approve');
-insert into transfer_rule_status values (4, 'Sender Problem');
-insert into transfer_rule_status values (8, 'Receiver Problem');
+insert into transfer_rule_status values (1, 'Sender Approved');
+insert into transfer_rule_status values (2, 'Receiver Approved');
+insert into transfer_rule_status values (4, 'Sender Reported Problem');
+insert into transfer_rule_status values (8, 'Receiver Reported Problem');
 insert into transfer_rule_status values (16, 'Other Issue');
 insert into transfer_rule_status values (32, 'Resolved: OK');
-insert into transfer_rule_status values (64, 'Resolved: Not OK');
+insert into transfer_rule_status values (64, 'Resolved: Do Not Use');
