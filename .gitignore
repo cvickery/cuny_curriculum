@@ -67,4 +67,6 @@ known_bad_ids.txt
 
 /cuny_external_subjects.py
 
-/restore.*.log
+/restore*.log
+
+restore*.sql
