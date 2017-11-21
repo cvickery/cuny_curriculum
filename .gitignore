@@ -64,3 +64,7 @@ known_bad_ids.txt
 /known_bad_ids.babbage.log
 
 /skipped_courses.babbage.log
+
+/cuny_external_subjects.py
+
+/restore.*.log
