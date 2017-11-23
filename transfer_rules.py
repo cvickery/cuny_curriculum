@@ -83,7 +83,7 @@ else:
         min_destination_units real,
         max_destination_units real,
         status integer default 0 references transfer_rule_status,
-        primary key (source_course_id, rule_priority, rule_group, destination_course_id))
+        primary key (source_course_id, rule_group, destination_course_id))
       """)
 
   known_bad_ids = [int(id.split(' ')[0]) for id in open(known_bad_filename)]

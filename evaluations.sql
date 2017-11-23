@@ -19,24 +19,29 @@ foreign key (bitmask) references transfer_rule_status);
 
 create table events (
 id serial primary key,
-source_course_id integer,
-destination_course_id integer,
-rule_priority integer,
+institution text references institutions,
+discipline text,
 rule_group integer,
 event_type text,
 who text,
 what text,
 event_time timestamptz default now(),
-foreign key (event_type) references event_types(abbr),
-foreign key (source_course_id, rule_priority, rule_group, destination_course_id)
-  references transfer_rules(source_course_id, rule_priority, rule_group, destination_course_id)
+foreign key (institution, discipline) references disciplines,
+foreign key (event_type) references event_types(abbr)
 );
 
 -- Populate event_types
-insert into event_types (abbr, bitmask, description) values ('src-ok', 1, 'Sender Approve');
-insert into event_types (abbr, bitmask, description) values ('dest-ok', 2, 'Receiver Approve');
-insert into event_types (abbr, bitmask, description) values ('src-not-ok', 4, 'Sender Problem');
-insert into event_types (abbr, bitmask, description) values ('dest-not-ok', 8, 'Receiver Problem');
-insert into event_types (abbr, bitmask, description) values ('other', 16, 'Other');
-insert into event_types (abbr, bitmask, description) values ('resolve-keep', 32, 'Keep Rule');
-insert into event_types (abbr, bitmask, description) values ('resolve-drop', 64, 'Delete Rule');
+insert into event_types (abbr, bitmask, description) values
+  ('src-ok', 1, (select description from transfer_rule_status where value = 1));
+insert into event_types (abbr, bitmask, description) values
+  ('dest-ok', 2, (select description from transfer_rule_status where value = 2));
+insert into event_types (abbr, bitmask, description) values
+  ('src-not-ok', 4, (select description from transfer_rule_status where value = 4));
+insert into event_types (abbr, bitmask, description) values
+  ('dest-not-ok', 8, (select description from transfer_rule_status where value = 8));
+insert into event_types (abbr, bitmask, description) values
+  ('other', 16, (select description from transfer_rule_status where value = 16));
+insert into event_types (abbr, bitmask, description) values
+  ('resolve-keep', 32, (select description from transfer_rule_status where value = 32));
+insert into event_types (abbr, bitmask, description) values
+  ('resolve-drop', 64, (select description from transfer_rule_status where value = 64));

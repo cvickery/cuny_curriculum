@@ -42,13 +42,22 @@ psql cuny_courses < create_courses.sql >> init_psql.$this_host.log
 python3 populate_courses.py --report >> init.$this_host.log
 echo done.
 
-echo CREATE TABLE transfer_rules...
+echo CREATE TABLE rule_groups...
 psql cuny_courses < evaluation_states.sql >> init_psql.$this_host.log
+psql cuny_courses < create_rule_groups.sql >> init_psql.$this_host.log
 echo "  generate bad id list... "
-python3 transfer_rules.py --generate --progress >> init.$this_host.log
-echo "  generate transfer rules... "
-python3 transfer_rules.py --progress --report >> init.$this_host.log
+python3 rule_groups.py --generate --progress >> init.$this_host.log
+echo "  generate transfer rule groups... "
+python3 rule_groupss.py --progress --report >> init.$this_host.log
 echo 'done.       '
+
+# echo CREATE TABLE transfer_rules...
+# psql cuny_courses < evaluation_states.sql >> init_psql.$this_host.log
+# echo "  generate bad id list... "
+# python3 transfer_rules.py --generate --progress >> init.$this_host.log
+# echo "  generate transfer rules... "
+# python3 transfer_rules.py --progress --report >> init.$this_host.log
+# echo 'done.       '
 
 echo -n CREATE TABLE sessions...
 psql cuny_courses < sessions.sql >> init_psql.$this_host.log
