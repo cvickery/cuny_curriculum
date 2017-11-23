@@ -2,12 +2,14 @@
 drop table if exists rule_groups cascade;
 create table rule_groups (
   id serial primary key,
-  institution text,
+  source_institution text,
   discipline text,
   group_number integer not null,
+  destination_institution text,
   status integer default 0,
-  foreign key (institution, discipline) references disciplines,
-  unique (institution, discipline, group_number));
+  foreign key (source_institution, discipline) references disciplines,
+  foreign key (destination_institution) references institutions,
+  unique (source_institution, discipline, group_number, destination_institution));
 
 drop table if exists source_courses cascade;
 create table source_courses (

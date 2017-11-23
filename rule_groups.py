@@ -140,25 +140,31 @@ else:
         # Create or look up the rule group
         cursor.execute("""
                        insert into rule_groups values(
-                       default, '{}', '{}', {}) on conflict do nothing returning id
-                       """.format(source_institution, source_discipline, rule_group_number))
+                       default, '{}', '{}', {}, '{}') on conflict do nothing returning id
+                       """.format(source_institution,
+                                  source_discipline,
+                                  rule_group_number,
+                                  destination_institution))
         num_groups += cursor.rowcount
         if cursor.rowcount == 0:
           cursor.execute("""
                          select id
                          from rule_groups
-                         where institution = '{}'
+                         where source_institution = '{}'
                          and discipline = '{}'
-                         and group_number = {}""".format(source_institution,
-                                                         source_discipline,
-                                                         rule_group_number))
+                         and group_number = {}
+                         and destination_institution ='{}'
+                         """.format(source_institution,
+                                    source_discipline,
+                                    rule_group_number,
+                                    destination_institution))
           assert cursor.rowcount == 1, """select rule_group id returned {} values
                                        """.format(cursor.rowcount)
         rule_group_id = cursor.fetchone()[0]
 
         # Add the source course
         cursor.execute("""
-                        insert into source_courses values(default, {}, {}, {})
+                        insert into source_courses values(default, {}, {}, {}, {})
                         on conflict do nothing
                        """.format(rule_group_id, source_course_id, min_gpa, max_gpa))
         num_source_courses += cursor.rowcount
