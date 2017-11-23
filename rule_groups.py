@@ -23,6 +23,8 @@ the_file = sorted(all_files, reverse=True)[0]
 if args.report:
   print('Transfer rules query file:', the_file)
 
+num_lines = sum(1 for line in open('queries/' + the_file))
+
 known_bad_filename = 'known_bad_ids.{}.log'.format(os.getenv('HOSTNAME').split('.')[0])
 db = psycopg2.connect('dbname=cuny_courses')
 cursor = db.cursor()
@@ -44,7 +46,7 @@ if args.generate:
     for row in csv_reader:
       row_num += 1
       if args.progress and row_num % 10000 == 0:
-        print('row {}\r'.format(row_num), end='', file=sys.stderr)
+        print('row {:,}/{:,}\r'.format(row_num, num_lines), end='', file=sys.stderr)
       if cols == None:
         row[0] = row[0].replace('\ufeff', '')
         cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
@@ -106,7 +108,8 @@ else:
             print()
       else:
         row_num += 1
-        if args.progress and row_num % 10000 == 0: print('row {}\r'.format(row_num),
+        if args.progress and row_num % 10000 == 0: print('row {:,}/{:,}\r'.format(row_num,
+                                                                                  num_lines),
                                                          end='',
                                                          file=sys.stderr)
         record = Record._make(row)
@@ -167,12 +170,8 @@ else:
         num_destination_courses += cursor.rowcount
 
     if args.report:
-      cursor.execute('select count(*) from rule_groups')
-      num_groups = cursor.fetchone()[0]
-      print('Given {} transfer rules: kept {}; rejected {} ({} conflicts).'.format(num_rules,
-                                                                                   num_inserted,
-                                                                                   num_ignored,
-                                                                                   num_conflicts))
+      print("""\n{:,} Groups\n{:,} Source courses\n{:,} Destination courses
+            """.format(num_groups, num_source_courses, num_destination_courses))
     db.commit()
     db.close()
     conflicts.close()
