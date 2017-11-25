@@ -52,6 +52,31 @@ cur.execute(
       primary key (institution, discipline))
     """)
 
+# CUNY ("external") subjects
+# --------------------------
+cur.execute('drop table if exists cuny_subjects cascade')
+cur.execute("""
+  create table cuny_subjects (
+  subject text primary key,
+  description text
+  )
+  """)
+with open('./queries/' + extern_file) as csvfile:
+  csv_reader = csv.reader(csvfile)
+  cols = None
+  for row in csv_reader:
+    if cols == None:
+      row[0] = row[0].replace('\ufeff', '')
+      cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
+      Record = namedtuple('Record', cols)
+    else:
+      record = Record._make(row)
+      q = """insert into cuny_subjects values('{}', '{}')""".format(
+          record.external_subject_area,
+          record.description.replace("'", "’"))
+      cur.execute(q)
+  db.commit()
+
 # College-specific disciplines
 # ----------------------------
 with open('./queries/' + discp_file) as csvfile:
@@ -70,35 +95,10 @@ with open('./queries/' + discp_file) as csvfile:
             """.format(
             record.institution,
             record.subject,
-            record.external_subject_area,
-            record.formal_description.replace('\'', '’'))
+            record.formal_description.replace('\'', '’'),
+            record.external_subject_area)
         if args.debug: print(q)
         cur.execute(q)
-  db.commit()
-
-# CUNY ("external") subjects
-# --------------------------
-cur.execute('drop table if exists cuny_subjects cascade')
-cur.execute("""
-  create table cuny_subjects (
-  area text primary key,
-  description text
-  )
-  """)
-with open('./queries/' + extern_file) as csvfile:
-  csv_reader = csv.reader(csvfile)
-  cols = None
-  for row in csv_reader:
-    if cols == None:
-      row[0] = row[0].replace('\ufeff', '')
-      cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
-      Record = namedtuple('Record', cols)
-    else:
-      record = Record._make(row)
-      q = """insert into cuny_subjects values('{}', '{}')""".format(
-          record.external_subject_area,
-          record.description.replace("'", "’"))
-      cur.execute(q)
   db.commit()
 
 db.close()
