@@ -45,7 +45,7 @@ sleep 2
 echo '  create database...'
 psql -U postgres -c 'create database cuny_courses'
 sleep 2
-echo '  resstore database...'
+echo '  restore database...'
 psql -U postgres cuny_courses < $restore_file > restore.log 2>&1
 
 )
