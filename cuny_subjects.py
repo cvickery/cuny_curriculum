@@ -41,6 +41,17 @@ if args.debug: print('cuny_subjects.py:\n  disciplines: {}\n  cuny_subjects:{}'.
 
 db = psycopg2.connect('dbname=cuny_courses')
 cur = db.cursor()
+
+# CUNY Subjects table
+cur.execute('drop table if exists cuny_subjects cascade')
+cur.execute("""
+  create table cuny_subjects (
+  subject text primary key,
+  description text
+  )
+  """)
+
+# Disciplines table
 cur.execute('drop table if exists disciplines cascade')
 cur.execute(
     """
@@ -52,15 +63,8 @@ cur.execute(
       primary key (institution, discipline))
     """)
 
-# CUNY ("external") subjects
-# --------------------------
-cur.execute('drop table if exists cuny_subjects cascade')
-cur.execute("""
-  create table cuny_subjects (
-  subject text primary key,
-  description text
-  )
-  """)
+# Populate cuny_subjects
+cur.execute("insert into cuny_subjects values('', 'Unknown')")
 with open('./queries/' + extern_file) as csvfile:
   csv_reader = csv.reader(csvfile)
   cols = None
@@ -77,8 +81,7 @@ with open('./queries/' + extern_file) as csvfile:
       cur.execute(q)
   db.commit()
 
-# College-specific disciplines
-# ----------------------------
+# Populate disciplines
 with open('./queries/' + discp_file) as csvfile:
   csv_reader = csv.reader(csvfile)
   cols = None

@@ -24,7 +24,6 @@ event_type text,
 who text,
 what text,
 event_time timestamptz default now(),
-foreign key (institution, discipline) references disciplines,
 foreign key (event_type) references event_types(abbr)
 );
 

@@ -14,6 +14,8 @@ restore_file=restore.`date +%Y-%m-%d`.sql
 pgproxy stop
 pg_dump -O cuny_courses > $restore_file
 
+read -p "Edit $restore_file before continuing ..." reply
+
 # No user associated with tables. On babbage and cvlaptop, vickery is the owner, but on GAE, the
 # owner will be postgres.
 
