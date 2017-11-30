@@ -59,12 +59,12 @@ cur.execute(
       institution text references institutions,
       discipline text,
       description text,
-      cuny_subject text references cuny_subjects,
+      cuny_subject text default 'missing' references cuny_subjects,
       primary key (institution, discipline))
     """)
 
 # Populate cuny_subjects
-cur.execute("insert into cuny_subjects values('', 'Unknown')")
+cur.execute("insert into cuny_subjects values('missing', 'MISSING')")
 with open('./queries/' + extern_file) as csvfile:
   csv_reader = csv.reader(csvfile)
   cols = None
@@ -94,12 +94,15 @@ with open('./queries/' + discp_file) as csvfile:
     else:
       record = Record._make(row)
       if record.institution != 'UAPC1':
+        external_subject_area = record.external_subject_area
+        if external_subject_area == '':
+          external_subject_area = 'missing'
         q = """insert into disciplines values ('{}', '{}', '{}', '{}') on conflict do nothing
             """.format(
             record.institution,
             record.subject,
             record.formal_description.replace('\'', '’'),
-            record.external_subject_area)
+            external_subject_area)
         if args.debug: print(q)
         cur.execute(q)
   db.commit()
