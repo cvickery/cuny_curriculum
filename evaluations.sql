@@ -19,7 +19,7 @@ foreign key (bitmask) references transfer_rule_status);
 
 create table events (
 id serial primary key,
-rule_group integer references rule_groups,
+rule_id integer references rule_groups,
 event_type text,
 who text,
 what text,
