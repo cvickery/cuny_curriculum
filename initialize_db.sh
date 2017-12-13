@@ -9,24 +9,44 @@ this_host=${name[0]}
 dropdb cuny_courses > init_psql.$this_host.log
 createdb cuny_courses >> init_psql.$this_host.log
 
+echo -n CREATE TABLE updates ...
+psql cuny_courses < updates.sql >> init_psql.$this_host.log
+echo done.
+
 echo -n CREATE TABLE institutions...
 psql cuny_courses < institutions.sql >> init_psql.$this_host.log
 echo done.
 
 echo -n CREATE TABLE cuny_subjects...
-python3 cuny_subjects.py > init.$this_host.log
+python3 cuny_subjects.py >> init.$this_host.log
+if [ $? -ne 0 ]
+  then echo failed
+       exit
+fi
 echo done.
 
 echo -n CREATE TABLE cuny_careers...
 python3 cuny_careers.py >> init.$this_host.log
+if [ $? -ne 0 ]
+  then echo failed
+       exit
+fi
 echo done.
 
 echo -n CREATE TABLE designations...
 python3 designations.py >> init.$this_host.log
+if [ $? -ne 0 ]
+  then echo failed
+       exit
+fi
 echo done.
 
 echo -n CREATE TABLE attributes...
 python3 attributes.py >> init.$this_host.log
+if [ $? -ne 0 ]
+  then echo failed
+       exit
+fi
 echo done.
 
 echo -n CREATE TABLE course_attributes...
@@ -35,11 +55,19 @@ echo done.
 
 echo -n CREATE TABLE cuny_departments...
 python3 cuny_departments.py >> init.$this_host.log
+if [ $? -ne 0 ]
+  then echo failed
+       exit
+fi
 echo done.
 
 echo -n CREATE TABLE courses...
 psql cuny_courses < create_courses.sql >> init_psql.$this_host.log
 python3 populate_courses.py --report >> init.$this_host.log
+if [ $? -ne 0 ]
+  then echo failed
+       exit
+fi
 echo done.
 
 echo CREATE TABLE rule_groups...
@@ -47,8 +75,16 @@ psql cuny_courses < evaluation_states.sql >> init_psql.$this_host.log
 psql cuny_courses < create_rule_groups.sql >> init_psql.$this_host.log
 echo "  generate bad id list... "
 python3 rule_groups.py --generate --progress >> init.$this_host.log
+if [ $? -ne 0 ]
+  then echo failed
+       exit
+fi
 echo "  generate transfer rule groups... "
 python3 rule_groups.py --progress --report >> init.$this_host.log
+if [ $? -ne 0 ]
+  then echo failed
+       exit
+fi
 echo -e '\ndone.       '
 
 echo -n CREATE TABLE sessions...

@@ -9,6 +9,7 @@ import os
 import sys
 import argparse
 from collections import namedtuple
+from datetime import date
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--debug', '-d', action='store_true')
@@ -17,17 +18,24 @@ parser.add_argument('--progress', '-p', action='store_true')
 parser.add_argument('--report', '-r', action='store_true')
 args = parser.parse_args()
 
+db = psycopg2.connect('dbname=cuny_courses')
+cursor = db.cursor()
+
 # Get most recent transfer_rules query file
 all_files = [x for x in os.listdir('./queries/') if x.startswith('QNS_CV_SR_TRNS_INTERNAL_RULES')]
 the_file = sorted(all_files, reverse=True)[0]
+file_date = date.fromtimestamp(os.lstat('./queries/' + the_file).st_mtime).strftime('%Y-%m-%d')
+cursor.execute("""
+               update updates
+               set update_date = '{}', file_name = '{}'
+               where table_name = 'rules'""".format(file_date, the_file))
+
 if args.report:
   print('Transfer rules query file:', the_file)
 
 num_lines = sum(1 for line in open('queries/' + the_file))
 
 known_bad_filename = 'known_bad_ids.{}.log'.format(os.getenv('HOSTNAME').split('.')[0])
-db = psycopg2.connect('dbname=cuny_courses')
-cursor = db.cursor()
 
 # There be some garbage institution "names" in the transfer_rules
 cursor.execute("""select code as institution

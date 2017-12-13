@@ -12,9 +12,9 @@ parser.add_argument('--report', '-r', action='store_true')
 args = parser.parse_args()
 
 db = psycopg2.connect('dbname=cuny_courses')
-cur = db.cursor()
-cur.execute('select code from institutions')
-all_colleges = [x[0] for x in cur.fetchall()]
+cursor = db.cursor()
+cursor.execute('select code from institutions')
+all_colleges = [x[0] for x in cursor.fetchall()]
 
 all_files = [x for x in os.listdir('./queries/') if x.endswith('.csv')]
 # Find most recent catalog, requisite, and attribute files; be sure they all
@@ -38,12 +38,17 @@ if not ((latest_cat != '0000-00-00') and (latest_cat == latest_req) and (latest_
   for d, file in [[latest_att, att_file], [latest_cat, cat_file], [latest_req, req_file]]:
     print('  {} {}'.format(date.fromtimestamp(os.lstat('./queries/' + file).st_mtime).strftime('%Y-%m-%d'), file))
     exit()
+cursor.execute("""
+               update updates
+               set update_date = '{}', file_name = '{}'
+               where table_name = 'courses'""".format(latest_cat, cat_file))
+
 if args.report:
   print("""Catalog file\t{} ({})\nRequisites file\t{} ({})\nAttributes file\t{} ({})
         """.format(cat_file, latest_cat, req_file, latest_req, att_file, latest_att  ))
 
 # Update the attributes table for all colleges
-cur.execute("delete from course_attributes")
+cursor.execute("delete from course_attributes")
 with open('./queries/' + att_file, newline='') as csvfile:
   att_reader = csv.reader(csvfile)
   cols = None
@@ -58,7 +63,7 @@ with open('./queries/' + att_file, newline='') as csvfile:
           row[cols.index('institution')],
           row[cols.index('course_attribute')],
           row[cols.index('course_attribute_value')]))
-      cur.execute(q)
+      cursor.execute(q)
 db.commit()
 
 # Build dictionary of course requisites; key is (institution, discipline, course_number)
@@ -155,15 +160,15 @@ with open('./queries/' + cat_file, newline='') as csvfile:
                                                                                float(hours),
                                                                                float(credits)))
         continue
-      cur.execute(q)
+      cursor.execute(q)
       num_courses += 1
 skip_log.close()
 if args.report:
   print('Inserted or ignored {:,} courses.'.format(num_courses))
-  cur.execute('select count(*) from courses')
-  num_found = cur.fetchone()[0]
+  cursor.execute('select count(*) from courses')
+  num_found = cursor.fetchone()[0]
   print('  {:,} retained; {:,} duplicates ignored'.format(num_found, num_courses - num_found))
   print('Skipped {} courses.'.format(skipped))
-cur.execute("update institutions set date_updated='{}'".format(latest_cat))
+cursor.execute("update institutions set date_updated='{}'".format(latest_cat))
 db.commit()
 db.close()
