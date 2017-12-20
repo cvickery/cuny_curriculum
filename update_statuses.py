@@ -42,6 +42,6 @@ for event in events:
                           event.discipline,
                           event.group_number,
                           event.destination_institution))
+  db.commit()
   # print('  new status is {}'.format(status))
-db.commit()
 db.close()

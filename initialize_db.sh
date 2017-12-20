@@ -2,13 +2,17 @@
 
 # Run the sequence of sql and python scripts to create and initialize the cuny_courses database.
 
-# Default is to dump and restore events, but it doesn't have to be so
+# Default is to dump and restore events. But -n or --no-events suppresses it.
 do_events=1
-if [ $1 == '--no-events' -o $1 == '-n' ]
-then do_events=0
+if [ $# -gt 0 ]
+then
+  if [ $# -eq 1 -a $1 = --no-events -o $1 = -n ]
+  then do_events=0
+  else
+    echo "usage: $0 [--no-events]"
+    exit 1
+  fi
 fi
-
-if [ $do_events -eq 1 ]
 
 # Separate log files depending on host
 IFS='. ' read -r -a name <<< $HOSTNAME
