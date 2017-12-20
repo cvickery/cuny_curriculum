@@ -70,3 +70,5 @@ known_bad_ids.txt
 /restore*.log
 
 restore*.sql
+
+/events-dump.sql

@@ -2,9 +2,24 @@
 
 # Run the sequence of sql and python scripts to create and initialize the cuny_courses database.
 
+# Default is to dump and restore events, but it doesn't have to be so
+do_events=1
+if [ $1 == '--no-events' -o $1 == '-n' ]
+then do_events=0
+fi
+
+if [ $do_events -eq 1 ]
+
 # Separate log files depending on host
 IFS='. ' read -r -a name <<< $HOSTNAME
 this_host=${name[0]}
+
+if [ $do_events -eq 1 ]
+then
+  echo -n Save events table ...
+  pg_dump --data-only --table=events -f events-dump.sql cuny_courses
+  echo done.
+fi
 
 dropdb cuny_courses > init_psql.$this_host.log
 createdb cuny_courses >> init_psql.$this_host.log
@@ -96,3 +111,11 @@ echo CREATE TABLE event_types...
 echo -n CREATE TABLE events...
 psql cuny_courses < evaluations.sql >> init_psql.$this_host.log
 echo done.
+
+if [ $do_events -eq 1 ]
+then
+  echo -n Restore previous events...
+  psql cuny_courses < events-dump.sql >> init_psql.$this_host.log
+  python3 update_statuses.py >> init.$this_host.log
+  echo done.
+fi
