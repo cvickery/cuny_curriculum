@@ -29,7 +29,7 @@ for event in events:
                             event.group_number,
                             event.destination_institution))
   status = cursor.fetchone()[0]
-  print('status is {}\n  event_type is {}\n  bitmask is {}'.format(status, event.event_type, bitmasks[event.event_type]))
+  # print('status is {}\n  event_type is {}\n  bitmask is {}'.format(status, event.event_type, bitmasks[event.event_type]))
   status = status or bitmasks[event.event_type]
   cursor.execute("""
                   update rule_groups set status = {}
@@ -42,6 +42,6 @@ for event in events:
                           event.discipline,
                           event.group_number,
                           event.destination_institution))
-  print('  new status is {}'.format(status))
+  # print('  new status is {}'.format(status))
 db.commit()
 db.close()
