@@ -90,7 +90,7 @@ fi
 echo done.
 
 echo CREATE TABLE rule_groups...
-psql cuny_courses < rule_status_bits.sql >> init_psql.$this_host.log
+psql cuny_courses < review_status_bits.sql >> init_psql.$this_host.log
 psql cuny_courses < create_rule_groups.sql >> init_psql.$this_host.log
 echo "  generate bad id list... "
 python3 rule_groups.py --generate --progress >> init.$this_host.log
