@@ -45,6 +45,9 @@ cursor.execute("""select code as institution
 known_institutions = [inst[0] for inst in cursor.fetchall()]
 
 if args.generate:
+  """
+      Generate list of bad course_ids referenced in the rows of the transfer rules query
+  """
   baddies = open(known_bad_filename, 'w')
   bad_set = set()
   with open('./queries/' + the_file) as csvfile:
@@ -90,6 +93,8 @@ if args.generate:
             baddies.write('{} dst\n'.format(destination_course_id))
   baddies.close()
 else:
+  """ Populate the three rule information tables
+  """
   conflicts = open('conflicts.{}.log'.format(os.getenv('HOSTNAME').split('.')[0]), 'w')
 
   known_bad_ids = [int(id.split(' ')[0]) for id in open(known_bad_filename)]
