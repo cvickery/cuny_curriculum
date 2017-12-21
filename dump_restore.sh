@@ -4,6 +4,7 @@
 # Google App Engine (GAE) is running an older version of Postgres than I am running on babbage and
 # cvlaptop. (Google: 9.6.1; Me: 10.1)
 
+# 2017-12-21: Automating the cleanup
 (
 . ~/.aliases_du_jour > /dev/null
 restore_file=restore.`date +%Y-%m-%d`.sql
