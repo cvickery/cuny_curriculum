@@ -1,9 +1,14 @@
 Icon*
+
 .DS_STORE
+
 *.csv
-out.txt
+
+*.txt
+
+!mondays_at_seven.txt
+
 /t/*
-cuny_catalog.db
 
 /out
 
@@ -11,64 +16,18 @@ cuny_catalog.db
 
 /dupe_report.txt
 
-/dupe_report.txt
-bad_ones
-known_bad_ids.txt
+/known_bad_ids.txt
 
 /proxy.out
 
-/cuny_restore.log
+/*.log
 
-/local_restore.log
-
-/cuny_courses.sql
-
-/CU_SR_TRNS_EXTERNAL_RULES_SHRT_88.xlsx
-
-/External_Organizations.xlsx
-
-/New_Unsaved_Query_1799.xlsx
-
-/queries/
-
-/init.log
-
-/skipped_courses.log
-
-/test_transfer_rules.py
-
-/init_psql.log
-
-/conflicts.log
-
-/mondays_at_seven.txt
-
-/query_downloads/
-
-/conflicts.cvlaptop.log
-
-/init.cvlaptop.log
-
-/init_psql.cvlaptop.log
-
-/known_bad_ids.cvlaptop.log
-
-/skipped_courses.cvlaptop.log
-
-/conflicts.babbage.log
-
-/init.babbage.log
-
-/init_psql.babbage.log
-
-/known_bad_ids.babbage.log
-
-/skipped_courses.babbage.log
-
-/cuny_external_subjects.py
+/restore*.sql
 
 /restore*.log
 
-restore*.sql
+/queries/
+
+/query_downloads/
 
 /events-dump.sql
