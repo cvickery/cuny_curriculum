@@ -31,3 +31,7 @@ Icon*
 /query_downloads/
 
 /events-dump.sql
+
+/compliance/
+
+/gae-events-dump.sql

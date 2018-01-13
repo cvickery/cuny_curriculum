@@ -1,4 +1,4 @@
-# Use the events table to update rule statuses.
+# Use the events table to set rule statuses.
 #
 
 import psycopg2
@@ -7,6 +7,11 @@ from collections import namedtuple
 db = psycopg2.connect('dbname=cuny_courses')
 cursor = db.cursor()
 
+# Clear all existing status bits: only status changes from the events table will be reflected in
+# the rules table.
+cursor.execute('update rule_groups set status = 0')
+
+# Initialize the bitmasks dict for this script to work from
 cursor.execute('select * from review_status_bits')
 Event_Type = namedtuple('Event_Type', [d[0] for d in cursor.description])
 event_types = map(Event_Type._make, cursor.fetchall())
@@ -14,6 +19,7 @@ bitmasks = dict()
 for event_type in event_types:
   bitmasks[event_type.abbr] = event_type.bitmask
 
+# Process the events table
 cursor.execute('select * from events')
 Event = namedtuple('Event', [d[0] for d in cursor.description])
 events = map(Event._make, cursor.fetchall())

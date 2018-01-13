@@ -1,13 +1,18 @@
 #! /usr/local/bin/bash
 
+# Reinitialize the GAE copy of the cuny_courses db while maintaining existing review activity.
+#
+# 2017-12-21: Automating the cleanup
+#
 # 2017-11-21: To copy the cuny_courses db from here to the cloud is complicated by the fact that
 # Google App Engine (GAE) is running an older version of Postgres than I am running on babbage and
-# cvlaptop. (Google: 9.6.1; Me: 10.1)
+# cvlaptop. (Google: 9.6.1; Me: 10.1.)
 
-# 2017-12-21: Automating the cleanup
 (
-. ~/.aliases_du_jour > /dev/null
+# Need function definition for pgproxy
+. ~/.aliases_du_jour > /dev/null 2>&1
 restore_file=restore.`date +%Y-%m-%d`.sql
+
 # First, be sure sql proxy is not running and create a dump of the local db:
 echo "Be sure pgproxy is stopped (look for 'No matching processes')..."
 pgproxy stop
@@ -27,9 +32,10 @@ pg_dump -O cuny_courses > $restore_file
 echo "Fixing $restore_file ..."
 ack -v "plpgsql" $restore_file | ack -v "AS integer" > temp.sql
 diff $restore_file temp.sql
+
 read -p "Restore to GAE [Yn]? " reply
 if [[ $reply =~ [Nn] ]]
-then rm temp.sql
+then rm -f temp.sql
       echo "Remove '$restore_file' if you don’t want it."
       echo "Nothing else changed."
       exit
@@ -42,19 +48,60 @@ mv temp.sql $restore_file
 # gained by generating the more efficient dump directory.
 
 # To restore to the GAE:
-#   Start the SQL proxy server, delete and recreate the db, and restore as user postgres:
+#   Start the SQL proxy server, save the events table, delete and recreate the db,
+#   restore as user postgres, restore the events table, update rule statuses.
 echo "Restore $restore_file to GAE..."
 echo "  Starting pgproxy ..."
 pgproxy start
 sleep 3
+
+echo '  Saving the events table ...'
+pg_dump --data-only --table=events -f events-dump.sql cuny_courses
+sleep 2
+
 echo '  Dropping GAE database...'
 psql -U postgres -c 'drop database cuny_courses'
 sleep 2
+
 echo '  Creating GAE database...'
 psql -U postgres -c 'create database cuny_courses'
 sleep 2
+
 echo '  Rebuilding GAE database...'
 psql -U postgres cuny_courses < $restore_file > restore.log 2>&1
+if [ $? -eq 0 ]
+then echo '  ... OK'
+else echo "Error: see restore.log for details."
+     exit 1
+fi
+
+echo '  Restore the events table...'
+psql cuny_courses -c "truncate table events restart identity" >> restore.log 2>&1
+if [ $? -eq 0 ]
+then echo '  ... truncate old table OK'
+else echo "Error: see restore.log for details."
+     exit 1
+fi
+sleep 2
+
+
+psql cuny_courses < events-dump.sql >> restore.log 2>&1
+if [ $? -eq 0 ]
+then echo '  ... restore events OK'
+else echo "Error: see restore.log for details."
+     exit 1
+fi
+sleep 2
+
+python3 update_statuses.py >> restore.log 2>&1
+if [ $? -eq 0 ]
+then echo '  ... update statuses OK'
+else echo "Error: see restore.log for details."
+     exit 1
+fi
+
+echo done.
+
 if [ $? -eq 0 ]
 then echo "OK"
 else echo "Error: see restore.log for details."
