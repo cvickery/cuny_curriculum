@@ -26,6 +26,8 @@ Icon*
 
 /restore*.log
 
+/gae_*.sql
+
 /queries/
 
 /query_downloads/
