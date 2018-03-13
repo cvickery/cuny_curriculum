@@ -80,6 +80,14 @@ if [ $? -ne 0 ]
 fi
 echo done.
 
+echo -n CREATE TABLE cuny_divisions...
+python3 cuny_divisions.py >> init.$this_host.log
+if [ $? -ne 0 ]
+  then echo failed
+       exit
+fi
+echo done.
+
 echo -n CREATE TABLE courses...
 psql cuny_courses < create_courses.sql >> init_psql.$this_host.log
 python3 populate_courses.py --report >> init.$this_host.log
