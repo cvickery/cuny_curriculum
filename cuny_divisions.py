@@ -44,11 +44,19 @@ if not ((latest_cat != '0000-00-00') and (latest_cat == latest_req) and (latest_
     print('  {} {}'.format(date.fromtimestamp(os.lstat('./queries/' + file).st_mtime).strftime('%Y-%m-%d'), file))
     exit()
 
+# Get list of known departments
+cursor.execute("""
+                select department
+                from cuny_departments
+                group by department
+               """)
+departments = [department[0] for department in cursor.fetchall()]
+
 # Open the report file
 with open ('./divisions_report_{}.log'.format(datetime.now().strftime('%Y-%m-%d')), 'w') \
   as report:
   anomalies = 0
-  # Get the column names of the catalog file
+  # Process the catalog file
   with open('./queries/' + cat_file, newline='') as csvfile:
     cat_reader = csv.reader(csvfile)
     cols = None
@@ -64,6 +72,8 @@ with open ('./divisions_report_{}.log'.format(datetime.now().strftime('%Y-%m-%d'
         department = row[cols.index('acad_org')]
         division = row[cols.index('acad_group')]
         course_id = row[cols.index('course_id')]
+        # Ignore courses where the department is not in cuny_departments
+        if department not in departments: continue
         if args.debug: print(institution, department, division, course_id)
         key = (institution, department)
         found = False
@@ -88,7 +98,7 @@ with open ('./divisions_report_{}.log'.format(datetime.now().strftime('%Y-%m-%d'
                    create table cuny_divisions (
                      institution text references institutions,
                      division text,
-                     department text,
+                     department text references cuny_departments,
                      courses integer,
                      primary key (institution, division, department)
                    )

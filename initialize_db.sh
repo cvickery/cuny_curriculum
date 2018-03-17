@@ -32,20 +32,50 @@ echo -n CREATE TABLE updates ...
 psql cuny_courses < updates.sql >> init_psql.$this_host.log
 echo done.
 
+# The following is the organizational structure of the University:
+#   Students are undergraduate or graduate (careers) at a college
+#   Colleges own divisions (groups/schools)
+#   Divisions own departments (organizations)
+#   Departments own disciplines (subjects)
+#   Disciplines map to CUNY subjects (external subject areas)
+#   Disciplines own courses
+#   Courses have a requirement designation and a list of attributes
+#
+# The sequence of initializations, however, does not follow this
+# structure.
+#   Careers references institutions, so create institutions first
+#   Divisions references the Departments, so create departments first
+#
 echo -n CREATE TABLE institutions...
 psql cuny_courses < institutions.sql >> init_psql.$this_host.log
 echo done.
 
-echo -n CREATE TABLE cuny_subjects...
-python3 cuny_subjects.py >> init.$this_host.log
+echo -n CREATE TABLE cuny_careers...
+python3 cuny_careers.py >> init.$this_host.log
 if [ $? -ne 0 ]
   then echo failed
        exit
 fi
 echo done.
 
-echo -n CREATE TABLE cuny_careers...
-python3 cuny_careers.py >> init.$this_host.log
+echo -n CREATE TABLE cuny_departments...
+python3 cuny_departments.py >> init.$this_host.log
+if [ $? -ne 0 ]
+  then echo failed
+       exit
+fi
+echo done.
+
+echo -n CREATE TABLE cuny_divisions...
+python3 cuny_divisions.py >> init.$this_host.log
+if [ $? -ne 0 ]
+  then echo failed
+       exit
+fi
+echo done.
+
+echo -n CREATE TABLE cuny_subjects...
+python3 cuny_subjects.py >> init.$this_host.log
 if [ $? -ne 0 ]
   then echo failed
        exit
@@ -72,22 +102,6 @@ echo -n CREATE TABLE course_attributes...
 psql cuny_courses < course_attributes.sql >> init_psql.$this_host.log
 echo done.
 
-echo -n CREATE TABLE cuny_departments...
-python3 cuny_departments.py >> init.$this_host.log
-if [ $? -ne 0 ]
-  then echo failed
-       exit
-fi
-echo done.
-
-echo -n CREATE TABLE cuny_divisions...
-python3 cuny_divisions.py >> init.$this_host.log
-if [ $? -ne 0 ]
-  then echo failed
-       exit
-fi
-echo done.
-
 echo -n CREATE TABLE courses...
 psql cuny_courses < create_courses.sql >> init_psql.$this_host.log
 python3 populate_courses.py --report >> init.$this_host.log
@@ -97,6 +111,7 @@ if [ $? -ne 0 ]
 fi
 echo done.
 
+# Existing transfer rules
 echo CREATE TABLE rule_groups...
 psql cuny_courses < review_status_bits.sql >> init_psql.$this_host.log
 psql cuny_courses < create_rule_groups.sql >> init_psql.$this_host.log
@@ -114,6 +129,7 @@ if [ $? -ne 0 ]
 fi
 echo -e '\ndone.       '
 
+# Managing the rule review process
 echo -n CREATE TABLE sessions...
 psql cuny_courses < sessions.sql >> init_psql.$this_host.log
 echo done.

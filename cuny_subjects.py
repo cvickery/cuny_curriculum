@@ -51,6 +51,13 @@ cursor.execute("""
 
 if args.debug: print('cuny_subjects.py:\n  disciplines: {}\n  cuny_subjects: {}'.format(discp_file,
                                                                                       extern_file))
+# Get list of known departments
+cursor.execute("""
+                select department
+                from cuny_departments
+                group by department
+               """)
+departments = [department[0] for department in cursor.fetchall()]
 
 # CUNY Subjects table
 cursor.execute('drop table if exists cuny_subjects cascade')
@@ -67,6 +74,7 @@ cursor.execute(
     """
     create table disciplines (
       institution text references institutions,
+      department text references cuny_departments,
       discipline text,
       description text,
       cuny_subject text default 'missing' references cuny_subjects,
@@ -103,18 +111,21 @@ with open('./queries/' + discp_file) as csvfile:
         Record = namedtuple('Record', cols)
     else:
       record = Record._make(row)
-      if record.institution != 'UAPC1':
-        external_subject_area = record.external_subject_area
-        if external_subject_area == '':
-          external_subject_area = 'missing'
-        q = """insert into disciplines values ('{}', '{}', '{}', '{}') on conflict do nothing
-            """.format(
-            record.institution,
-            record.subject,
-            record.formal_description.replace('\'', '’'),
-            external_subject_area)
-        if args.debug: print(q)
-        cursor.execute(q)
+      if record.acad_org in departments:
+        if record.institution != 'UAPC1':
+          external_subject_area = record.external_subject_area
+          if external_subject_area == '':
+            external_subject_area = 'missing'
+          q = """insert into disciplines values ('{}', '{}', '{}', '{}', '{}')
+                    on conflict do nothing
+              """.format(
+              record.institution,
+              record.acad_org,
+              record.subject,
+              record.formal_description.replace('\'', '’'),
+              external_subject_area)
+          if args.debug: print(q)
+          cursor.execute(q)
   db.commit()
 
 db.close()
