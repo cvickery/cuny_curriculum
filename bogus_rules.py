@@ -1,5 +1,5 @@
-# Remove rows from the internal rules query where the discipline/catalog# differ between the rule
-# and the actual catalog info.
+# Identify rows from the internal rules query where the discipline/catalog# differ between the rule
+# and the actual catalog info. Create and populate the bogus_rules table.
 import psycopg2
 import csv
 import re
@@ -29,6 +29,27 @@ all_files = [x for x in os.listdir('./queries/') if x.startswith('QNS_CV_SR_TRNS
 csvfile_name = sorted(all_files, reverse=True)[0]
 logfile_name = csvfile_name.replace('.csv', '.log')
 if args.debug: print('rules file: {}'.format(csvfile_name))
+
+cursor.execute('drop table if exists bogus_rules')
+cursor.execute("""
+               create table bogus_rules (
+
+                 id serial primary key,
+                 source_institution text references institutions,
+                 source_discipline text,
+                 rule_group integer,
+                 destination_institution text references institutions,
+
+                 source_course_id integer,
+                 source_course_id_is_bogus boolean,
+                 bogus_source_discipline text,
+                 bogus_source_catalog_number text,
+
+                 destination_course_id integer,
+                 destination_course_id_is_bogus boolean,
+                 bogus_destination_discipline text,
+                 bogus_destination_catalog_number text)
+               """)
 
 num_records = sum(1 for line in open('queries/' + csvfile_name))
 count_records = 0
@@ -63,7 +84,12 @@ with open('./' + logfile_name, 'w') as logfile:
            record.destination_institution not in known_institutions:
           continue
 
-        error = ''
+        source_course_id_is_bogus = False
+        bogus_source_discipline = ''
+        bogus_source_catalog_number = ''
+        destination_course_id_is_bogus = False
+        bogus_destination_discipline = ''
+        bogus_destination_catalog_number = ''
 
         # Check source course
         source_course_id = int(record.source_course_id)
@@ -74,19 +100,21 @@ with open('./' + logfile_name, 'w') as logfile:
                        """, (source_course_id, ))
         src_info = [row for row in cursor.fetchall()]
         if len(src_info) == 0:
-          error = 'Source course not in cuny catalog.\n'
+          source_course_id_is_bogus = True
+          bogus_source_discipline = record.source_discipline
+          bogus_source_catalog_number = record.source_catalog_num
         else:
           if args.debug: print('src_info', src_info)
           if src_info[0][0] != record.source_discipline:
-            error += '  Source discipline ({}) does not match cuny catalog ({}).\n'.format(
-                      src_info[0][0], record.source_discipline)
+            bogus_source_discipline = record.source_discipline
+          # Check numeric part of catalog number only
           src_num = re.search('\d+', src_info[0][1])
           if src_num: src_num = src_num.group(0)
           cat_num = re.search('\d+', record.source_catalog_num)
           if cat_num: cat_num = cat_num.group(0)
           if src_num != cat_num:
-            error += '  Source catalog number ({}) does not match cuny catalog: ({}).'.format(
-                      src_num, cat_num)
+            # ... but record the actual number from the CF query result
+            bogus_source_catalog_number = record.source_catalog_num.strip()
 
         # Check destination course
         destination_course_id = int(record.destination_course_id)
@@ -97,25 +125,84 @@ with open('./' + logfile_name, 'w') as logfile:
                        """, (destination_course_id, ))
         dst_info = [row for row in cursor.fetchall()]
         if len(dst_info) == 0:
-          error = 'Destination course not in cuny catalog.\n'
+          destination_course_id_is_bogus = True
+          bogus_destination_discipline = record.destination_discipline
+          bogus_destination_catalog_number = record.destination_catalog_num
         else:
           if args.debug: print('dst_info', dst_info)
           if dst_info[0][0] != record.destination_discipline:
-            error += '  Destination discipline ({}) does not match cuny catalog ({}).\n'.format(
-                      dst_info[0][0], record.destination_discipline)
+            bogus_destination_discipline = record.destination_discipline
           dst_num = re.search('\d+', dst_info[0][1])
           if dst_num: dst_num = dst_num.group(0)
           cat_num = re.search('\d+', record.destination_catalog_num)
           if cat_num: cat_num = cat_num.group(0)
           if dst_num != cat_num:
-            error += '  Destination catalog number ({}) does not match cuny catalog: ({}).'.format(
-                      dst_num, cat_num)
-        if error != '':
-          num_bogus += 1
-          logfile.write('{}\n{}'.format(row, error))
+            bogus_destination_catalog_number = record.destination_catalog_num.strip()
 
-  logfile.write('Found {} bogus records ({:.1}%) out of {}.\n'.format(num_bogus,
+        if  source_course_id_is_bogus or \
+            bogus_source_discipline or \
+            bogus_source_catalog_number or \
+            destination_course_id_is_bogus or bogus_destination_discipline or \
+            bogus_destination_catalog_number:
+          num_bogus += 1
+          rule_group_key = '{}-{}-{}-{}'.format(record.source_institution,
+                                                record.source_discipline,
+                                                record.src_equivalency_component,
+                                                record.destination_discipline)
+
+          # id serial primary key,
+          # source_institution text references institutions,
+          # source_discipline text,
+          # rule_group integer,
+          # destination_institution text references institutions,
+
+          # source_course_id integer,
+          # source_course_id_is_bogus boolean,
+          # bogus_source_discipline text,
+          # bogus_source_catalog_number text,
+
+          # destination_course_id integer,
+          # destination_course_id_is_bogus boolean,
+          # bogus_destination_discipline text,
+          # bogus_destination_catalog_number text
+
+          cursor.execute("""
+                          insert into bogus_rules
+                          values (default, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s )
+                         """, (record.source_institution,
+                               record.source_discipline,
+                               record.src_equivalency_component,
+                               record.destination_institution,
+
+                               source_course_id,
+                               source_course_id_is_bogus,
+                               bogus_source_discipline,
+                               bogus_source_catalog_number,
+
+                               destination_course_id,
+                               destination_course_id_is_bogus,
+                               bogus_destination_discipline,
+                               bogus_destination_catalog_number))
+          logfile.write('\n{}-{}-{}-{}: {} {} {} {} {} {} {} {}'.format(
+                                                              record.source_institution,
+                                                              record.source_discipline,
+                                                              record.src_equivalency_component,
+                                                              record.destination_institution,
+
+                                                              source_course_id,
+                                                              source_course_id_is_bogus,
+                                                              bogus_source_discipline,
+                                                              bogus_source_catalog_number,
+
+                                                              destination_course_id,
+                                                              destination_course_id_is_bogus,
+                                                              bogus_destination_discipline,
+                                                              bogus_destination_catalog_number))
+
+  logfile.write('\nFound {:,} bogus records ({:.2f}%) out of {:,}.\n'.format(num_bogus,
                                                               100 *num_bogus / num_records,
                                                               num_records))
 
+db.commit()
+db.close()
 print()
