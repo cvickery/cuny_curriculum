@@ -20,6 +20,7 @@ this_host=${name[0]}
 
 if [ $do_events -eq 1 ]
 then
+  touch events-dump.sql
   echo -n Save events table ...
   pg_dump --data-only --table=events -f events-dump.sql cuny_courses
   echo done.
@@ -127,7 +128,15 @@ if [ $? -ne 0 ]
   then echo failed
        exit
 fi
-echo -e '\ndone.       '
+echo -e '\ndone.'
+
+echo "  identify bogus rules... "
+python3 bogus_rules.py --progress >> init.$this_host.log
+if [ $? -ne 0 ]
+  then echo failed
+       exit
+fi
+echo -e '\ndone.'
 
 # Managing the rule review process
 echo -n CREATE TABLE sessions...
