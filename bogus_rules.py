@@ -205,4 +205,6 @@ with open('./' + logfile_name, 'w') as logfile:
 
 db.commit()
 db.close()
-print()
+print('  Found {:,} bogus records ({:.2f}%) out of {:,}.'.format(num_bogus,
+                                                              100 *num_bogus / num_records,
+                                                              num_records))
