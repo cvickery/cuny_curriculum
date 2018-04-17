@@ -127,13 +127,13 @@ else:
                                                          file=sys.stderr)
         record = Record._make(row)
 
-        source_institution = record.source_institution
-        destination_institution = record.destination_institution
-        if source_institution not in known_institutions:
-          conflicts.write('Unknown institution: {}\n'.format(source_institution))
+        src_institution = record.source_institution
+        if src_institution not in known_institutions:
+          conflicts.write('Unknown institution: {}\n'.format(src_institution))
           continue
-        if destination_institution not in known_institutions:
-          conflicts.write('Unknown institution: {}\n'.format(destination_institution))
+        dest_institution = record.destination_institution
+        if dest_institution not in known_institutions:
+          conflicts.write('Unknown institution: {}\n'.format(dest_institution))
           continue
 
         # Assemble the components of the rule group
@@ -145,6 +145,16 @@ else:
                           from courses
                           where course_id = {}""".format(source_course_id))
         source_institution, source_discipline = cursor.fetchone()
+        if source_institution != src_institution:
+          conflicts.write("""Source institution ({}) != course institution ({})\n"""\
+                          .format(src_instituion, source_instution))
+        cursor.execute("""select institution
+                            from courses
+                           where course_id = {}""".format(destination_course_id))
+        destination_institution = cursor.fetchone()[0]
+        if destination_institution != dest_institution:
+          conflicts.write("""Destination institution ({}) != course institution ({})\n"""\
+                          .format(dest_institution, destination_institution))
         rule_group_number = int(record.src_equivalency_component)
         min_gpa = float(record.min_grade_pts)
         max_gpa = float(record.max_grade_pts)
