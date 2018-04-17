@@ -25,9 +25,10 @@ insert into institutions values ('MEC01', 'Medgar Evers',   'Medgar Evers Colleg
 insert into institutions values ('MED01', 'Medical School', 'CUNY School of Medicine',        false, false);
 insert into institutions values ('MHC01', 'Macaulay',       'Macaulay Honors College',        false, true);
 insert into institutions values ('NCC01', 'Guttman',        'Guttman Community College',      true,  false);
-insert into institutions values ('NYT01', 'City Tech',      'NYC College of Technology',      true,  true);
+insert into institutions values ('NYT01', 'City Tech',       'NYC College of Technology',      true,  true);
 insert into institutions values ('QCC01', 'Queensborough',  'Queensborough CC',               true,  false);
 insert into institutions values ('QNS01', 'Queens',         'Queens College',                 false, true);
+insert into institutions values ('SOJ01', 'SOJ',            'Graduate School of Journalism', false, false);
 insert into institutions values ('SPH01', 'Public Health',  'CUNY School of Public Health',   false, false);
 insert into institutions values ('SPS01', 'SPS',            'School of Professional Studies', false, true);
 insert into institutions values ('YRK01', 'York',           'York College',                   false, true);

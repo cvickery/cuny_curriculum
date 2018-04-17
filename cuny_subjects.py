@@ -82,7 +82,7 @@ cursor.execute(
     """)
 
 # Populate cuny_subjects
-# cursor.execute("insert into cuny_subjects values('missing', 'MISSING')")
+cursor.execute("insert into cuny_subjects values('missing', 'MISSING')")
 with open('./queries/' + extern_file) as csvfile:
   csv_reader = csv.reader(csvfile)
   cols = None
