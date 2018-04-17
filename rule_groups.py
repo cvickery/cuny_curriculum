@@ -146,15 +146,15 @@ else:
                           where course_id = {}""".format(source_course_id))
         source_institution, source_discipline = cursor.fetchone()
         if source_institution != src_institution:
-          conflicts.write("""Source institution ({}) != course institution ({})\n"""\
-                          .format(src_instituion, source_instution))
+          conflicts.write("""Source institution ({}) != course institution ({})\n{}\n"""\
+                          .format(src_instituion, source_instution, record))
         cursor.execute("""select institution
                             from courses
                            where course_id = {}""".format(destination_course_id))
         destination_institution = cursor.fetchone()[0]
         if destination_institution != dest_institution:
-          conflicts.write("""Destination institution ({}) != course institution ({})\n"""\
-                          .format(dest_institution, destination_institution))
+          conflicts.write("""Destination institution ({}) != course institution ({})\n{}\n"""\
+                          .format(dest_institution, destination_institution, record))
         rule_group_number = int(record.src_equivalency_component)
         min_gpa = float(record.min_grade_pts)
         max_gpa = float(record.max_grade_pts)
