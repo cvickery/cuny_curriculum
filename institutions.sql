@@ -23,6 +23,7 @@ insert into institutions values ('LAW01', 'Law School',     'CUNY School of Law'
 insert into institutions values ('LEH01', 'Lehman',         'Lehman College',                 false, true);
 insert into institutions values ('MEC01', 'Medgar Evers',   'Medgar Evers College',           true,  true);
 insert into institutions values ('MED01', 'Medical School', 'CUNY School of Medicine',        false, false);
+insert into institutions values ('MHC01', 'Macaulay',       'Macaulay Honors College',        false, true);
 insert into institutions values ('NCC01', 'Guttman',        'Guttman Community College',      true,  false);
 insert into institutions values ('NYT01', 'City Tech',      'NYC College of Technology',      true,  true);
 insert into institutions values ('QCC01', 'Queensborough',  'Queensborough CC',               true,  false);
