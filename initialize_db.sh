@@ -52,7 +52,7 @@ psql cuny_courses < institutions.sql >> init_psql.$this_host.log
 echo done.
 
 echo -n CREATE TABLE cuny_careers...
-python3 cuny_careers.py >> init.$this_host.log
+python3 cuny_careers.py > init.$this_host.log
 if [ $? -ne 0 ]
   then echo failed
        exit
