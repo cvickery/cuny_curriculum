@@ -44,6 +44,13 @@ if not ((latest_cat != '0000-00-00') and (latest_cat == latest_req) and (latest_
     print('  {} {}'.format(date.fromtimestamp(os.lstat('./queries/' + file).st_mtime).strftime('%Y-%m-%d'), file))
     exit()
 
+# Get list of known institutions
+cursor.execute("""
+                 select code
+                 from institutions
+               """)
+institutions = [institution[0] for institution in cursor.fetchall()]
+
 # Get list of known departments
 cursor.execute("""
                 select department
@@ -69,6 +76,7 @@ with open ('./divisions_report_{}.log'.format(datetime.now().strftime('%Y-%m-%d'
           # print(cols)
       else:
         institution = row[cols.index('institution')]
+        if institution not in institutions: continue
         department = row[cols.index('acad_org')]
         division = row[cols.index('acad_group')]
         course_id = row[cols.index('course_id')]
