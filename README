@@ -1,13 +1,14 @@
 2017-12-19
-Here are the queries that run each Monday. The get_cuny command should be run as a cron job after
+Here are the queries that run each Tuesday morning. The get_cuny command should be run as a cron job after
 Tumbleweed receives the files, and then I need a script that extracts events, re-initializes the db,
 restores the events and rule statuses, and updates the db in the Google App Engine.
-$ get_cuny
-Converting QNS_CV_ACADEMIC_ORGANIZATIONS-14640497.csv ... done.
-Converting QNS_CV_CUNY_DISCIPLINES-14648965.csv ... done.
-Converting QNS_CV_CUNY_SUBJECTS-14648960.csv ... done.
-Converting QNS_CV_CUNY_SUBJECT_TABLE-14640498.csv ... done.
-Converting QNS_CV_SR_TRNS_INTERNAL_RULES-14640508.csv ... done.
-Converting QNS_QCCV_COURSE_ATTRIBUTES_NP-14640499.csv ... done.
-Converting QNS_QCCV_CU_CATALOG_NP-14640503.csv ... done.
-Converting QNS_QCCV_CU_REQUISITES_NP-14640505.csv ... done.
+
+  QNS_CV_ACADEMIC_ORGANIZATIONS
+  QNS_CV_CUNY_DISCIPLINES
+  QNS_CV_CUNY_SUBJECTS
+  QNS_CV_CUNY_SUBJECT_TABLE
+  QNS_CV_SR_TRNS_INTERNAL_RULES
+  QNS_QCCV_COURSE_ATTRIBUTES_NP       <== the attribute names by course_id
+  SR742___CRSE_ATTRIBUTE_VALUE        <== The possible values in the attributes table
+  QNS_QCCV_CU_CATALOG_NP
+  QNS_QCCV_CU_REQUISITES_NP
