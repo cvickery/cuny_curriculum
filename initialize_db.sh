@@ -45,11 +45,21 @@ echo done.
 # The sequence of initializations, however, does not follow this
 # structure.
 #   Careers references institutions, so create institutions first
-#   Divisions references the Departments, so create departments first
+#   Divisions references departments, so create departments first
 #
 echo -n CREATE TABLE institutions...
 psql cuny_courses < institutions.sql >> init_psql.$this_host.log
 echo done.
+
+# Python scripts process query results, so check that they are all present
+# and report any mismatched dates.
+
+echo -n CHECK QUERY FILES...
+./query_check.sh > init.$this_host.log
+if [ $? -ne 0 ]
+  then echo WARNING: mismatched dates
+  else echo done
+fi
 
 echo -n CREATE TABLE cuny_careers...
 python3 cuny_careers.py > init.$this_host.log

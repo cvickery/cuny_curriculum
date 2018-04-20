@@ -14,7 +14,7 @@ cur.execute(
       description text,
       primary key (attribute_name, attribute_value))
     """)
-with open('./queries/SR742A___CRSE_ATTRIBUTE_VALUE.csv') as csvfile:
+with open('./latest_queries/SR742A___CRSE_ATTRIBUTE_VALUE.csv') as csvfile:
   csv_reader = csv.reader(csvfile)
   cols = None
   for row in csv_reader:

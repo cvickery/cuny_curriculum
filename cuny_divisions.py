@@ -20,28 +20,16 @@ cursor = db.cursor()
 # report of all courses in the "wrong" division.                                   #
 # *********************************************************************************#
 
-all_files = [x for x in os.listdir('./queries/') if x.endswith('.csv')]
-# Find most recent catalog, requisite, and attribute files; be sure they all
-# have the same date. Only the catalog file is used here, but it should be
-# consistent with the other two.
-latest_cat = '0000-00-00'
-latest_req = '0000-00-00'
-latest_att = '0000-00-00'
-for file in all_files:
-  mdate = date.fromtimestamp(os.lstat('./queries/' + file).st_mtime).strftime('%Y-%m-%d')
-  if re.search('catalog_np', file, re.I) and mdate > latest_cat:
-    latest_cat = mdate
-    cat_file = file
-  if re.search('requisites_np', file, re.I) and mdate > latest_req:
-    latest_req = mdate
-    req_file = file
-  if re.search('attributes_np', file, re.I) and mdate > latest_att:
-    latest_att = mdate
-    att_file = file
-if not ((latest_cat != '0000-00-00') and (latest_cat == latest_req) and (latest_req == latest_att)):
+cat_file = './latest_queries/QNS_QCCV_CU_CATALOG_NP.csv'
+req_file = './latest_queries/QNS_QCCV_CU_REQUISITES_NP.csv'
+att_file = './latest_queries/QNS_QCCV_COURSE_ATTRIBUTES_NP.csv'
+cat_date = date.fromtimestamp(os.lstat(cat_file).st_birthtime).strftime('%Y-%m-%d')
+req_date = date.fromtimestamp(os.lstat(req_file).st_birthtime).strftime('%Y-%m-%d')
+att_date = date.fromtimestamp(os.lstat(att_file).st_birthtime).strftime('%Y-%m-%d')
+if not ((cat_date == req_date) and (req_date == att_date)):
   print('*** FILE DATES DO NOT MATCH ***')
-  for d, file in [[latest_att, att_file], [latest_cat, cat_file], [latest_req, req_file]]:
-    print('  {} {}'.format(date.fromtimestamp(os.lstat('./queries/' + file).st_mtime).strftime('%Y-%m-%d'), file))
+  for d, file in [[att_date, att_file], [cat_date, cat_file], [req_date, req_file]]:
+    print('  {} {}'.format(d, file))
     exit()
 
 # Get list of known institutions
@@ -64,7 +52,7 @@ with open ('./divisions_report_{}.log'.format(datetime.now().strftime('%Y-%m-%d'
   as report:
   anomalies = 0
   # Process the catalog file
-  with open('./queries/' + cat_file, newline='') as csvfile:
+  with open(cat_file, newline='') as csvfile:
     cat_reader = csv.reader(csvfile)
     cols = None
     divisions = dict()

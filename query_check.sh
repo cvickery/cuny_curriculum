@@ -21,4 +21,21 @@
     ln $first $t.csv
     gstat -c "%w %n" $t.csv | cut -c 1-11,52-
   done
+
+  # Do the query dates match?
+  dates=()
+  for file in latest_queries/*.csv
+  do
+    dates+=(`gstat -c %w $file | cut -c 1-10`)
+  done
+  for d1 in ${dates[@]}
+  do
+    for d2 in ${dates[@]}
+    do
+      if [[ $d1 != $d2 ]]
+      then echo "Dates do not match: $d1 != $d2"
+      fi
+    done
+  done
+  echo "Query dates okay"
  )

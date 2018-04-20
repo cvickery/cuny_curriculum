@@ -25,9 +25,9 @@ cursor.execute("""select code as institution
 known_institutions = [inst[0] for inst in cursor.fetchall()]
 
 # Get most recent transfer_rules query file
-all_files = [x for x in os.listdir('./queries/') if x.startswith('QNS_CV_SR_TRNS_INTERNAL_RULES')]
-csvfile_name = sorted(all_files, reverse=True)[0]
-logfile_name = csvfile_name.replace('.csv', '.log')
+csvfile_name = './latest_queries/QNS_CV_SR_TRNS_INTERNAL_RULES.csv'
+file_date = date.fromtimestamp(os.lstat(csvfile_name).st_birthtime).strftime('%Y-%m-%d')
+logfile_name = './QNS_CV_SR_TRNS_INTERNAL_RULES_{}.csv'.format(file_date)
 if args.debug: print('rules file: {}'.format(csvfile_name))
 
 cursor.execute('drop table if exists bogus_rules')
@@ -51,11 +51,11 @@ cursor.execute("""
                  bogus_destination_catalog_number text)
                """)
 
-num_records = sum(1 for line in open('queries/' + csvfile_name))
+num_records = sum(1 for line in open(csvfile_name))
 count_records = 0
 num_bogus = 0
-with open('./' + logfile_name, 'w') as logfile:
-  with open('./queries/' + csvfile_name) as csvfile:
+with open(logfile_name, 'w') as logfile:
+  with open(csvfile_name) as csvfile:
     csv_reader = csv.reader(csvfile)
     cols = None
     row_num = 0

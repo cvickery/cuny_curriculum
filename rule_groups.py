@@ -22,18 +22,19 @@ db = psycopg2.connect('dbname=cuny_courses')
 cursor = db.cursor()
 
 # Get most recent transfer_rules query file
-all_files = [x for x in os.listdir('./queries/') if x.startswith('QNS_CV_SR_TRNS_INTERNAL_RULES')]
-the_file = sorted(all_files, reverse=True)[0]
-file_date = date.fromtimestamp(os.lstat('./queries/' + the_file).st_mtime).strftime('%Y-%m-%d')
+the_file = './latest_queries/QNS_CV_SR_TRNS_INTERNAL_RULES.csv'
+file_date = date\
+      .fromtimestamp(os.lstat(the_file).st_mtime).strftime('%Y-%m-%d')
+
 cursor.execute("""
                update updates
                set update_date = '{}', file_name = '{}'
                where table_name = 'rules'""".format(file_date, the_file))
 
 if args.report:
-  print('Transfer rules query file:', the_file)
+  print('Transfer rules query file: {} {}'.format(file_date, the_file))
 
-num_lines = sum(1 for line in open('queries/' + the_file))
+num_lines = sum(1 for line in open(the_file))
 
 known_bad_filename = 'known_bad_ids.{}.log'.format(os.getenv('HOSTNAME').split('.')[0])
 
@@ -50,7 +51,7 @@ if args.generate:
   """
   baddies = open(known_bad_filename, 'w')
   bad_set = set()
-  with open('./queries/' + the_file) as csvfile:
+  with open(the_file) as csvfile:
     csv_reader = csv.reader(csvfile)
     cols = None
     row_num = 0
@@ -105,7 +106,7 @@ else:
   num_source_courses = 0
   num_destination_courses = 0
 
-  with open('./queries/' + the_file) as csvfile:
+  with open(the_file) as csvfile:
     csv_reader = csv.reader(csvfile)
     cols = None
     row_num = 0;

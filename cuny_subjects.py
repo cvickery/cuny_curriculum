@@ -18,36 +18,19 @@ db = psycopg2.connect('dbname=cuny_courses')
 cursor = db.cursor()
 
 # Internal Subjects (disciplines)
-# Be sure there are subject_tbl (disciplines) and external_subject (cuny_subjects) query files,
-# and get the latest ones.
-all_files = [x for x in os.listdir('./queries/') if x.endswith('.csv')]
-latest_discp = '0000-00-00'
-discp_file = None
-latest_extern = '0000-00-00'
-extern_file = None
-for file in all_files:
-  mdate = date.fromtimestamp(os.lstat('./queries/' + file).st_mtime).strftime('%Y-%m-%d')
-  if re.search('cuny_disciplines', file, re.I) and mdate > latest_discp:
-    latest_discp = mdate
-    discp_file = file
-  if re.search('cuny_subjects', file, re.I) and mdate > latest_extern:
-    latest_extern = mdate
-    extern_file = file
+discp_file = './latest_queries/QNS_CV_CUNY_DISCIPLINES.csv'
+extern_file = './latest_queries/QNS_CV_CUNY_SUBJECTS.csv'
+discp_date = date.fromtimestamp(os.lstat(discp_file).st_birthtime).strftime('%Y-%m-%d')
+extern_date = date.fromtimestamp(os.lstat(extern_file).st_birthtime).strftime('%Y-%m-%d')
 
-if discp_file == None:
-  print('No CUNY disciplines query found', file = sys.stderr)
-  exit(1)
-if extern_file == None:
-  print('No CUNY subjects query found', file = sys.stderr)
-  exit(1)
 cursor.execute("""
                update updates
                set update_date = '{}', file_name = '{}'
-               where table_name = 'disciplines'""".format(latest_discp, discp_file))
+               where table_name = 'disciplines'""".format(discp_date, discp_file))
 cursor.execute("""
                update updates
                set update_date = '{}', file_name = '{}'
-               where table_name = 'subjects'""".format(latest_extern, extern_file))
+               where table_name = 'subjects'""".format(extern_date, extern_file))
 
 if args.debug: print('cuny_subjects.py:\n  disciplines: {}\n  cuny_subjects: {}'.format(discp_file,
                                                                                       extern_file))
@@ -83,7 +66,7 @@ cursor.execute(
 
 # Populate cuny_subjects
 cursor.execute("insert into cuny_subjects values('missing', 'MISSING')")
-with open('./queries/' + extern_file) as csvfile:
+with open(extern_file) as csvfile:
   csv_reader = csv.reader(csvfile)
   cols = None
   for row in csv_reader:
@@ -100,7 +83,7 @@ with open('./queries/' + extern_file) as csvfile:
   db.commit()
 
 # Populate disciplines
-with open('./queries/' + discp_file) as csvfile:
+with open(discp_file) as csvfile:
   csv_reader = csv.reader(csvfile)
   cols = None
   for row in csv_reader:
