@@ -23,6 +23,7 @@ with open('./latest_queries/ACAD_CAREER_TBL.csv') as csvfile:
       row[0] = row[0].replace('\ufeff', '')
       cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
     else:
+      if row[cols.index('institution')] == 'UAPC1': continue
       is_graduate = 0
       if row[cols.index('graduate')] == 'Y': is_graduate = 1
       q = """insert into cuny_careers values('{}', '{}', '{}', cast({} as boolean))""".format(

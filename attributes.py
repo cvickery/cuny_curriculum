@@ -22,7 +22,7 @@ with open('./latest_queries/SR742A___CRSE_ATTRIBUTE_VALUE.csv') as csvfile:
       row[0] = row[0].replace('\ufeff', '')
       cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
     else:
-      q = """insert into attributes values('{}', '{}', '{}')""".format(
+      q = """insert into attributes values('{}', '{}', '{}') on conflict do nothing""".format(
           row[cols.index('crse_attr')],
           row[cols.index('crsatr_val')],
           row[cols.index('formal_description')].replace('\'', '’'))

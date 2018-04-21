@@ -31,11 +31,11 @@ if not ((cat_date == req_date) and (req_date == att_date)):
 cursor.execute("""
                update updates
                set update_date = '{}', file_name = '{}'
-               where table_name = 'courses'""".format(latest_cat, cat_file))
+               where table_name = 'courses'""".format(cat_date, cat_file))
 
 if args.report:
   print("""Catalog file\t{} ({})\nRequisites file\t{} ({})\nAttributes file\t{} ({})
-        """.format(cat_file, latest_cat, req_file, latest_req, att_file, latest_att  ))
+        """.format(cat_file, cat_date, req_file, req_date, att_file, att_date  ))
 
 # Update the attributes table for all colleges
 cursor.execute("delete from course_attributes")
@@ -147,6 +147,7 @@ if args.report:
   num_found = cursor.fetchone()[0]
   print('  {:,} retained; {:,} duplicates ignored'.format(num_found, num_courses - num_found))
   print('Skipped {} courses.'.format(skipped))
-cursor.execute("update institutions set date_updated='{}'".format(latest_cat))
+# The date the catalog information for institutions was updated
+cursor.execute("update institutions set date_updated='{}'".format(cat_date))
 db.commit()
 db.close()

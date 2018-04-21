@@ -16,6 +16,7 @@ cur.execute('drop table if exists cuny_departments cascade')
 cur.execute("""
   create table cuny_departments (
   department text primary key,
+  institution text references institutions,
   description text)
   """)
 with open(org_file) as csvfile:
@@ -27,8 +28,11 @@ with open(org_file) as csvfile:
       if row[0].lower() == 'acad org':
         cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
     else:
+      institution = row[cols.index('institution')]
+      if institution == 'CUNY' or institution == 'UAPC1': continue
       q = """insert into cuny_departments values('{}', '{}')""".format(
           row[cols.index('acad_org')],
+          row[cols.index('institution')],
           row[cols.index('formaldesc')].replace('\'', '’'))
       cur.execute(q)
   db.commit()
