@@ -14,10 +14,6 @@ then
   fi
 fi
 
-# Separate log files depending on host
-IFS='. ' read -r -a name <<< $HOSTNAME
-this_host=${name[0]}
-
 if [ $do_events -eq 1 ]
 then
   touch events-dump.sql
@@ -26,11 +22,11 @@ then
   echo done.
 fi
 
-dropdb cuny_courses > init_psql.$this_host.log
-createdb cuny_courses >> init_psql.$this_host.log
+dropdb cuny_courses > init_psql.log
+createdb cuny_courses >> init_psql.log
 
 echo -n CREATE TABLE updates ...
-psql cuny_courses < updates.sql >> init_psql.$this_host.log
+psql cuny_courses < updates.sql >> init_psql.log
 echo done.
 
 # The following is the organizational structure of the University:
@@ -48,21 +44,23 @@ echo done.
 #   Divisions references departments, so create departments first
 #
 echo -n CREATE TABLE institutions...
-psql cuny_courses < institutions.sql >> init_psql.$this_host.log
+psql cuny_courses < institutions.sql >> init_psql.log
 echo done.
 
 # Python scripts process query results, so check that they are all present
 # and report any mismatched dates.
 
 echo -n CHECK QUERY FILES...
-./query_check.sh > init.$this_host.log
+./check_query_dates.sh > init.log
 if [ $? -ne 0 ]
-  then echo WARNING: mismatched dates
-  else echo done
+  then echo "WARNING: mismatched dates."
+  else echo done.
 fi
 
+# Now regenerate the tables that are based on query results
+#
 echo -n CREATE TABLE cuny_careers...
-python3 cuny_careers.py > init.$this_host.log
+python3 cuny_careers.py >> init.log
 if [ $? -ne 0 ]
   then echo failed
        exit
@@ -70,7 +68,7 @@ fi
 echo done.
 
 echo -n CREATE TABLE cuny_departments...
-python3 cuny_departments.py >> init.$this_host.log
+python3 cuny_departments.py >> init.log
 if [ $? -ne 0 ]
   then echo failed
        exit
@@ -78,7 +76,7 @@ fi
 echo done.
 
 echo -n CREATE TABLE cuny_divisions...
-python3 cuny_divisions.py >> init.$this_host.log
+python3 cuny_divisions.py >> init.log
 if [ $? -ne 0 ]
   then echo failed
        exit
@@ -86,7 +84,7 @@ fi
 echo done.
 
 echo -n CREATE TABLE cuny_subjects...
-python3 cuny_subjects.py >> init.$this_host.log
+python3 cuny_subjects.py >> init.log
 if [ $? -ne 0 ]
   then echo failed
        exit
@@ -94,7 +92,7 @@ fi
 echo done.
 
 echo -n CREATE TABLE designations...
-python3 designations.py >> init.$this_host.log
+python3 designations.py >> init.log
 if [ $? -ne 0 ]
   then echo failed
        exit
@@ -102,7 +100,7 @@ fi
 echo done.
 
 echo -n CREATE TABLE attributes...
-python3 attributes.py >> init.$this_host.log
+python3 attributes.py >> init.log
 if [ $? -ne 0 ]
   then echo failed
        exit
@@ -110,12 +108,12 @@ fi
 echo done.
 
 echo -n CREATE TABLE course_attributes...
-psql cuny_courses < course_attributes.sql >> init_psql.$this_host.log
+psql cuny_courses < course_attributes.sql >> init_psql.log
 echo done.
 
 echo -n CREATE TABLE courses...
-psql cuny_courses < create_courses.sql >> init_psql.$this_host.log
-python3 populate_courses.py --report >> init.$this_host.log
+psql cuny_courses < create_courses.sql >> init_psql.log
+python3 populate_courses.py --report >> init.log
 if [ $? -ne 0 ]
   then echo failed
        exit
@@ -124,16 +122,16 @@ echo done.
 
 # Existing transfer rules
 echo CREATE TABLE rule_groups...
-psql cuny_courses < review_status_bits.sql >> init_psql.$this_host.log
-psql cuny_courses < create_rule_groups.sql >> init_psql.$this_host.log
+psql cuny_courses < review_status_bits.sql >> init_psql.log
+psql cuny_courses < create_rule_groups.sql >> init_psql.log
 echo "  generate bad id list... "
-python3 rule_groups.py --generate --progress >> init.$this_host.log
+python3 rule_groups.py --generate --progress >> init.log
 if [ $? -ne 0 ]
   then echo failed
        exit
 fi
 echo "  populate rule_groups... "
-python3 rule_groups.py --progress --report >> init.$this_host.log
+python3 rule_groups.py --progress --report >> init.log
 if [ $? -ne 0 ]
   then echo failed
        exit
@@ -141,7 +139,7 @@ fi
 echo -e '\ndone.'
 
 echo "  identify bogus rules... "
-python3 bogus_rules.py --progress >> init.$this_host.log
+python3 bogus_rules.py --progress >> init.log
 if [ $? -ne 0 ]
   then echo failed
        exit
@@ -150,19 +148,19 @@ echo -e '\ndone.'
 
 # Managing the rule review process
 echo -n CREATE TABLE sessions...
-psql cuny_courses < sessions.sql >> init_psql.$this_host.log
+psql cuny_courses < sessions.sql >> init_psql.log
 echo done.
 
 echo CREATE TABLE pending_reviews...
 echo CREATE TABLE event_types...
 echo -n CREATE TABLE events...
-psql cuny_courses < reviews.sql >> init_psql.$this_host.log
+psql cuny_courses < reviews.sql >> init_psql.log
 echo done.
 
 if [ $do_events -eq 1 ]
 then
   echo -n Restore previous events...
-  psql cuny_courses < events-dump.sql >> init_psql.$this_host.log
-  python3 update_statuses.py >> init.$this_host.log
+  psql cuny_courses < events-dump.sql >> init_psql.log
+  python3 update_statuses.py >> init.log
   echo done.
 fi

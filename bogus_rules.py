@@ -27,7 +27,7 @@ known_institutions = [inst[0] for inst in cursor.fetchall()]
 # Get most recent transfer_rules query file
 csvfile_name = './latest_queries/QNS_CV_SR_TRNS_INTERNAL_RULES.csv'
 file_date = date.fromtimestamp(os.lstat(csvfile_name).st_birthtime).strftime('%Y-%m-%d')
-logfile_name = './QNS_CV_SR_TRNS_INTERNAL_RULES_{}.csv'.format(file_date)
+logfile_name = './bogus_rules_report_{}.log'.format(file_date)
 if args.debug: print('rules file: {}'.format(csvfile_name))
 
 cursor.execute('drop table if exists bogus_rules')
@@ -69,10 +69,10 @@ with open(logfile_name, 'w') as logfile:
             print('{} = {}; '.format(col, cols.index(col), end = ''))
           print()
       else:
-        count_records += 1
         if args.progress:
           if (count_records % 1000) == 0:
             print('\r{:,}/{:,} {:,} bogus'.format(count_records, num_records, num_bogus), end='')
+        count_records += 1
         if len(row) != len(cols):
           print('\nrow {} len(cols) = {} but len(rows) = {}'.format(row_num, len(cols), len(row)))
           continue
@@ -150,22 +150,6 @@ with open(logfile_name, 'w') as logfile:
                                                 record.src_equivalency_component,
                                                 record.destination_discipline)
 
-          # id serial primary key,
-          # source_institution text references institutions,
-          # source_discipline text,
-          # rule_group integer,
-          # destination_institution text references institutions,
-
-          # source_course_id integer,
-          # source_course_id_is_bogus boolean,
-          # bogus_source_discipline text,
-          # bogus_source_catalog_number text,
-
-          # destination_course_id integer,
-          # destination_course_id_is_bogus boolean,
-          # bogus_destination_discipline text,
-          # bogus_destination_catalog_number text
-
           cursor.execute("""
                           insert into bogus_rules
                           values (default, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s )
@@ -205,6 +189,6 @@ with open(logfile_name, 'w') as logfile:
 
 db.commit()
 db.close()
-print('  Found {:,} bogus records ({:.2f}%) out of {:,}.'.format(num_bogus,
+print('\rFound {:,} bogus records ({:.2f}%) out of {:,}.'.format(num_bogus,
                                                               100 *num_bogus / num_records,
                                                               num_records))

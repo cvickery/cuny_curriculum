@@ -33,9 +33,11 @@
     for d2 in ${dates[@]}
     do
       if [[ $d1 != $d2 ]]
-      then echo "Dates do not match: $d1 != $d2"
+      then echo "Query dates do not match: $d1 != $d2"
+      exit 1
       fi
     done
   done
   echo "Query dates okay"
+  exit 0
  )
