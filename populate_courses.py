@@ -123,10 +123,10 @@ with open(cat_file, newline='') as csvfile:
         {}, '{}', '{}', '{}', '{}', '{}', '{}', '{:0.1f}',
         '{:0.1f}', '{}', '{}', '{}', '{}', '{}', '{}', '{}')
         on conflict(course_id) do nothing
-        """.format(course_id, institution, cuny_subject, department, discipline, catalog_number, title,
-                    float(hours), float(credits), requisite_str, designation, description, career, course_status,
-                    discipline_status, can_schedule)
-      if department == 'PEES-BKL' or department == 'SOC-YRK':
+        """.format(course_id, institution, cuny_subject, department, discipline, catalog_number,
+                   title, float(hours), float(credits), requisite_str, designation, description,
+                   career, course_status, discipline_status, can_schedule)
+      if department == 'PEES-BKL' or department == 'SOC-YRK' or department == 'JOUR-GRD':
         skipped += 1
         skip_log.write('Skipping {} {} {} {} {} {} {} {:0.1f} {:0.1f}\n'.format(course_id,
                                                                                institution,
