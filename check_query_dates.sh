@@ -1,6 +1,6 @@
 #! /usr/local/bin/bash
 # Link the latest version of each query in queries into the latest_queries folder, dropping the
-# CUNYfirst run-id part of the file name.
+# CUNYfirst run-id part of the file name. Archive old queries if all the dates are ok.
 
 # Subshell to ensuring proper directories
 (
@@ -39,5 +39,11 @@
     done
   done
   echo "Query dates okay"
+  for file in queries/*
+  do
+    if [[ 1 == `gstat -c %h $file` ]]
+    then mv $file query_archive/
+    fi
+  done
   exit 0
  )
