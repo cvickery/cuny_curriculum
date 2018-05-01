@@ -7,8 +7,10 @@ from collections import namedtuple
 db = psycopg2.connect('dbname=cuny_courses')
 cursor = db.cursor()
 
-# Clear all existing status bits: only status changes from the events table will be reflected in
-# the rules table.
+# Clear all existing status bits: only status changes from the events table
+# will be reflected in the rules table.
+cursor.execute('select count(*) from rule_groups')
+print('  Reset status for {:,} rules ...'.format(cursor.fetchone()[0]))
 cursor.execute('update rule_groups set status = 0')
 
 # Initialize the bitmasks dict for this script to work from
@@ -21,6 +23,7 @@ for event_type in event_types:
 
 # Process the events table
 cursor.execute('select * from events')
+print('  Process {} events ...'.format(cursor.rowcount))
 Event = namedtuple('Event', [d[0] for d in cursor.description])
 events = map(Event._make, cursor.fetchall())
 for event in events:
@@ -50,4 +53,5 @@ for event in events:
                           event.group_number,
                           event.destination_institution))
   db.commit()
+print('  Done')
 db.close()
