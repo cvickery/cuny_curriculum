@@ -120,20 +120,22 @@ if [ $? -ne 0 ]
 fi
 echo done.
 
-# Existing transfer rules
-echo CREATE TABLE rule_groups...
+# Transfer rules
+echo CREATE TABLE review_status_bits
 psql cuny_courses < review_status_bits.sql >> init_psql.log
+echo CREATE TABLE rule_groups, source_courses, destination_courses
 psql cuny_courses < create_rule_groups.sql >> init_psql.log
+echo POPULATE rule_groups, source_courses, destination_courses ...
 echo "  generate bad id list... "
 python3 rule_groups.py --generate --progress >> init.log
 if [ $? -ne 0 ]
-  then echo failed
+  then echo -e '\nfailed.'
        exit
 fi
 echo "  populate rule_groups... "
 python3 rule_groups.py --progress --report >> init.log
 if [ $? -ne 0 ]
-  then echo failed
+  then echo -e '\nfailed.'
        exit
 fi
 echo -e '\ndone.'
@@ -141,7 +143,7 @@ echo -e '\ndone.'
 echo "  identify bogus rules... "
 python3 bogus_rules.py --progress >> init.log
 if [ $? -ne 0 ]
-  then echo failed
+  then echo -e '\nfailed.'
        exit
 fi
 echo -e '\ndone.'
