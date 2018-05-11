@@ -16,7 +16,7 @@ gae_restore_file=gae_restore.`date +%Y-%m-%d_%H:%M`.sql
 gae_events_file=gae_events.`date +%Y-%m-%d_%H:%M`.sql
 
 # First, be sure sql proxy is not running and create a dump of the local db:
-echo "Be sure pgproxy is stopped (look for 'No matching processes')..."
+echo "Be sure pgproxy is stopped (Expect 'No matching processes')..."
 pgproxy stop
 echo "Dumping local db..."
 pg_dump -O cuny_courses > $gae_restore_file
