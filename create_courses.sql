@@ -8,8 +8,11 @@ CREATE TABLE courses (
   discipline text,
   catalog_number text,
   title text,
-  hours text,
-  credits text,
+  hours float,
+  min_credits float,
+  max_credits float,
+  credits float,      -- academic progress units
+  fa_credits float,   -- financial aid units
   requisites text,
   designation text references designations,
   description text,

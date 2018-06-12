@@ -3,6 +3,7 @@ import csv
 import argparse
 
 from datetime import date
+from time import perf_counter
 import os
 import re
 
@@ -16,6 +17,7 @@ cursor = db.cursor()
 cursor.execute('select code from institutions')
 all_colleges = [x[0] for x in cursor.fetchall()]
 
+start_time = perf_counter()
 
 cat_file = './latest_queries/QNS_QCCV_CU_CATALOG_NP.csv'
 req_file = './latest_queries/QNS_QCCV_CU_REQUISITES_NP.csv'
@@ -107,8 +109,21 @@ with open(cat_file, newline='') as csvfile:
                                                   .replace('\n', ' ')\
                                                   .replace('( ', '(')
       catalog_component = row[cols.index('catalog_course_component')]
-      hours = row[cols.index('contact_hours')]
-      credits = row[cols.index('progress_units')]
+      # Contact hours string
+      hours = '{:0.1f}'.format(float(row[cols.index('contact_hours')]))
+      if hours.endswith('.0'):
+        hours = hours[0:-2]
+      # Credits string can look like:
+      #   3
+      #   3.5
+      #   3-6
+      #   3.0-4.5
+      #   3 (6 progress units)
+      #   3.5 (1 progress unit)
+      min_credits = float(row[cols.index('min_units')])
+      max_credits = float(row[cols.index('max_units')])
+      credits = float(row[cols.index('progress_units')])
+      fa_credits = float(row[cols.index('financial_aid_progress_units')])
       designation = row[cols.index('designation')]
       requisite_str = 'None'
       if (institution, discipline, catalog_number) in requisites.keys():
@@ -120,23 +135,28 @@ with open(cat_file, newline='') as csvfile:
       can_schedule = row[cols.index('schedule_course')]
       q = """
         insert into courses values (
-        {}, '{}', '{}', '{}', '{}', '{}', '{}', '{:0.1f}',
-        '{:0.1f}', '{}', '{}', '{}', '{}', '{}', '{}', '{}')
+        {}, '{}', '{}', '{}', '{}', '{}',
+        '{}', {}, {}, {}, {}, {}, '{}',
+        '{}', '{}', '{}', '{}', '{}', '{}')
         on conflict(course_id) do nothing
         """.format(course_id, institution, cuny_subject, department, discipline, catalog_number,
-                   title, float(hours), float(credits), requisite_str, designation, description,
-                   career, course_status, discipline_status, can_schedule)
+                   title, hours, min_credits, max_credits, credits, fa_credits, requisite_str,
+                   designation, description, career, course_status, discipline_status, can_schedule)
       if department == 'PEES-BKL' or department == 'SOC-YRK' or department == 'JOUR-GRD':
         skipped += 1
-        skip_log.write('Skipping {} {} {} {} {} {} {} {:0.1f} {:0.1f}\n'.format(course_id,
-                                                                               institution,
-                                                                               cuny_subject,
-                                                                               department,
-                                                                               discipline,
-                                                                               catalog_number,
-                                                                               title,
-                                                                               float(hours),
-                                                                               float(credits)))
+        skip_log.write('Skipping {} {} {} {} {} {} {} {} {:0.1f} {:0.1f} {:0.1f} {:0.1f}\n'.format(
+                                                                                course_id,
+                                                                                institution,
+                                                                                cuny_subject,
+                                                                                department,
+                                                                                discipline,
+                                                                                catalog_number,
+                                                                                title,
+                                                                                hours,
+                                                                                min_credits,
+                                                                                max_credits,
+                                                                                credits,
+                                                                                fa_credits))
         continue
       cursor.execute(q)
       num_courses += 1
@@ -147,6 +167,12 @@ if args.report:
   num_found = cursor.fetchone()[0]
   print('  {:,} retained; {:,} duplicates ignored'.format(num_found, num_courses - num_found))
   print('Skipped {} courses.'.format(skipped))
+  run_time = perf_counter() - start_time + 60
+  minutes = int(run_time / 60.)
+  suffix = 's'
+  if minutes == 1: suffix = ''
+  seconds = run_time - (minutes * 60)
+  print('Completed in {} minute{} and {:0.1f} seconds.'.format(minutes, suffix, seconds))
 # The date the catalog information for institutions was updated
 cursor.execute("update institutions set date_updated='{}'".format(cat_date))
 db.commit()
