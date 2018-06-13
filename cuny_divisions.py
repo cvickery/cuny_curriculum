@@ -91,6 +91,7 @@ with open ('./divisions_report_{}.log'.format(datetime.now().strftime('%Y-%m-%d'
         else:
           divisions[key] = [(division, 1, [course_id])]
     cursor.execute("""
+                   drop table if exists cuny_divisions cascade;
                    create table cuny_divisions (
                      institution text references institutions,
                      division text,
