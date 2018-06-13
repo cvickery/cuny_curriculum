@@ -30,7 +30,7 @@ with open(org_file) as csvfile:
     else:
       institution = row[cols.index('institution')]
       if institution == 'CUNY' or institution == 'UAPC1': continue
-      q = """insert into cuny_departments values('{}', '{}')""".format(
+      q = """insert into cuny_departments values('{}', '{}', '{}')""".format(
           row[cols.index('acad_org')],
           row[cols.index('institution')],
           row[cols.index('formaldesc')].replace('\'', '’'))
