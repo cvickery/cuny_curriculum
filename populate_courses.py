@@ -167,7 +167,7 @@ if args.report:
   num_found = cursor.fetchone()[0]
   print('  {:,} retained; {:,} duplicates ignored'.format(num_found, num_courses - num_found))
   print('Skipped {} courses.'.format(skipped))
-  run_time = perf_counter() - start_time + 60
+  run_time = perf_counter() - start_time
   minutes = int(run_time / 60.)
   suffix = 's'
   if minutes == 1: suffix = ''
