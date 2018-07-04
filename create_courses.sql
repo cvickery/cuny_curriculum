@@ -9,11 +9,7 @@ CREATE TABLE courses (
   discipline text,
   catalog_number text,
   title text,
-  hours float,
-  min_credits float,
-  max_credits float,
-  credits float,      -- academic progress units
-  fa_credits float,   -- financial aid units
+  components jsonb,  -- array of (component, hours, min_credits, max_credits)
   requisites text,
   designation text references designations,
   description text,
@@ -21,6 +17,6 @@ CREATE TABLE courses (
   course_status text,
   discipline_status text,
   can_schedule text,
-  primary key (course_id, offer_nbr)
+  primary key (course_id, offer_nbr),
   foreign key (institution, career) references cuny_careers
   )

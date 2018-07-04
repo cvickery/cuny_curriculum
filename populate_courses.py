@@ -1,12 +1,18 @@
 import psycopg2
+from psycopg2.extras import NamedTupleCursor, Json
+
 import csv
 import argparse
 
 from datetime import date
 from time import perf_counter
 import os
+import sys
 import re
 
+from collections import namedtuple
+
+start_time = perf_counter()
 parser = argparse.ArgumentParser()
 parser.add_argument('--debug', '-d', action='store_true')
 parser.add_argument('--report', '-r', action='store_true')
@@ -14,11 +20,9 @@ args = parser.parse_args()
 
 db = psycopg2.connect('dbname=cuny_courses')
 cursor = db.cursor()
-cursor.execute('select code from institutions')
-all_colleges = [x[0] for x in cursor.fetchall()]
+lookup_cursor = db.cursor(cursor_factory=NamedTupleCursor)
 
-start_time = perf_counter()
-
+# Get the three query files needed, and be sure they are in sync
 cat_file = './latest_queries/QNS_QCCV_CU_CATALOG_NP.csv'
 req_file = './latest_queries/QNS_QCCV_CU_REQUISITES_NP.csv'
 att_file = './latest_queries/QNS_QCCV_COURSE_ATTRIBUTES_NP.csv'
@@ -58,7 +62,11 @@ with open(att_file, newline='') as csvfile:
       cursor.execute(q)
 db.commit()
 
-# Build dictionary of course requisites; key is (institution, discipline, course_number)
+# Cache institutions
+cursor.execute('select code from institutions')
+all_colleges = [x[0] for x in cursor.fetchall()]
+
+# Cache a dictionary of course requisites; key is (institution, discipline, catalog)
 with open(req_file, newline='') as csvfile:
   req_reader = csv.reader(csvfile)
   requisites = {}
@@ -69,110 +77,122 @@ with open(req_file, newline='') as csvfile:
       if 'Institution' == row[0]:
         cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
     else:
-      # discipline and course number are called subject and catalog
-      value = row[cols.index('descr_of_pre_co-requisites')].strip()
+      # discipline and catalog course number are called subject and catalog
+      value = row[cols.index('descr_of_pre_co-requisites')].strip().replace("'", "’")
       if value != '':
         key = (row[cols.index('institution')],
                row[cols.index('subject')],
-               row[cols.index('catalog')])
+               row[cols.index('catalog')].strip())
         requisites[key] = value
 if args.debug: print('{:,} requisites'.format(len(requisites)))
 
 # Now process the rows from the courses query.
-skip_log = open('./skipped_courses.{}.log'.format(os.getenv('HOSTNAME').split('.')[0]), 'w')
+total_rows = 0
+with open(cat_file) as f:
+  for line in f:
+    total_rows += 1
+num_rows = 0
 num_courses = 0
 skipped = 0
+Component = namedtuple('Component', 'component hours min_credits max_credits')
 with open(cat_file, newline='') as csvfile:
   cat_reader = csv.reader(csvfile)
   cols = None
   for row in cat_reader:
+    num_rows += 1
+    if 0 == num_rows % 1000: print(f'Row {num_rows:,} / {total_rows:,}\r', end='', file=sys.stderr)
     if cols == None:
       row[0] = row[0].replace('\ufeff', '')
       if 'Institution' == row[0]:
         cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
+        Cols = namedtuple('Cols', cols)
     else:
+      r = Cols._make(row)
       # Skip inactive and administrative courses; insert others
       #   2017-07-12: Retain inactive courses
       #   2017-07-26: Retain all courses!
       # if row[cols.index('approved')] == 'A' and \
       #    row[cols.index('schedule_course')] == 'Y':
-      course_id = row[cols.index('course_id')]
-      institution = row[cols.index('institution')]
-      cuny_subject = row[cols.index('subject_external_area')]
-      if cuny_subject == '':
-        cuny_subject = 'missing'
-      department = row[cols.index('acad_org')]
-      discipline = row[cols.index('subject')]
-      catalog_number = row[cols.index('catalog_number')]
-      title = row[cols.index('long_course_title')].replace("'", "’")\
-                                                  .replace('\r', '')\
-                                                  .replace('\n', ' ')\
-                                                  .replace('( ', '(')
-      catalog_component = row[cols.index('catalog_course_component')]
-      # Contact hours string
-      hours = '{:0.1f}'.format(float(row[cols.index('contact_hours')]))
-      if hours.endswith('.0'):
-        hours = hours[0:-2]
-      # Credits string can look like:
-      #   3
-      #   3.5
-      #   3-6
-      #   3.0-4.5
-      #   3 (6 progress units)
-      #   3.5 (1 progress unit)
-      min_credits = float(row[cols.index('min_units')])
-      max_credits = float(row[cols.index('max_units')])
-      credits = float(row[cols.index('progress_units')])
-      fa_credits = float(row[cols.index('financial_aid_progress_units')])
-      designation = row[cols.index('designation')]
-      requisite_str = 'None'
-      if (institution, discipline, catalog_number) in requisites.keys():
-        requisite_str = requisites[(institution, discipline, catalog_number)].replace("'", "’")
-      description = row[cols.index('descr')].replace("'", "’")
-      career = row[cols.index('career')]
-      course_status = row[cols.index('crse_catalog_status')]
-      discipline_status = row[cols.index('subject_eff_status')]
-      can_schedule = row[cols.index('schedule_course')]
-      q = """
-        insert into courses values (
-        {}, '{}', '{}', '{}', '{}', '{}',
-        '{}', {}, {}, {}, {}, {}, '{}',
-        '{}', '{}', '{}', '{}', '{}', '{}')
-        on conflict(course_id) do nothing
-        """.format(course_id, institution, cuny_subject, department, discipline, catalog_number,
-                   title, hours, min_credits, max_credits, credits, fa_credits, requisite_str,
-                   designation, description, career, course_status, discipline_status, can_schedule)
+
+      # There be departments that are bogus and/or in which we're not interested
+      department = r.acad_org
       if department == 'PEES-BKL' or department == 'SOC-YRK' or department == 'JOUR-GRD':
-        skipped += 1
-        skip_log.write('Skipping {} {} {} {} {} {} {} {} {:0.1f} {:0.1f} {:0.1f} {:0.1f}\n'.format(
-                                                                                course_id,
-                                                                                institution,
-                                                                                cuny_subject,
-                                                                                department,
-                                                                                discipline,
-                                                                                catalog_number,
-                                                                                title,
-                                                                                hours,
-                                                                                min_credits,
-                                                                                max_credits,
-                                                                                credits,
-                                                                                fa_credits))
         continue
-      cursor.execute(q)
-      num_courses += 1
-skip_log.close()
+      course_id = r.course_id
+      offer_nbr = r.offer_nbr
+      discipline = r.subject
+      catalog_number = r.catalog_number.strip()
+      component = Component._make( (r.component_course_component,
+                                        float(r.contact_hours),
+                                        float(r.min_units),
+                                        float(r.max_units)) )
+      lookup_query = """select components
+                          from courses
+                         where course_id = %s
+                           and offer_nbr = %s
+                           and discipline = %s
+                           and catalog_number = %s"""
+      lookup_cursor.execute(lookup_query, (course_id, offer_nbr, discipline, catalog_number))
+      if lookup_cursor.rowcount > 0:
+        if lookup_cursor.rowcount > 1:
+          print(f'{lookup_query} returned multiple rows')
+          exit()
+        else:
+          lookup = lookup_cursor.fetchone()
+          components = lookup.components
+          # print(f'Lookup found 1: {course_id} {offer_nbr} {discipline} {catalog_number} {components}', file=sys.stderr)
+          if component not in components:
+            components.append(component)
+            update_query = """update courses set components = %s
+                            where course_id = %s
+                              and offer_nbr = %s
+                              and discipline = %s
+                              and catalog_number = %s"""
+            lookup_cursor.execute(update_query, (Json(components),
+                                               course_id, offer_nbr, discipline, catalog_number))
+          else:
+            print(f'Repeated component: {course_id} {offer_nbr} {discipline} {catalog_number} :: {component}')
+      else:
+        # print(f'Lookup found 0: {course_id} {offer_nbr} {discipline} {catalog_number}', file=sys.stderr)
+        components = [component]
+        institution = r.institution
+        cuny_subject = r.subject_external_area
+        if cuny_subject == '':
+          cuny_subject = 'missing'
+        title = r.long_course_title.replace("'", "’")\
+                                   .replace('\r', '')\
+                                   .replace('\n', ' ')\
+                                   .replace('( ', '(')
+
+        designation = row[cols.index('designation')]
+
+        requisite_str = 'None'
+        if (institution, discipline, catalog_number) in requisites.keys():
+          requisite_str = requisites[(institution, discipline, catalog_number)]
+        description = row[cols.index('descr')].replace("'", "’")
+        career = row[cols.index('career')]
+        course_status = row[cols.index('crse_catalog_status')]
+        discipline_status = row[cols.index('subject_eff_status')]
+        can_schedule = row[cols.index('schedule_course')]
+        cursor.execute("""insert into courses values
+                          (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                        (course_id, offer_nbr, institution, cuny_subject, department, discipline,
+                        catalog_number, title, Json(components), requisite_str, designation,
+                        description, career, course_status, discipline_status, can_schedule))
+        num_courses += 1
+
 if args.report:
   print('Inserted or ignored {:,} courses.'.format(num_courses))
   cursor.execute('select count(*) from courses')
   num_found = cursor.fetchone()[0]
   print('  {:,} retained; {:,} duplicates ignored'.format(num_found, num_courses - num_found))
-  print('Skipped {} courses.'.format(skipped))
   run_time = perf_counter() - start_time
   minutes = int(run_time / 60.)
   suffix = 's'
   if minutes == 1: suffix = ''
   seconds = run_time - (minutes * 60)
-  print('Completed in {} minute{} and {:0.1f} seconds.'.format(minutes, suffix, seconds))
+  print('Completed in {minutes} minute{suffix} and {seconds:0.1f} seconds.')
+
 # The date the catalog information for institutions was updated
 cursor.execute("update institutions set date_updated='{}'".format(cat_date))
 db.commit()
