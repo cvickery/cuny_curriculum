@@ -91,7 +91,6 @@ total_rows = sum(1 for line in open(cat_file))
 num_rows = 0
 num_courses = 0
 skipped = 0
-Component = namedtuple('Component', 'component hours min_credits max_credits')
 with open(cat_file, newline='') as csvfile:
   cat_reader = csv.reader(csvfile)
   cols = None
@@ -117,13 +116,14 @@ with open(cat_file, newline='') as csvfile:
         continue
       course_id = r.course_id
       offer_nbr = r.offer_nbr
+      institution = r.institution
       discipline = r.subject
       catalog_number = r.catalog_number.strip()
-      component = Component._make( (r.component_course_component,
-                                        float(r.contact_hours),
-                                        float(r.min_units),
-                                        float(r.max_units)) )
-      lookup_query = """select components
+      component = r.component_course_component
+      hours = float(r.contact_hours)
+      min_credits = float(r.min_units)
+      max_credits = float(r.max_units)
+      lookup_query = """select hours, min_credits, max_credits, components
                           from courses
                          where course_id = %s
                            and offer_nbr = %s
@@ -136,10 +136,23 @@ with open(cat_file, newline='') as csvfile:
           exit()
         else:
           lookup = lookup_cursor.fetchone()
+          # Make sure hours and credits haven’t changed
+          if hours != lookup.hours or \
+             min_credits != lookup.min_credits or \
+             max_credits != lookup.max_credits:
+            print('Inconsistent hours/credits for {}-{} {} {}'.format(course_id,
+                                                                      offer_nbr,
+                                                                      discipline,
+                                                                      catalog_number))
+            exit
           components = lookup.components
           # print(f'Lookup found 1: {course_id} {offer_nbr} {discipline} {catalog_number} {components}', file=sys.stderr)
           if component not in components:
             components.append(component)
+            components.sort()
+            if 'LEC' in components and components[0] != 'LEC':
+              components.remove('LEC')
+              components = ['LEC'] + components
             update_query = """update courses set components = %s
                             where course_id = %s
                               and offer_nbr = %s
@@ -148,11 +161,15 @@ with open(cat_file, newline='') as csvfile:
             lookup_cursor.execute(update_query, (Json(components),
                                                course_id, offer_nbr, discipline, catalog_number))
           else:
-            print(f'Repeated component: {course_id} {offer_nbr} {discipline} {catalog_number} :: {component}')
+            print('Repeated component: {} {} {} {} {} :: {}'.format(course_id,
+                                                                    offer_nbr,
+                                                                    institution,
+                                                                    discipline,
+                                                                    catalog_number,
+                                                                    component))
       else:
         # print(f'Lookup found 0: {course_id} {offer_nbr} {discipline} {catalog_number}', file=sys.stderr)
         components = [component]
-        institution = r.institution
         cuny_subject = r.subject_external_area
         if cuny_subject == '':
           cuny_subject = 'missing'
@@ -172,10 +189,14 @@ with open(cat_file, newline='') as csvfile:
         discipline_status = row[cols.index('subject_eff_status')]
         can_schedule = row[cols.index('schedule_course')]
         cursor.execute("""insert into courses values
-                          (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                          (%s, %s, %s, %s, %s, %s,
+                           %s, %s, %s, %s, %s, %s,
+                           %s, %s, %s, %s, %s,
+                           %s, %s)""",
                         (course_id, offer_nbr, institution, cuny_subject, department, discipline,
-                        catalog_number, title, Json(components), requisite_str, designation,
-                        description, career, course_status, discipline_status, can_schedule))
+                        catalog_number, title, hours, min_credits, max_credits, Json(components),
+                        requisite_str, designation, description, career, course_status,
+                        discipline_status, can_schedule))
         num_courses += 1
 
 if args.report:

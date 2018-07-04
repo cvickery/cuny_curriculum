@@ -9,7 +9,10 @@ CREATE TABLE courses (
   discipline text,
   catalog_number text,
   title text,
-  components jsonb,  -- array of (component, hours, min_credits, max_credits)
+  hours float,
+  min_credits float,
+  max_credits float,
+  components jsonb,  -- array of components
   requisites text,
   designation text references designations,
   description text,
