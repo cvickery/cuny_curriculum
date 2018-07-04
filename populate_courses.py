@@ -114,8 +114,12 @@ with open(cat_file, newline='') as csvfile:
       department = r.acad_org
       if department == 'PEES-BKL' or department == 'SOC-YRK' or department == 'JOUR-GRD':
         continue
-      course_id = r.course_id
-      offer_nbr = r.offer_nbr
+      course_id = int(r.course_id)
+      offer_nbr = int(r.offer_nbr)
+      try:
+        equivalence_group = int(r.equiv_course_group)
+      except:
+        equivalence_group = None
       institution = r.institution
       discipline = r.subject
       catalog_number = r.catalog_number.strip()
@@ -188,13 +192,20 @@ with open(cat_file, newline='') as csvfile:
         course_status = row[cols.index('crse_catalog_status')]
         discipline_status = row[cols.index('subject_eff_status')]
         can_schedule = row[cols.index('schedule_course')]
+        # print                (course_id, offer_nbr, equivalence_group, institution, cuny_subject,
+        #                  department, discipline, catalog_number, title,
+        #                  hours, min_credits, max_credits, Json(components),
+        #                 requisite_str, designation, description, career, course_status,
+        #                 discipline_status, can_schedule)
         cursor.execute("""insert into courses values
-                          (%s, %s, %s, %s, %s, %s,
-                           %s, %s, %s, %s, %s, %s,
+                          (%s, %s, %s, %s, %s,
+                           %s, %s, %s, %s,
+                           %s, %s, %s, %s,
                            %s, %s, %s, %s, %s,
                            %s, %s)""",
-                        (course_id, offer_nbr, institution, cuny_subject, department, discipline,
-                        catalog_number, title, hours, min_credits, max_credits, Json(components),
+                        (course_id, offer_nbr, equivalence_group, institution, cuny_subject,
+                         department, discipline, catalog_number, title,
+                         hours, min_credits, max_credits, Json(components),
                         requisite_str, designation, description, career, course_status,
                         discipline_status, can_schedule))
         num_courses += 1

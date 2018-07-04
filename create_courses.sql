@@ -3,6 +3,7 @@ DROP TABLE IF EXISTS courses cascade;
 CREATE TABLE courses (
   course_id integer,
   offer_nbr integer,
+  equivalence_group integer references crse_equiv_tbl,
   institution text references institutions,
   cuny_subject text references cuny_subjects,
   department text references cuny_departments,
