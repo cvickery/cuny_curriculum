@@ -1,3 +1,10 @@
+"""
+    Find the division for each course in the cuny catalog and populate the divisions table with a
+    count of how many courses are offered in each division at each college. Checks for cases where
+    the same department appears in different divisions and picks the division with the largest
+    number of courses. Generates a report of all courses in the "wrong" division.
+"""
+
 import psycopg2
 import csv
 import argparse
@@ -12,13 +19,6 @@ args = parser.parse_args()
 
 db = psycopg2.connect('dbname=cuny_courses')
 cursor = db.cursor()
-# *********************************************************************************#
-# Find the division for each course in the cuny catalog and populate the divisions #
-# table with a count of how many courses are offered in each division at each      #
-# college. Checkes for cases where the same department appears in different        #
-# divisions and picks the division with the largest number of courses. Generates a #
-# report of all courses in the "wrong" division.                                   #
-# *********************************************************************************#
 
 cat_file = './latest_queries/QNS_QCCV_CU_CATALOG_NP.csv'
 req_file = './latest_queries/QNS_QCCV_CU_REQUISITES_NP.csv'
