@@ -87,10 +87,7 @@ with open(req_file, newline='') as csvfile:
 if args.debug: print('{:,} requisites'.format(len(requisites)))
 
 # Now process the rows from the courses query.
-total_rows = 0
-with open(cat_file) as f:
-  for line in f:
-    total_rows += 1
+total_rows = sum(1 for line in open(cat_file))
 num_rows = 0
 num_courses = 0
 skipped = 0
