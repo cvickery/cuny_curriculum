@@ -5,20 +5,23 @@
     number of courses. Generates a report of all courses in the "wrong" division.
 """
 
-import psycopg2
-import csv
 import argparse
-
-from datetime import date, datetime
 import os
 import re
+import csv
+from collections import namedtuple
+from datetime import date, datetime
+
+import psycopg2
+from psycopg2.extras import NamedTupleCursor
 
 parser = argparse.ArgumentParser()
+parser.add_argument('--active_only', '-a', action='store_true')
 parser.add_argument('--debug', '-d', action='store_true')
 args = parser.parse_args()
 
 db = psycopg2.connect('dbname=cuny_courses')
-cursor = db.cursor()
+cursor = db.cursor(cursor_factory=NamedTupleCursor)
 
 cat_file = './latest_queries/QNS_QCCV_CU_CATALOG_NP.csv'
 req_file = './latest_queries/QNS_QCCV_CU_REQUISITES_NP.csv'
@@ -37,7 +40,7 @@ cursor.execute("""
                  select code
                  from institutions
                """)
-institutions = [institution[0] for institution in cursor.fetchall()]
+institutions = [institution.code for institution in cursor.fetchall()]
 
 # Get list of known departments
 cursor.execute("""
@@ -45,7 +48,7 @@ cursor.execute("""
                 from cuny_departments
                 group by department
                """)
-departments = [department[0] for department in cursor.fetchall()]
+departments = [d.department for d in cursor.fetchall()]
 
 # Open the report file
 with open ('./divisions_report_{}.log'.format(datetime.now().strftime('%Y-%m-%d')), 'w') \
@@ -61,13 +64,16 @@ with open ('./divisions_report_{}.log'.format(datetime.now().strftime('%Y-%m-%d'
         row[0] = row[0].replace('\ufeff', '')
         if 'Institution' == row[0]:
           cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
-          # print(cols)
+          Col = namedtuple('Col', cols)
       else:
-        institution = row[cols.index('institution')]
+        row = Col._make(row)
+        institution = row.institution
         if institution not in institutions: continue
-        department = row[cols.index('acad_org')]
-        division = row[cols.index('acad_group')]
-        course_id = row[cols.index('course_id')]
+        department = row.acad_org
+        division = row.acad_group
+        course_id = int(row.course_id)
+        status = row.crse_catalog_status
+        if args.active_only and status != 'A': continue
         # Ignore courses where the department is not in cuny_departments
         if department not in departments: continue
         if args.debug: print(institution, department, division, course_id)
