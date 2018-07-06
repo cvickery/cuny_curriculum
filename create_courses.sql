@@ -10,10 +10,11 @@ CREATE TABLE courses (
   discipline text,
   catalog_number text,
   title text,
-  hours float,
+  components jsonb,  -- array of [component, component_contact_hours]
+  total_hours float,
   min_credits float,
   max_credits float,
-  components jsonb,  -- array of components
+  primary_component text,
   requisites text,
   designation text references designations,
   description text,
@@ -21,6 +22,7 @@ CREATE TABLE courses (
   course_status text,
   discipline_status text,
   can_schedule text,
+  attributes text,  -- semicolon-separated list of course attribute descriptions
   primary key (course_id, offer_nbr),
   foreign key (institution, career) references cuny_careers
   )

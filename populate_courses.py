@@ -10,6 +10,7 @@ import os
 import sys
 import re
 
+from math import isclose
 from collections import namedtuple
 
 start_time = perf_counter()
@@ -87,6 +88,7 @@ with open(req_file, newline='') as csvfile:
 if args.debug: print('{:,} requisites'.format(len(requisites)))
 
 # Now process the rows from the courses query.
+Component = namedtuple('Component', 'component component_contact_hours')
 total_rows = 0
 with open(cat_file, newline='') as csvfile:
   cat_reader = csv.reader(csvfile)
@@ -121,6 +123,17 @@ with open(cat_file, newline='') as csvfile:
       if department == 'PEES-BKL' or department == 'SOC-YRK' or department == 'JOUR-GRD':
         continue
       course_id = int(r.course_id)
+
+      # Checking course attributes
+      lookup_cursor.execute("""select string_agg(description, '; ') as attributes
+                                 from course_attributes, attributes
+                                where course_id = %s
+                                  and name = attribute_name
+                                  and value = attribute_value""",
+                            (course_id,))
+      attributes = lookup_cursor.fetchone().attributes
+      if attributes == None: attributes = 'None'
+
       offer_nbr = int(r.offer_nbr)
       try:
         equivalence_group = int(r.equiv_course_group)
@@ -129,11 +142,14 @@ with open(cat_file, newline='') as csvfile:
       institution = r.institution
       discipline = r.subject
       catalog_number = r.catalog_number.strip()
-      component = r.component_course_component
-      hours = float(r.contact_hours)
+      component = Component._make([r.component_course_component, r.instructor_contact_hours])
+      if isclose(float(component.component_contact_hours), 0.0) and 'Blanket Credit' not in attributes:
+        print(f'Component with no contact hours: {course_id} {institution} {component} {r.designation} {attributes}')
+      primary_component = r.primary_component
+      total_hours = float(r.contact_hours)
       min_credits = float(r.min_units)
       max_credits = float(r.max_units)
-      lookup_query = """select hours, min_credits, max_credits, components
+      lookup_query = """select total_hours, primary_component, min_credits, max_credits, components
                           from courses
                          where course_id = %s
                            and offer_nbr = %s
@@ -146,25 +162,27 @@ with open(cat_file, newline='') as csvfile:
           exit()
         else:
           lookup = lookup_cursor.fetchone()
-          # Make sure hours and credits haven’t changed
-          if hours != lookup.hours or \
+          # Make sure total_hours, primary_component, and credits haven’t changed
+          if total_hours != lookup.total_hours or \
+             primary_component != lookup.primary_component or \
              min_credits != lookup.min_credits or \
              max_credits != lookup.max_credits:
-            print('Inconsistent hours/credits for {}-{} {} {}'.format(course_id,
-                                                                      offer_nbr,
-                                                                      discipline,
-                                                                      catalog_number),
+            print('Inconsistent hours/credits/component for {}-{} {} {}'.format(course_id,
+                                                                                offer_nbr,
+                                                                                discipline,
+                                                                                catalog_number),
                   file=sys.stderr)
             exit
           components = lookup.components
           # print(f'Lookup found 1: {course_id} {offer_nbr} {discipline} {catalog_number} {components}', file=sys.stderr)
           if component not in components:
             components.append(component)
+            # Do the following at display time, putting the primary_component first.
             # Order components alphabetically, but LEC is always first if present.
-            components.sort()
-            if 'LEC' in components and components[0] != 'LEC':
-              components.remove('LEC')
-              components = ['LEC'] + components
+            # components.sort()
+            # if 'LEC' in components and components[0] != 'LEC':
+            #   components.remove('LEC')
+            #   components = ['LEC'] + components
             update_query = """update courses set components = %s
                             where course_id = %s
                               and offer_nbr = %s
@@ -204,14 +222,14 @@ with open(cat_file, newline='') as csvfile:
         cursor.execute("""insert into courses values
                           (%s, %s, %s, %s, %s,
                            %s, %s, %s, %s,
-                           %s, %s, %s, %s,
+                           %s, %s, %s, %s, %s,
                            %s, %s, %s, %s, %s,
                            %s, %s)""",
                         (course_id, offer_nbr, equivalence_group, institution, cuny_subject,
                          department, discipline, catalog_number, title,
-                         hours, min_credits, max_credits, Json(components),
-                        requisite_str, designation, description, career, course_status,
-                        discipline_status, can_schedule))
+                         Json(components), total_hours, min_credits, max_credits, primary_component,
+                         requisite_str, designation, description, career, course_status,
+                         discipline_status, can_schedule))
         num_courses += 1
 
 print(file=sys.stderr)
