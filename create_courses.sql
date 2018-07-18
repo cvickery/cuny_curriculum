@@ -11,7 +11,7 @@ CREATE TABLE courses (
   catalog_number text,
   title text,
   components jsonb,  -- array of [component, component_contact_hours]
-  total_hours float,
+  contact_hours float,
   min_credits float,
   max_credits float,
   primary_component text,

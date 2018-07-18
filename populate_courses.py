@@ -142,14 +142,12 @@ with open(cat_file, newline='') as csvfile:
       institution = r.institution
       discipline = r.subject
       catalog_number = r.catalog_number.strip()
-      component = Component._make([r.component_course_component, r.instructor_contact_hours])
-      if isclose(float(component.component_contact_hours), 0.0) and 'Blanket Credit' not in attributes:
-        print(f'Component with no contact hours: {course_id} {institution} {component} {r.designation} {attributes}')
+      component = Component._make([r.component_course_component, float(r.instructor_contact_hours)])
       primary_component = r.primary_component
-      total_hours = float(r.contact_hours)
+      contact_hours = float(r.course_contact_hours)
       min_credits = float(r.min_units)
       max_credits = float(r.max_units)
-      lookup_query = """select total_hours, primary_component, min_credits, max_credits, components
+      lookup_query = """select contact_hours, primary_component, min_credits, max_credits, components
                           from courses
                          where course_id = %s
                            and offer_nbr = %s
@@ -162,8 +160,8 @@ with open(cat_file, newline='') as csvfile:
           exit()
         else:
           lookup = lookup_cursor.fetchone()
-          # Make sure total_hours, primary_component, and credits haven’t changed
-          if total_hours != lookup.total_hours or \
+          # Make sure contact_hours, primary_component, and credits haven’t changed
+          if contact_hours != lookup.contact_hours or \
              primary_component != lookup.primary_component or \
              min_credits != lookup.min_credits or \
              max_credits != lookup.max_credits:
@@ -173,7 +171,7 @@ with open(cat_file, newline='') as csvfile:
                                                                                 catalog_number),
                   file=sys.stderr)
             exit
-          components = lookup.components
+          components = [Component._make(c) for c in lookup.components]
           # print(f'Lookup found 1: {course_id} {offer_nbr} {discipline} {catalog_number} {components}', file=sys.stderr)
           if component not in components:
             components.append(component)
@@ -209,27 +207,27 @@ with open(cat_file, newline='') as csvfile:
                                    .replace('\n', ' ')\
                                    .replace('( ', '(')
 
-        designation = row[cols.index('designation')]
+        designation = r.designation
 
         requisite_str = 'None'
         if (institution, discipline, catalog_number) in requisites.keys():
           requisite_str = requisites[(institution, discipline, catalog_number)]
-        description = row[cols.index('descr')].replace("'", "’")
-        career = row[cols.index('career')]
-        course_status = row[cols.index('crse_catalog_status')]
-        discipline_status = row[cols.index('subject_eff_status')]
-        can_schedule = row[cols.index('schedule_course')]
+        description = r.descr.replace("'", "’")
+        career = r.career
+        course_status = r.crse_catalog_status
+        discipline_status = r.subject_eff_status
+        can_schedule = r.schedule_course
         cursor.execute("""insert into courses values
                           (%s, %s, %s, %s, %s,
                            %s, %s, %s, %s,
                            %s, %s, %s, %s, %s,
                            %s, %s, %s, %s, %s,
-                           %s, %s)""",
+                           %s, %s, %s)""",
                         (course_id, offer_nbr, equivalence_group, institution, cuny_subject,
                          department, discipline, catalog_number, title,
-                         Json(components), total_hours, min_credits, max_credits, primary_component,
+                         Json(components), contact_hours, min_credits, max_credits, primary_component,
                          requisite_str, designation, description, career, course_status,
-                         discipline_status, can_schedule))
+                         discipline_status, can_schedule, attributes))
         num_courses += 1
 
 print(file=sys.stderr)
