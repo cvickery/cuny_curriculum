@@ -54,7 +54,7 @@ echo -n CHECK QUERY FILES...
 ./check_query_dates.sh > init.log
 if [ $? -ne 0 ]
   then echo "WARNING: mismatched dates."
-  else echo done.
+  else echo OK.
 fi
 
 # Now regenerate the tables that are based on query results
@@ -62,7 +62,7 @@ fi
 echo -n CREATE TABLE cuny_careers...
 python3 cuny_careers.py >> init.log
 if [ $? -ne 0 ]
-  then echo failed
+  then echo -e '\nFAILED!'
        exit
 fi
 echo done.
@@ -70,7 +70,7 @@ echo done.
 echo -n CREATE TABLE cuny_departments...
 python3 cuny_departments.py >> init.log
 if [ $? -ne 0 ]
-  then echo failed
+  then echo  -e '\nFAILED!'
        exit
 fi
 echo done.
@@ -78,7 +78,7 @@ echo done.
 echo -n CREATE TABLE cuny_divisions...
 python3 cuny_divisions.py >> init.log
 if [ $? -ne 0 ]
-  then echo failed
+  then echo  -e '\nFAILED!'
        exit
 fi
 echo done.
@@ -86,7 +86,7 @@ echo done.
 echo -n CREATE TABLE cuny_subjects...
 python3 cuny_subjects.py >> init.log
 if [ $? -ne 0 ]
-  then echo failed
+  then echo  -e '\nFAILED!'
        exit
 fi
 echo done.
@@ -94,7 +94,7 @@ echo done.
 echo -n CREATE TABLE designations...
 python3 designations.py >> init.log
 if [ $? -ne 0 ]
-  then echo failed
+  then echo  -e '\nFAILED!'
        exit
 fi
 echo done.
@@ -102,7 +102,7 @@ echo done.
 echo -n CREATE TABLE attributes...
 python3 attributes.py >> init.log
 if [ $? -ne 0 ]
-  then echo failed
+  then echo -e '\nFAILED!'
        exit
 fi
 echo done.
@@ -111,11 +111,19 @@ echo -n CREATE TABLE course_attributes...
 psql cuny_courses < course_attributes.sql >> init_psql.log
 echo done.
 
+echo -n CREATE TABLE crse_quiv_tbl...
+python3 mk_crse_equiv_tbl.py
+if [ $? -ne 0 ]
+  then echo -e '\nFAILED!'
+       exit
+fi
+echo done.
+
 echo -n CREATE TABLE courses...
 psql cuny_courses < create_courses.sql >> init_psql.log
 python3 populate_courses.py --report >> init.log
 if [ $? -ne 0 ]
-  then echo failed
+  then echo -e '\nFAILED!'
        exit
 fi
 echo done.
@@ -125,17 +133,21 @@ echo CREATE TABLE review_status_bits
 psql cuny_courses < review_status_bits.sql >> init_psql.log
 echo CREATE TABLE rule_groups, source_courses, destination_courses
 psql cuny_courses < create_rule_groups.sql >> init_psql.log
+if [ $? -ne 0 ]
+  then echo -e '\nFAILED!'
+       exit
+fi
 echo "    POPULATE rule_groups, source_courses, destination_courses ..."
 echo "      generate bad id list... "
 python3 rule_groups.py --generate --progress >> init.log
 if [ $? -ne 0 ]
-  then echo -e '\nfailed.'
+  then echo -e '\nFAILED!'
        exit
 fi
 echo "      populate rule_groups... "
 python3 rule_groups.py --progress --report >> init.log
 if [ $? -ne 0 ]
-  then echo -e '\nfailed.'
+  then echo -e '\nFAILED!'
        exit
 fi
 echo -e '\ndone.'
@@ -143,7 +155,7 @@ echo -e '\ndone.'
 echo "      identify bogus rules... "
 python3 bogus_rules.py --progress >> init.log
 if [ $? -ne 0 ]
-  then echo -e '\nfailed.'
+  then echo -e '\nFAILED!'
        exit
 fi
 echo -e '\ndone.'
