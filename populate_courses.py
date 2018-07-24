@@ -16,6 +16,7 @@ from collections import namedtuple
 start_time = perf_counter()
 parser = argparse.ArgumentParser()
 parser.add_argument('--debug', '-d', action='store_true')
+parser.add_argument('--progress', '-p', action='store_true')
 parser.add_argument('--report', '-r', action='store_true')
 args = parser.parse_args()
 
@@ -101,8 +102,17 @@ with open(cat_file, newline='') as csvfile:
   cols = None
   for row in cat_reader:
     num_rows += 1
-    if 0 == num_rows % 1000:
-      print(f'Row {num_rows:,} / {total_rows:,}; {num_courses:,} courses\r',
+    if args.progress and 0 == num_rows % 1000:
+      elapsed_seconds = perf_counter() - start_time
+      total_seconds = total_rows * (elapsed_seconds / num_rows)
+      remaining_seconds = total_seconds - elapsed_seconds
+      remaining_minutes = int(remaining_seconds / 60)
+      remaining_seconds = int(remaining_seconds - remaining_minutes * 60)
+      print('\nRow {:,} / {:,}; {:,}  courses. {}:{:02}\r'.format(num_rows,
+                                                                total_rows,
+                                                                num_courses,
+                                                                remaining_minutes,
+                                                                remaining_seconds) ,
             end='',
             file=sys.stderr)
     if cols == None:
@@ -217,20 +227,23 @@ with open(cat_file, newline='') as csvfile:
         course_status = r.crse_catalog_status
         discipline_status = r.subject_eff_status
         can_schedule = r.schedule_course
-        cursor.execute("""insert into courses values
-                          (%s, %s, %s, %s, %s,
-                           %s, %s, %s, %s,
-                           %s, %s, %s, %s, %s,
-                           %s, %s, %s, %s, %s,
-                           %s, %s, %s)""",
-                        (course_id, offer_nbr, equivalence_group, institution, cuny_subject,
-                         department, discipline, catalog_number, title,
-                         Json(components), contact_hours, min_credits, max_credits, primary_component,
-                         requisite_str, designation, description, career, course_status,
-                         discipline_status, can_schedule, attributes))
-        num_courses += 1
-
-print(file=sys.stderr)
+        try:
+          cursor.execute("""insert into courses values
+                            (%s, %s, %s, %s, %s,
+                             %s, %s, %s, %s,
+                             %s, %s, %s, %s, %s,
+                             %s, %s, %s, %s, %s,
+                             %s, %s, %s)""",
+                          (course_id, offer_nbr, equivalence_group, institution, cuny_subject,
+                           department, discipline, catalog_number, title,
+                           Json(components), contact_hours, min_credits, max_credits, primary_component,
+                           requisite_str, designation, description, career, course_status,
+                           discipline_status, can_schedule, attributes))
+          num_courses += 1
+        except:
+          print('So sad')
+if args.progress:
+  print(file=sys.stderr)
 if args.report:
   run_time = perf_counter() - start_time
   minutes = int(run_time / 60.)

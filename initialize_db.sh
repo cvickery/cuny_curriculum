@@ -137,15 +137,15 @@ if [ $? -ne 0 ]
   then echo -e '\nFAILED!'
        exit
 fi
-echo "    POPULATE rule_groups, source_courses, destination_courses ..."
-echo "      generate bad id list... "
-python3 rule_groups.py --generate --progress >> init.log
-if [ $? -ne 0 ]
-  then echo -e '\nFAILED!'
-       exit
-fi
+# echo "    POPULATE rule_groups, source_courses, destination_courses ..."
+# echo "      generate bad id list... "
+# python3 populate_rule_groups.py --progress >> init.log
+# if [ $? -ne 0 ]
+#   then echo -e '\nFAILED!'
+#        exit
+# fi
 echo "      populate rule_groups... "
-python3 rule_groups.py --progress --report >> init.log
+python3 populate_rule_groups.py --progress --report >> init.log
 if [ $? -ne 0 ]
   then echo -e '\nFAILED!'
        exit

@@ -16,14 +16,15 @@ import csv
 
 from collections import namedtuple
 from datetime import date
+from time import perf_counter
 
 import psycopg2
 from psycopg2.extras import NamedTupleCursor
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--debug', '-d', action='store_true')
-parser.add_argument('--progress', '-p', action='store_true')
-parser.add_argument('--report', '-r', action='store_true')
+parser.add_argument('--progress', '-p', action='store_true')  # to stderr
+parser.add_argument('--report', '-r', action='store_true')    # to stdout
 args = parser.parse_args()
 
 db = psycopg2.connect('dbname=cuny_courses')
@@ -51,174 +52,218 @@ cursor.execute("""select *
                   order by code""")
 known_institutions = [inst.code for inst in cursor.fetchall()]
 
-if args.generate:
-  """
-      Generate list of bad course_ids referenced in the rows of the transfer rules query
-  """
-  baddies = open(known_bad_filename, 'w')
-  bad_set = set()
-  with open(the_file) as csvfile:
-    csv_reader = csv.reader(csvfile)
-    cols = None
-    row_num = 0
-    for row in csv_reader:
-      row_num += 1
-      if args.progress and row_num % 10000 == 0:
-        print('row {:,}/{:,}\r'.format(row_num, num_lines), end='', file=sys.stderr)
-      if cols == None:
-        row[0] = row[0].replace('\ufeff', '')
-        cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
-        Record = namedtuple('Record', cols)
-        if args.debug:
-          print(cols)
-          for col in cols:
-            print('{} = {}; '.format(col, cols.index(col), end = ''))
+# if args.generate:
+#   """
+#       Generate list of bad course_ids referenced in the rows of the transfer rules query
+#   """
+#   baddies = open(known_bad_filename, 'w')
+#   bad_set = set()
+#   with open(the_file) as csvfile:
+#     csv_reader = csv.reader(csvfile)
+#     cols = None
+#     row_num = 0
+#     for row in csv_reader:
+#       row_num += 1
+#       if args.progress and row_num % 10000 == 0:
+#         print('row {:,}/{:,}\r'.format(row_num, num_lines), end='', file=sys.stderr)
+#       if cols == None:
+#         row[0] = row[0].replace('\ufeff', '')
+#         cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
+#         Record = namedtuple('Record', cols)
+#         if args.debug:
+#           print(cols)
+#           for col in cols:
+#             print('{} = {}; '.format(col, cols.index(col), end = ''))
+#           print()
+#       else:
+#         if len(row) != len(cols):
+#           print('\nrow {} len(cols) = {} but len(rows) = {}'.format(row_num, len(cols), len(row)))
+#           continue
+#         record = Record._make(row)
+#         if record.source_institution not in known_institutions or \
+#            record.destination_institution not in known_institutions:
+#           continue
+#         source_course_id = int(record.source_course_id)
+#         destination_course_id = int(record.destination_course_id)
+#         if source_course_id not in bad_set:
+#           cursor.execute("""select course_id
+#                             from courses
+#                             where course_id = {}""".format(source_course_id))
+#           if cursor.rowcount == 0:
+#             bad_set.add(source_course_id)
+#             baddies.write('{} src\n'.format(source_course_id))
+#         if destination_course_id not in bad_set:
+#           cursor.execute("""select course_id
+#                             from courses
+#                             where course_id = {}""".format(destination_course_id))
+#           if cursor.rowcount == 0:
+#             bad_set.add(destination_course_id)
+#             baddies.write('{} dst\n'.format(destination_course_id))
+#   baddies.close()
+# else:
+
+start_time = perf_counter()
+""" Populate the three rule information tables
+"""
+conflicts = open('conflicts.{}.log'.format(os.getenv('HOSTNAME').split('.')[0]), 'w')
+
+# known_bad_ids = [int(id.split(' ')[0]) for id in open(known_bad_filename)]
+# Clear the three tables
+cursor.execute('truncate source_courses, destination_courses, rule_groups')
+
+num_groups = 0
+num_source_courses = 0
+num_destination_courses = 0
+
+with open(the_file) as csvfile:
+  csv_reader = csv.reader(csvfile)
+  cols = None
+  row_num = 0;
+  for row in csv_reader:
+    if cols == None:
+      row[0] = row[0].replace('\ufeff', '')
+      cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
+      Record = namedtuple('Record', cols);
+      if args.debug:
+        print(cols)
+        for col in cols:
+          print('{} = {}; '.format(col, cols.index(col), end = ''))
           print()
+    else:
+      row_num += 1
+      if args.progress and row_num % 1000 == 0:
+        elapsed_time = perf_counter() - start_time
+        total_time = elapsed_time / row_num / num_lines
+        secs_remaining = total_time - elapsed_time
+        mins_remaining = int((secs_remaining) / 60)
+        secs_remaining -= mins_remaining * 60
+        print('row {:,}/{:,} {}:{:02}\r'.format(row_num,
+                                                num_lines,
+                                                mins_remaining,
+                                                int(secs_remaining)),
+              end='', file=sys.stderr)
+      record = Record._make(row)
+
+      # 2018-07-19: The following two tests never fail
+      src_institution = record.source_institution
+      if src_institution not in known_institutions:
+        conflicts.write('Unknown institution: {}\n'.format(src_institution))
+        continue
+      dest_institution = record.destination_institution
+      if dest_institution not in known_institutions:
+        conflicts.write('Unknown institution: {}\n'.format(dest_institution))
+        continue
+
+      # Assemble the components of the rule group
+      source_course_id = int(record.source_course_id)
+      destination_course_id = int(record.destination_course_id)
+      # if source_course_id in known_bad_ids or destination_course_id in known_bad_ids:
+      #   continue
+      cursor.execute("""select institution, offer_nbr, discipline
+                        from courses
+                        where course_id = %s""", (source_course_id,))
+      if cursor.rowcount > 0:
+        if cursor.rowcount > 1:
+          for row in cursor.fetchall():
+            print(f'{source_course_id}: {row.institution} {row.offer_nbr} {row.discipline}')
+            source_institution = row.institution
+            offer_nbr = row.offer_nbr
+            discipline = row.discipline
+          print('Multiple source offer_nbrs ({}) not implemented yet for {}. {}'.format(
+                                                                              cursor.rowcount,
+                                                                              source_course_id,
+                                                                              record))
+        else:
+          source_institution, offer_nbr, source_discipline = cursor.fetchone()
       else:
-        if len(row) != len(cols):
-          print('\nrow {} len(cols) = {} but len(rows) = {}'.format(row_num, len(cols), len(row)))
-          continue
-        record = Record._make(row)
-        if record.source_institution not in known_institutions or \
-           record.destination_institution not in known_institutions:
-          continue
-        source_course_id = int(record.source_course_id)
-        destination_course_id = int(record.destination_course_id)
-        if source_course_id not in bad_set:
-          cursor.execute("""select course_id
-                            from courses
-                            where course_id = {}""".format(source_course_id))
-          if cursor.rowcount == 0:
-            bad_set.add(source_course_id)
-            baddies.write('{} src\n'.format(source_course_id))
-        if destination_course_id not in bad_set:
-          cursor.execute("""select course_id
-                            from courses
-                            where course_id = {}""".format(destination_course_id))
-          if cursor.rowcount == 0:
-            bad_set.add(destination_course_id)
-            baddies.write('{} dst\n'.format(destination_course_id))
-  baddies.close()
-else:
-  """ Populate the three rule information tables
-  """
-  conflicts = open('conflicts.{}.log'.format(os.getenv('HOSTNAME').split('.')[0]), 'w')
-
-  known_bad_ids = [int(id.split(' ')[0]) for id in open(known_bad_filename)]
-  # Clear the three tables
-  cursor.execute('truncate source_courses, destination_courses, rule_groups')
-
-  num_groups = 0
-  num_source_courses = 0
-  num_destination_courses = 0
-
-  with open(the_file) as csvfile:
-    csv_reader = csv.reader(csvfile)
-    cols = None
-    row_num = 0;
-    for row in csv_reader:
-      if cols == None:
-        row[0] = row[0].replace('\ufeff', '')
-        cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
-        Record = namedtuple('Record', cols);
-        if args.debug:
-          print(cols)
-          for col in cols:
-            print('{} = {}; '.format(col, cols.index(col), end = ''))
-            print()
-      else:
-        row_num += 1
-        if args.progress and row_num % 10000 == 0: print('row {:,}/{:,}\r'.format(row_num,
-                                                                                  num_lines),
-                                                         end='',
-                                                         file=sys.stderr)
-        record = Record._make(row)
-
-        src_institution = record.source_institution
-        if src_institution not in known_institutions:
-          conflicts.write('Unknown institution: {}\n'.format(src_institution))
-          continue
-        dest_institution = record.destination_institution
-        if dest_institution not in known_institutions:
-          conflicts.write('Unknown institution: {}\n'.format(dest_institution))
-          continue
-
-        # Assemble the components of the rule group
-        source_course_id = int(record.source_course_id)
-        destination_course_id = int(record.destination_course_id)
-        if source_course_id in known_bad_ids or destination_course_id in known_bad_ids:
-          continue
-        cursor.execute("""select institution, discipline
+        print(f'Source Course ID {source_course_id} not found for {record}')
+        continue
+      if source_institution != src_institution:
+        conflicts.write("""Source institution ({}) != course institution ({})\n{}\n"""\
+                        .format(src_instituion, source_instution, record))
+      cursor.execute("""select institution, offer_nbr
                           from courses
-                          where course_id = {}""".format(source_course_id))
-        source_institution, source_discipline = cursor.fetchone()
-        if source_institution != src_institution:
-          conflicts.write("""Source institution ({}) != course institution ({})\n{}\n"""\
-                          .format(src_instituion, source_instution, record))
-        cursor.execute("""select institution
-                            from courses
-                           where course_id = {}""".format(destination_course_id))
-        destination_institution = cursor.fetchone()[0]
-        if destination_institution != dest_institution:
-          conflicts.write("""Destination institution ({}) != course institution ({})\n{}\n"""\
-                          .format(dest_institution, destination_institution, record))
-        rule_group_number = int(record.src_equivalency_component)
-        min_gpa = float(record.min_grade_pts)
-        max_gpa = float(record.max_grade_pts)
-        transfer_credits = float(record.units_taken)
+                         where course_id = %s""", (destination_course_id,))
+      if cursor.rowcount > 0:
+        if cursor.rowcount > 1:
+          for row in cursor.fetchall():
+            print(f'{destination_course_id}: {row.institution} {row.offer_nbr}')
+            source_institution = row.institution
+            offer_nbr = row.offer_nbr
+          print('Multiple destination offer_nbrs ({}) not implemented yet for {}. {}'.format(
+                                                                            cursor.rowcount,
+                                                                            destination_course_id,
+                                                                            record))
+        else:
+          destination_institution, offer_nbr = cursor.fetchone()
+      else:
+        print(f'Destination Course ID {destination_course_id} not found for {record}')
+        continue
+      if destination_institution != dest_institution:
+        conflicts.write("""Destination institution ({}) != course institution ({})\n{}\n"""\
+                        .format(dest_institution, destination_institution, record))
+      rule_group_number = int(record.src_equivalency_component)
+      min_gpa = float(record.min_grade_pts)
+      max_gpa = float(record.max_grade_pts)
+      transfer_credits = float(record.units_taken)
 
-        # Create or look up the rule group
-        cursor.execute("""
-                       insert into rule_groups values(
-                       '{}', '{}', {}, '{}') on conflict do nothing
-                       """.format(source_institution,
-                                  source_discipline,
-                                  rule_group_number,
-                                  destination_institution))
-        num_groups += cursor.rowcount
-        # if cursor.rowcount == 0:
-        #   cursor.execute("""
-        #                  select *
-        #                  from rule_groups
-        #                  where source_institution = '{}'
-        #                  and discipline = '{}'
-        #                  and group_number = {}
-        #                  and destination_institution ='{}'
-        #                  """.format(source_institution,
-        #                             source_discipline,
-        #                             rule_group_number,
-        #                             destination_institution))
-        #   assert cursor.rowcount == 1, """select rule_group returned {} values
-        #                                """.format(cursor.rowcount)
-        # rule_group_id = cursor.fetchone()[0]
+      # Create or look up the rule group
+      cursor.execute("""
+                     insert into rule_groups values(
+                     '{}', '{}', {}, '{}') on conflict do nothing
+                     """.format(source_institution,
+                                source_discipline,
+                                rule_group_number,
+                                destination_institution))
+      num_groups += cursor.rowcount
+      # if cursor.rowcount == 0:
+      #   cursor.execute("""
+      #                  select *
+      #                  from rule_groups
+      #                  where source_institution = '{}'
+      #                  and discipline = '{}'
+      #                  and group_number = {}
+      #                  and destination_institution ='{}'
+      #                  """.format(source_institution,
+      #                             source_discipline,
+      #                             rule_group_number,
+      #                             destination_institution))
+      #   assert cursor.rowcount == 1, """select rule_group returned {} values
+      #                                """.format(cursor.rowcount)
+      # rule_group_id = cursor.fetchone()[0]
 
-        # Add the source course
-        cursor.execute("""
-                       insert into source_courses values(default, '{}', '{}', {}, '{}', {}, {}, {})
-                       on conflict do nothing
-                       """.format(source_institution,
-                                  source_discipline,
-                                  rule_group_number,
-                                  destination_institution,
-                                  source_course_id,
-                                  min_gpa,
-                                  max_gpa))
-        num_source_courses += cursor.rowcount
-        # Add the destination course
-        cursor.execute("""
-                       insert into destination_courses values(default, '{}', '{}', {}, '{}', {}, {})
-                       on conflict do nothing
-                       """.format(source_institution,
-                                  source_discipline,
-                                  rule_group_number,
-                                  destination_institution,
-                                  destination_course_id,
-                                  transfer_credits))
-        num_destination_courses += cursor.rowcount
-
-    if args.report:
-      print("""\n{:,} Groups\n{:,} Source courses\n{:,} Destination courses
-            """.format(num_groups, num_source_courses, num_destination_courses))
-    db.commit()
-    db.close()
-    conflicts.close()
+      # Add the source course
+      cursor.execute("""
+                     insert into source_courses values(default, '{}', '{}', {}, '{}', {}, {}, {})
+                     on conflict do nothing
+                     """.format(source_institution,
+                                source_discipline,
+                                rule_group_number,
+                                destination_institution,
+                                source_course_id,
+                                min_gpa,
+                                max_gpa))
+      num_source_courses += cursor.rowcount
+      # Add the destination course
+      cursor.execute("""
+                     insert into destination_courses values(default, '{}', '{}', {}, '{}', {}, {})
+                     on conflict do nothing
+                     """.format(source_institution,
+                                source_discipline,
+                                rule_group_number,
+                                destination_institution,
+                                destination_course_id,
+                                transfer_credits))
+      num_destination_courses += cursor.rowcount
+  if args.progress:
+    print('', file=sys.stderr)
+  if args.report:
+    print("""\n{:,} Groups\n{:,} Source courses\n{:,} Destination courses
+          """.format(num_groups, num_source_courses, num_destination_courses))
+    secs = perfmeter() - start_time
+    mins = int(secs / 60)
+    secs = int(secs - 60 * mins)
+    print(f'{mins}:{secs:02} elapsed time')
+  db.commit()
+  db.close()
+  conflicts.close()
