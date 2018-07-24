@@ -1,6 +1,7 @@
+Query Name                          Run Control ID
 ACAD_CAREER_TBL.csv                 acad_career
 QCCV_RQMNT_DESIG_TBL.csv            rd_table
-QNS_CV_ACADEMIC_ORGANIZATIONS.csv   cuny_departments 
+QNS_CV_ACADEMIC_ORGANIZATIONS.csv   cuny_departments
 QNS_CV_CRSE_EQUIV_TBL.csv           crse_equiv
 QNS_CV_CUNY_DISCIPLINES.csv         disciplines
 QNS_CV_CUNY_SUBJECTS.csv            cuny_subjects
@@ -11,4 +12,3 @@ QNS_QCCV_CU_CATALOG_NP.csv          cuny_catalog
 QNS_QCCV_CU_REQUISITES_NP.csv       cuny_reqs
 SR701____INSTITUTION_TABLE.csv      institutions
 SR742A___CRSE_ATTRIBUTE_VALUE.csv   attribute_values
-
