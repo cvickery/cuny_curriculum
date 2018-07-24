@@ -1,25 +1,33 @@
 # Two modes of operation:
-#   1. Create a list of all course_ids that are part of transfer rules, but which do not appear in
-#   the catalog.
-#   2. Clear and re-populate the rule_groups, source_courses, and destination_courses tables.
+#   Clear and re-populate the rule_groups, source_courses, and destination_courses tables.
+#
+#   Note and ignore rules that have invalid course_id fields (lookup fails).
+#
+#   Note, but keep, rules where the textual description of the course does not match the catalog
+#   description. (Mismatched institution and/or discipline.) Use the course_id and catalog info.
+#
+#   Deal with cross-listed courses by allowing a source or destination course_id to represent all
+#   offer_nbr values for “the course“.
 
-import psycopg2
-import csv
 import os
 import sys
 import argparse
+import csv
+
 from collections import namedtuple
 from datetime import date
 
+import psycopg2
+from psycopg2.extras import NamedTupleCursor
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--debug', '-d', action='store_true')
-parser.add_argument('--generate', '-g', action='store_true')
 parser.add_argument('--progress', '-p', action='store_true')
 parser.add_argument('--report', '-r', action='store_true')
 args = parser.parse_args()
 
 db = psycopg2.connect('dbname=cuny_courses')
-cursor = db.cursor()
+cursor = db.cursor(cursor_factory=NamedTupleCursor)
 
 # Get most recent transfer_rules query file
 the_file = './latest_queries/QNS_CV_SR_TRNS_INTERNAL_RULES.csv'
@@ -36,14 +44,12 @@ if args.report:
 
 num_lines = sum(1 for line in open(the_file))
 
-known_bad_filename = 'known_bad_ids.{}.log'.format(os.getenv('HOSTNAME').split('.')[0])
-
-# There be some garbage institution "names" in the transfer_rules
-cursor.execute("""select code as institution
+# There be some garbage institution "names" in the transfer_rules, but the app’s institutions
+# table is “definitive”.
+cursor.execute("""select *
                   from institutions
-                  group by institution
-                  order by institution""")
-known_institutions = [inst[0] for inst in cursor.fetchall()]
+                  order by code""")
+known_institutions = [inst.code for inst in cursor.fetchall()]
 
 if args.generate:
   """

@@ -3,17 +3,18 @@ DROP TABLE IF EXISTS courses cascade;
 CREATE TABLE courses (
   course_id integer,
   offer_nbr integer,
+  equivalence_group integer references crse_equiv_tbl,
   institution text references institutions,
   cuny_subject text references cuny_subjects,
   department text references cuny_departments,
   discipline text,
   catalog_number text,
   title text,
-  hours float,
+  components jsonb,  -- array of [component, component_contact_hours]
+  contact_hours float,
   min_credits float,
   max_credits float,
-  credits float,      -- academic progress units
-  fa_credits float,   -- financial aid units
+  primary_component text,
   requisites text,
   designation text references designations,
   description text,
@@ -21,6 +22,7 @@ CREATE TABLE courses (
   course_status text,
   discipline_status text,
   can_schedule text,
-  primary key (course_id, offer_nbr)
+  attributes text,  -- semicolon-separated list of course attribute descriptions
+  primary key (course_id, offer_nbr),
   foreign key (institution, career) references cuny_careers
   )

@@ -17,7 +17,7 @@ create table source_courses (
   discipline text,
   group_number integer,
   destination_institution text,
-  course_id integer references courses,
+  course_id integer, -- may reference multiple rows in courses if cross-listed
   min_gpa real,
   max_gpa real,
   foreign key (source_institution, discipline, group_number, destination_institution)
@@ -37,10 +37,10 @@ create table destination_courses (
   discipline text,
   group_number integer,
   destination_institution text,
-  course_id integer references courses,
+  course_id integer, -- may reference multiple rows in courses if cross-listed
   transfer_credits real,
- foreign key (source_institution, discipline, group_number, destination_institution)
-   references rule_groups,
+  foreign key (source_institution, discipline, group_number, destination_institution)
+    references rule_groups,
  unique (source_institution,
          discipline,
          group_number,

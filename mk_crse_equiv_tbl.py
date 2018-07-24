@@ -1,6 +1,12 @@
-""" Create my own copy of crse_equiv_tbl.
-    Then I can lookup courses where the equivalent_course_group is bogus one way or another.
-    Working on answering the question, "What is a cross-listed course?""
+""" Create copy of CUNYfirst crse_equiv_tbl.
+      Originally so I could lookup courses where the equivalent_course_group is bogus in one way or
+      another. Working on answering the question, “What is a cross-listed course?”
+
+      Now it’s just to provide a resource for elaborating on course catalog descriptions in the app.
+      Cross-listing is handled by a single course_id with multiple offer_nbrs.
+
+      It would be interesting, for example, to see what Pathways courses are designated by virtue of
+      being part of an equivalence group rather than having been reviewed by the CCCRC.
 """
 import csv
 import sys
@@ -10,7 +16,7 @@ from collections import namedtuple
 import psycopg2
 from psycopg2.extras import NamedTupleCursor
 num_rows = 0;
-conn = psycopg2.connect('dbname=vickery')
+conn = psycopg2.connect('dbname=cuny_courses')
 cursor = conn.cursor(cursor_factory=NamedTupleCursor)
 cursor.execute("""
   drop table if exists crse_equiv_tbl;
@@ -18,16 +24,16 @@ cursor.execute("""
     equivalent_course_group integer primary key,
     description text)
 """)
-with open('./QNS_CCV_CRSE_EQUIV_TBL_7102.csv') as csvfile:
+total_rows = sum(1 for line in open('./latest_queries/QNS_CV_CRSE_EQUIV_TBL.csv'))
+with open('./latest_queries/QNS_CV_CRSE_EQUIV_TBL.csv') as csvfile:
   csv_reader = csv.reader(csvfile)
-  raw = next(csv_reader)  # skip pre-header row
   raw = next(csv_reader, False) # header row
   raw[0] = raw[0].replace('\ufeff', '')
   Equiv_Table_Row = namedtuple('Equiv_Table_Row', [val.lower().replace(' ', '_').replace('/', '_') for val in raw])
   raw = next(csv_reader, False) # first data row
   while raw:
     num_rows += 1
-    print(f'{num_rows}\r', file=sys.stderr, end='')
+    if 0 == num_rows % 100: print(f'{num_rows:,} / {total_rows:,}\r', file=sys.stderr, end='')
     row = Equiv_Table_Row._make(raw)
     try:
       int(row.equivalent_course_group)
