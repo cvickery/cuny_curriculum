@@ -27,6 +27,9 @@ parser.add_argument('--progress', '-p', action='store_true')  # to stderr
 parser.add_argument('--report', '-r', action='store_true')    # to stdout
 args = parser.parse_args()
 
+if args.progress:
+  print('', file=sys.stderr)
+
 db = psycopg2.connect('dbname=cuny_courses')
 cursor = db.cursor(cursor_factory=NamedTupleCursor)
 
