@@ -247,7 +247,7 @@ with open(cat_file, newline='') as csvfile:
           print(e.pgerror)
           exit(e.pgerror)
 if args.progress:
-  print(file=sys.stderr)
+  print('', file=sys.stderr)
 if args.report:
   run_time = perf_counter() - start_time
   minutes = int(run_time / 60.)

@@ -151,15 +151,15 @@ fi
 echo done.
 
 # Transfer rules
-echo -n CREATE TABLE review_status_bits | tee -a init_psql.log
+echo -n CREATE TABLE review_status_bits... | tee -a init_psql.log
 psql cuny_courses < review_status_bits.sql >> init_psql.log
 if [ $? -ne 0 ]
   then echo -e '\nFAILED!'
        exit
 fi
-echo done
+echo done.
 
-echo -n CREATE TABLE rule_groups, source_courses, destination_courses | tee -a init_psql.log
+echo -n CREATE TABLE rule_groups, source_courses, destination_courses... | tee -a init_psql.log
 psql cuny_courses < create_rule_groups.sql >> init_psql.log
 if [ $? -ne 0 ]
   then echo -e '\nFAILED!'
