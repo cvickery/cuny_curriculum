@@ -54,21 +54,21 @@ known_institutions = [inst.code for inst in cursor.fetchall()]
 
 # if args.generate:
 #   """
-#       Generate list of bad course_ids referenced in the rows of the transfer rules query
+#       Generate list of bad course_ids referenced in the lines of the transfer rules query
 #   """
 #   baddies = open(known_bad_filename, 'w')
 #   bad_set = set()
 #   with open(the_file) as csvfile:
 #     csv_reader = csv.reader(csvfile)
 #     cols = None
-#     row_num = 0
-#     for row in csv_reader:
-#       row_num += 1
-#       if args.progress and row_num % 10000 == 0:
-#         print('row {:,}/{:,}\r'.format(row_num, num_lines), end='', file=sys.stderr)
+#     line_num = 0
+#     for line in csv_reader:
+#       line_num += 1
+#       if args.progress and line_num % 10000 == 0:
+#         print('line {:,}/{:,}\r'.format(line_num, num_lines), end='', file=sys.stderr)
 #       if cols == None:
-#         row[0] = row[0].replace('\ufeff', '')
-#         cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
+#         line[0] = line[0].replace('\ufeff', '')
+#         cols = [val.lower().replace(' ', '_').replace('/', '_') for val in line]
 #         Record = namedtuple('Record', cols)
 #         if args.debug:
 #           print(cols)
@@ -76,10 +76,10 @@ known_institutions = [inst.code for inst in cursor.fetchall()]
 #             print('{} = {}; '.format(col, cols.index(col), end = ''))
 #           print()
 #       else:
-#         if len(row) != len(cols):
-#           print('\nrow {} len(cols) = {} but len(rows) = {}'.format(row_num, len(cols), len(row)))
+#         if len(line) != len(cols):
+#           print('\nline {} len(cols) = {} but len(lines) = {}'.format(line_num, len(cols), len(line)))
 #           continue
-#         record = Record._make(row)
+#         record = Record._make(line)
 #         if record.source_institution not in known_institutions or \
 #            record.destination_institution not in known_institutions:
 #           continue
@@ -118,11 +118,11 @@ num_destination_courses = 0
 with open(the_file) as csvfile:
   csv_reader = csv.reader(csvfile)
   cols = None
-  row_num = 0;
-  for row in csv_reader:
+  line_num = 0;
+  for line in csv_reader:
     if cols == None:
-      row[0] = row[0].replace('\ufeff', '')
-      cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
+      line[0] = line[0].replace('\ufeff', '')
+      cols = [val.lower().replace(' ', '_').replace('/', '_') for val in line]
       Record = namedtuple('Record', cols);
       if args.debug:
         print(cols)
@@ -130,19 +130,20 @@ with open(the_file) as csvfile:
           print('{} = {}; '.format(col, cols.index(col), end = ''))
           print()
     else:
-      row_num += 1
-      if args.progress and row_num % 1000 == 0:
+      line_num += 1
+      if args.progress and line_num % 1000 == 0:
         elapsed_time = perf_counter() - start_time
-        total_time = elapsed_time / row_num / num_lines
+        total_time = num_lines * elapsed_time / line_num
         secs_remaining = total_time - elapsed_time
         mins_remaining = int((secs_remaining) / 60)
-        secs_remaining -= mins_remaining * 60
-        print('row {:,}/{:,} {}:{:02}\r'.format(row_num,
+        secs_remaining = int(secs_remaining - (mins_remaining * 60))
+        print('line {:,}/{:,} ({:.1f}%) {}:{:02} remaining\r'.format(line_num,
                                                 num_lines,
+                                                100 * line_num / num_lines,
                                                 mins_remaining,
-                                                int(secs_remaining)),
+                                                secs_remaining),
               end='', file=sys.stderr)
-      record = Record._make(row)
+      record = Record._make(line)
 
       # 2018-07-19: The following two tests never fail
       src_institution = record.source_institution
@@ -164,17 +165,19 @@ with open(the_file) as csvfile:
                         where course_id = %s""", (source_course_id,))
       if cursor.rowcount > 0:
         if cursor.rowcount > 1:
-          for row in cursor.fetchall():
-            print(f'{source_course_id}: {row.institution} {row.offer_nbr} {row.discipline}')
-            source_institution = row.institution
-            offer_nbr = row.offer_nbr
-            discipline = row.discipline
+          for course in cursor.fetchall():
+            print(f'{source_course_id}: {course.institution} {course.offer_nbr} {course.discipline}')
+            source_institution = course.institution
+            offer_nbr = course.offer_nbr
+            discipline = course.discipline
           print('Multiple source offer_nbrs ({}) not implemented yet for {}. {}'.format(
                                                                               cursor.rowcount,
                                                                               source_course_id,
                                                                               record))
         else:
           source_institution, offer_nbr, source_discipline = cursor.fetchone()
+          if args.debug:
+            print(f'Lookup source: {source_institution} {offer_nbr}, {source_discipline} for {source_course_id}')
       else:
         print(f'Source Course ID {source_course_id} not found for {record}')
         continue
@@ -186,16 +189,18 @@ with open(the_file) as csvfile:
                          where course_id = %s""", (destination_course_id,))
       if cursor.rowcount > 0:
         if cursor.rowcount > 1:
-          for row in cursor.fetchall():
-            print(f'{destination_course_id}: {row.institution} {row.offer_nbr}')
-            source_institution = row.institution
-            offer_nbr = row.offer_nbr
+          for course in cursor.fetchall():
+            print(f'{destination_course_id}: {course.institution} {course.offer_nbr}')
+            destination_institution = course.institution
+            offer_nbr = course.offer_nbr
           print('Multiple destination offer_nbrs ({}) not implemented yet for {}. {}'.format(
                                                                             cursor.rowcount,
                                                                             destination_course_id,
                                                                             record))
         else:
           destination_institution, offer_nbr = cursor.fetchone()
+          if args.debug:
+            print(f'Lookup destination: {destination_institution} {offer_nbr} for {destination_course_id}')
       else:
         print(f'Destination Course ID {destination_course_id} not found for {record}')
         continue
@@ -208,29 +213,20 @@ with open(the_file) as csvfile:
       transfer_credits = float(record.units_taken)
 
       # Create or look up the rule group
-      cursor.execute("""
-                     insert into rule_groups values(
-                     '{}', '{}', {}, '{}') on conflict do nothing
-                     """.format(source_institution,
-                                source_discipline,
-                                rule_group_number,
-                                destination_institution))
-      num_groups += cursor.rowcount
-      # if cursor.rowcount == 0:
-      #   cursor.execute("""
-      #                  select *
-      #                  from rule_groups
-      #                  where source_institution = '{}'
-      #                  and discipline = '{}'
-      #                  and group_number = {}
-      #                  and destination_institution ='{}'
-      #                  """.format(source_institution,
-      #                             source_discipline,
-      #                             rule_group_number,
-      #                             destination_institution))
-      #   assert cursor.rowcount == 1, """select rule_group returned {} values
-      #                                """.format(cursor.rowcount)
-      # rule_group_id = cursor.fetchone()[0]
+      try:
+        cursor.execute('insert into rule_groups values (%s, %s, %s, %s) on conflict do nothing',
+                       (source_institution,
+                        source_discipline,
+                        rule_group_number,
+                        destination_institution))
+        num_groups += cursor.rowcount
+        if args.debug: print(f'{cursor.query}\n  Rows inserted {cursor.rowcount}')
+      except psycopg2.Error as e:
+        print(f'Error creating/updating rule group for {source_course_id}, {destination_course_id}',
+              file=sys.stderr)
+        print(cursor.query)
+        print(e.pgerror, file=sys.stderr)
+        exit(1)
 
       # Add the source course
       cursor.execute("""
@@ -260,10 +256,10 @@ with open(the_file) as csvfile:
   if args.report:
     print("""\n{:,} Groups\n{:,} Source courses\n{:,} Destination courses
           """.format(num_groups, num_source_courses, num_destination_courses))
-    secs = perfmeter() - start_time
+    secs = perf_counter() - start_time
     mins = int(secs / 60)
     secs = int(secs - 60 * mins)
-    print(f'{mins}:{secs:02} elapsed time')
+    print(f'Completed in {mins}:{secs:02} minutes')
   db.commit()
   db.close()
   conflicts.close()

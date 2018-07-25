@@ -29,17 +29,21 @@ with open('./latest_queries/QNS_CV_CRSE_EQUIV_TBL.csv') as csvfile:
   csv_reader = csv.reader(csvfile)
   raw = next(csv_reader, False) # header row
   raw[0] = raw[0].replace('\ufeff', '')
-  Equiv_Table_Row = namedtuple('Equiv_Table_Row', [val.lower().replace(' ', '_').replace('/', '_') for val in raw])
+  Equiv_Table_Row = namedtuple('Equiv_Table_Row',
+                               [val.lower().replace(' ', '_').replace('/', '_') for val in raw])
   raw = next(csv_reader, False) # first data row
   while raw:
     num_rows += 1
-    if 0 == num_rows % 100: print(f'{num_rows:,} / {total_rows:,}\r', file=sys.stderr, end='')
+    if 0 == num_rows % 1000:
+      print(f'{num_rows:,} / {total_rows:,}\r', file=sys.stderr, end='')
     row = Equiv_Table_Row._make(raw)
     try:
       int(row.equivalent_course_group)
-      cursor.execute('insert into crse_equiv_tbl values (%s, %s)', (row.equivalent_course_group, row.description))
+      cursor.execute('insert into crse_equiv_tbl values (%s, %s)', (row.equivalent_course_group,
+                                                                    row.description))
     except:
       print('Invalid Index:', row)
     raw = next(csv_reader, False) # next data row
+print(file=sys.stderr)
 conn.commit()
 conn.close()

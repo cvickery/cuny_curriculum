@@ -108,13 +108,15 @@ with open(cat_file, newline='') as csvfile:
       remaining_seconds = total_seconds - elapsed_seconds
       remaining_minutes = int(remaining_seconds / 60)
       remaining_seconds = int(remaining_seconds - remaining_minutes * 60)
-      print('\nRow {:,} / {:,}; {:,}  courses. {}:{:02}\r'.format(num_rows,
+      print('\r' + 80 * ' ' +
+            '\rRow {:,} / {:,}; {:,}  courses. {}:{:02}'.format(num_rows,
                                                                 total_rows,
                                                                 num_courses,
                                                                 remaining_minutes,
                                                                 remaining_seconds) ,
             end='',
             file=sys.stderr)
+
     if cols == None:
       row[0] = row[0].replace('\ufeff', '')
       if 'Institution' == row[0]:
@@ -130,7 +132,11 @@ with open(cat_file, newline='') as csvfile:
 
       # There be departments that are bogus and/or in which we're not interested
       department = r.acad_org
-      if department == 'PEES-BKL' or department == 'SOC-YRK' or department == 'JOUR-GRD':
+      discipline = r.subject
+      if department == 'PEES-BKL' or \
+          department == 'SOC-YRK' or \
+          department == 'JOUR-GRD' or \
+          discipline == 'JOUR':
         continue
       course_id = int(r.course_id)
 
@@ -150,7 +156,6 @@ with open(cat_file, newline='') as csvfile:
       except:
         equivalence_group = None
       institution = r.institution
-      discipline = r.subject
       catalog_number = r.catalog_number.strip()
       component = Component._make([r.component_course_component, float(r.instructor_contact_hours)])
       primary_component = r.primary_component
@@ -182,7 +187,6 @@ with open(cat_file, newline='') as csvfile:
                   file=sys.stderr)
             exit
           components = [Component._make(c) for c in lookup.components]
-          # print(f'Lookup found 1: {course_id} {offer_nbr} {discipline} {catalog_number} {components}', file=sys.stderr)
           if component not in components:
             components.append(component)
             # Do the following at display time, putting the primary_component first.
@@ -207,7 +211,6 @@ with open(cat_file, newline='') as csvfile:
                                                                       catalog_number,
                                                                       component))
       else:
-        # print(f'Lookup found 0: {course_id} {offer_nbr} {discipline} {catalog_number}', file=sys.stderr)
         components = [component]
         cuny_subject = r.subject_external_area
         if cuny_subject == '':
@@ -240,8 +243,9 @@ with open(cat_file, newline='') as csvfile:
                            requisite_str, designation, description, career, course_status,
                            discipline_status, can_schedule, attributes))
           num_courses += 1
-        except:
-          print('So sad')
+        except psycopg2.Error as e:
+          print(e.pgerror)
+          exit(e.pgerror)
 if args.progress:
   print(file=sys.stderr)
 if args.report:
