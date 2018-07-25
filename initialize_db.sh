@@ -175,7 +175,7 @@ if [ $? -ne 0 ]
 fi
 echo done.
 
-echo -n CHECK bogus rules | tee -a init.log
+echo -n CHECK bogus rules... | tee -a init.log
 python3 bogus_rules.py --progress >> init.log
 if [ $? -ne 0 ]
   then echo -e '\nFAILED!'
