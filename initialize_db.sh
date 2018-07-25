@@ -135,7 +135,7 @@ fi
 echo done.
 
 echo -n POPULATE courses... | tee -a init.log
-python3 populate_courses.py --progress --report
+python3 populate_courses.py --progress --report > populate_courses.log
 if [ $? -ne 0 ]
   then echo -e '\nFAILED!'
        exit

@@ -15,9 +15,11 @@ from collections import namedtuple
 
 import psycopg2
 from psycopg2.extras import NamedTupleCursor
+
 num_rows = 0;
 conn = psycopg2.connect('dbname=cuny_courses')
 cursor = conn.cursor(cursor_factory=NamedTupleCursor)
+
 cursor.execute("""
   drop table if exists crse_equiv_tbl;
   create table crse_equiv_tbl (
@@ -35,7 +37,7 @@ with open('./latest_queries/QNS_CV_CRSE_EQUIV_TBL.csv') as csvfile:
   while raw:
     num_rows += 1
     if 0 == num_rows % 1000:
-      print(f'{num_rows:,} / {total_rows:,}\r', file=sys.stderr, end='')
+      print(f'{num_rows:,} / {total_rows:,}\r', end='')
     row = Equiv_Table_Row._make(raw)
     try:
       int(row.equivalent_course_group)
