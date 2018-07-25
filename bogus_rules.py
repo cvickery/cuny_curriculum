@@ -14,6 +14,8 @@ parser.add_argument('--debug', '-d', action='store_true')
 parser.add_argument('--progress', '-p', action='store_true')
 args = parser.parse_args()
 
+if args.progress:
+  print('', file=sys.stderr)
 db = psycopg2.connect('dbname=cuny_courses')
 cursor = db.cursor()
 
@@ -71,7 +73,9 @@ with open(logfile_name, 'w') as logfile:
       else:
         if args.progress:
           if (count_records % 1000) == 0:
-            print('\r{:,}/{:,} {:,} bogus'.format(count_records, num_records, num_bogus), end='')
+            print('\r{:,}/{:,} {:,} bogus'.format(count_records, num_records, num_bogus),
+                  file=sys.stderr,
+                  end='')
         count_records += 1
         if len(row) != len(cols):
           print('\nrow {} len(cols) = {} but len(rows) = {}'.format(row_num, len(cols), len(row)))
@@ -189,6 +193,8 @@ with open(logfile_name, 'w') as logfile:
 
 db.commit()
 db.close()
+if args.progress:
+  print('', file=sys.stderr)
 print('\rFound {:,} bogus records ({:.2f}%) out of {:,}.'.format(num_bogus,
                                                               100 *num_bogus / num_records,
                                                               num_records))
