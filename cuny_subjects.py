@@ -60,6 +60,7 @@ cursor.execute(
       department text references cuny_departments,
       discipline text,
       description text,
+      status text,
       cuny_subject text default 'missing' references cuny_subjects,
       primary key (institution, discipline))
     """)
@@ -99,16 +100,15 @@ with open(discp_file) as csvfile:
           external_subject_area = record.external_subject_area
           if external_subject_area == '':
             external_subject_area = 'missing'
-          q = """insert into disciplines values ('{}', '{}', '{}', '{}', '{}')
+          cursor.execute("""insert into disciplines values (%s, %s, %s, %s, %s, %s)
                     on conflict do nothing
-              """.format(
-              record.institution,
-              record.acad_org,
-              record.subject,
-              record.formal_description.replace('\'', '’'),
-              external_subject_area)
-          if args.debug: print(q)
-          cursor.execute(q)
+              """, (record.institution,
+                    record.acad_org,
+                    record.subject,
+                    record.formal_description.replace('\'', '’'),
+                    record.status,
+                    external_subject_area))
+          if args.debug: print(cursor.query)
   db.commit()
 
 db.close()
