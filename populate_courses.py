@@ -111,11 +111,11 @@ with open(cat_file, newline='') as csvfile:
       remaining_minutes = int(remaining_seconds / 60)
       remaining_seconds = int(remaining_seconds - remaining_minutes * 60)
       print('\r' + 80 * ' ' +
-            '\rRow {:,} / {:,}; {:,}  courses. {}:{:02}'.format(num_rows,
-                                                                total_rows,
-                                                                num_courses,
-                                                                remaining_minutes,
-                                                                remaining_seconds) ,
+            '\rRow {:,} / {:,}; {:,} courses; {}:{:02} remaining.'.format(num_rows,
+                                                                          total_rows,
+                                                                          num_courses,
+                                                                          remaining_minutes,
+                                                                          remaining_seconds) ,
             end='',
             file=sys.stderr)
 
