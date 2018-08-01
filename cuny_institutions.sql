@@ -32,6 +32,7 @@ insert into institutions values ('NCC01', 'Guttman',        'Guttman Community C
 insert into institutions values ('NYT01', 'City Tech',      'NYC College of Technology',      true,  true);
 insert into institutions values ('QCC01', 'Queensborough',  'Queensborough Community College',true,  false);
 insert into institutions values ('QNS01', 'Queens',         'Queens College',                 false, true);
+insert into institutions values ('SLU01', 'New',            'New Unknown',                    false, false);
 insert into institutions values ('SOJ01', 'Journalism',     'Graduate School of Journalism',  false, false);
 insert into institutions values ('SPH01', 'Public Health',  'CUNY School of Public Health',   false, false);
 insert into institutions values ('SPS01', 'SPS',            'School of Professional Studies', false, true);

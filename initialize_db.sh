@@ -47,7 +47,7 @@ echo done.
 #   Divisions references departments, so create departments first
 #
 echo -n CREATE TABLE institutions... | tee -a init_psql.log
-psql cuny_courses < institutions.sql >> init_psql.log
+psql cuny_courses < cuny_institutions.sql >> init_psql.log
 echo done.
 
 # Python scripts process query results, so check that they are all present
