@@ -3,7 +3,7 @@ drop table if exists rule_groups cascade;
 create table rule_groups (
   source_institution text not null,
   source_discipline text not null,
-  group_number integer not null,
+  group_number real not null,
   destination_institution text not null,
   status integer default 0,
   foreign key (source_institution, source_discipline) references disciplines,
@@ -15,7 +15,7 @@ create table source_courses (
   id serial primary key,
   source_institution text,
   source_discipline text,
-  group_number integer,
+  group_number real,
   destination_institution text,
   course_id integer, -- may reference multiple rows in courses if cross-listed
   min_gpa real,
@@ -35,7 +35,7 @@ create table destination_courses (
   id serial primary key,
   source_institution text,
   source_discipline text,
-  group_number integer,
+  group_number real,
   destination_institution text,
   course_id integer, -- may reference multiple rows in courses if cross-listed
   transfer_credits real,
