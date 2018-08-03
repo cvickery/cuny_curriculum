@@ -14,7 +14,7 @@ create table events (
 id serial primary key,
 source_institution text,
 discipline text,
-group_number real,
+group_number numeric(6, 1),
 destination_institution text,
 event_type text references review_status_bits(abbr),
 who text,

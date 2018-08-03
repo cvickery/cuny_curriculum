@@ -12,12 +12,14 @@ import sys
 import argparse
 from collections import namedtuple
 from datetime import date
+from time import perf_counter
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--debug', '-d', action='store_true')
 parser.add_argument('--progress', '-p', action='store_true')
 args = parser.parse_args()
 
+start_time = perf_counter()
 if args.progress:
   print('', file=sys.stderr)
 
@@ -37,6 +39,7 @@ if args.debug:
 csvfile_name = './latest_queries/QNS_CV_SR_TRNS_INTERNAL_RULES.csv'
 file_date = date.fromtimestamp(os.lstat(csvfile_name).st_birthtime).strftime('%Y-%m-%d')
 logfile_name = './bogus_rules_report_{}.log'.format(file_date)
+
 if args.debug: print('rules file: {}'.format(csvfile_name))
 
 cursor.execute('drop table if exists bogus_rules')
@@ -78,12 +81,21 @@ with open(logfile_name, 'w') as logfile:
             print('{} = {}; '.format(col, cols.index(col), end = ''))
           print()
       else:
+        count_records += 1
         if args.progress:
           if (count_records % 1000) == 0:
-            print('\r{:,}/{:,} {:,} bogus'.format(count_records, num_records, num_bogus),
+            elapsed_time = perf_counter() - start_time
+            total_time = num_records * elapsed_time / count_records
+            secs_remaining = total_time - elapsed_time
+            mins_remaining = int((secs_remaining) / 60)
+            secs_remaining = int(secs_remaining - (mins_remaining * 60))
+            print('line {:,}/{:,} ({:.1f}%) {}:{:02} remaining.\r'.format(count_records,
+                                                    num_records,
+                                                    100 * count_records / num_records,
+                                                    mins_remaining,
+                                                    secs_remaining),
                   file=sys.stderr,
                   end='')
-        count_records += 1
         if len(row) != len(cols):
           print('\nrow {} len(cols) = {} but len(rows) = {}'.format(row_num, len(cols), len(row)))
           continue
