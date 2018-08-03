@@ -1,7 +1,10 @@
 # Identify rows from the internal rules query where the discipline/catalog# differ between the rule
-# and the actual catalog info. Create and populate the vickery.bogus_rules table; generate a log
-# file with same info.
+# and the actual catalog info. Create and populate the bogus_rules table; generate a log
+# file with same info. (The db table is not used in the app, but is useful for reporting to CUNY.)
+
 import psycopg2
+from psycopg2.extras import NamedTupleCursor
+
 import csv
 import re
 import os
@@ -19,7 +22,7 @@ if args.progress:
   print('', file=sys.stderr)
 
 db = psycopg2.connect('dbname=cuny_courses')
-cursor = db.cursor()
+cursor = db.cursor(cursor_factory=NamedTupleCursor)
 
 # There be some garbage institution "names" in the transfer_rules
 cursor.execute("""select code as institution
@@ -30,12 +33,8 @@ known_institutions = [inst[0] for inst in cursor.fetchall()]
 if args.debug:
   print(known_institutions)
 
-# Now switch to local db for the bogus_rules table
-db = psycopg2.connect('dbname=vickery')
-cursor = db.cursor()
-
 # Get most recent transfer_rules query file
-csvfile_name = '../latest_queries/QNS_CV_SR_TRNS_INTERNAL_RULES.csv'
+csvfile_name = './latest_queries/QNS_CV_SR_TRNS_INTERNAL_RULES.csv'
 file_date = date.fromtimestamp(os.lstat(csvfile_name).st_birthtime).strftime('%Y-%m-%d')
 logfile_name = './bogus_rules_report_{}.log'.format(file_date)
 if args.debug: print('rules file: {}'.format(csvfile_name))

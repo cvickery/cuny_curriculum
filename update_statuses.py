@@ -28,6 +28,10 @@ print('  Process {} events ...'.format(cursor.rowcount))
 Event = namedtuple('Event', [d[0] for d in cursor.description])
 events = map(Event._make, cursor.fetchall())
 for event in events:
+  # Convert old integer group numbers to float with default fractional part (offer_nbr) of 0.1
+  group_number = event.group_number
+  if float(group_number) == int(group_number):
+    group_number = float(group_number) + 0.1
   cursor.execute("""select status
                       from rule_groups
                      where source_institution = %s

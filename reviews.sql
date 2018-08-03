@@ -1,5 +1,5 @@
 -- The pending_reviews table
-drop table if exists pending_reviews;
+drop table if exists pending_reviews cascade;
 create table pending_reviews (
 token text primary key,
 email text,
@@ -8,13 +8,13 @@ when_entered timestamptz default now()
 );
 
 -- The (review_)events table
-drop table if exists events;
+drop table if exists events cascade;
 
 create table events (
 id serial primary key,
 source_institution text,
 discipline text,
-group_number integer,
+group_number real,
 destination_institution text,
 event_type text references review_status_bits(abbr),
 who text,

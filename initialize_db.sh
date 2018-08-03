@@ -16,9 +16,16 @@ fi
 
 if [ $do_events -eq 1 ]
 then
+  # If the db has no events table (yet), re-use the existing events-dump.sql if there is one, or
+  # create an empty one.
   touch events-dump.sql
   echo -n SAVE EVENTS TABLE ...
+  # events-dump.sql won’t be changed if "no matching tables found"
   pg_dump --data-only --table=events -f events-dump.sql cuny_courses
+  # Convert old-style group numbers (ints) to floats
+  #   This can away once all old-style reviews have been converted.
+  python3 fix_events_dump.py < events-dump.sql > t.sql
+  mv t.sql events-dump.sql
   echo done.
 fi
 
