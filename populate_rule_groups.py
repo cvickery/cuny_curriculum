@@ -126,9 +126,6 @@ with open(the_file) as csvfile:
                         where course_id = %s""", (source_course_id,))
       if cursor.rowcount > 0:
         if cursor.rowcount > 1:
-          print('Multiple source offer_nbrs ({}) for {}. {}'.format(cursor.rowcount,
-                                                                    source_course_id,
-                                                                    record))
           for course in cursor.fetchall():
             if args.debug:
               print(f'{source_course_id}: {course.institution} {course.offer_nbr} {course.discipline}')
@@ -140,20 +137,20 @@ with open(the_file) as csvfile:
               offer_nbr = 1
             if offer_nbr > 4:
               conflicts.write('Bogus offer_nbr ({}) for source_course_id {}.\n{}'.format(offer_nbr,
-                                                                                  source_course_id))
+                                                                                  source_course_id,
+                                                                                  record))
               offer_nbr = 1
             source_discipline = course.discipline
             group_number = float(record.src_equivalency_component) + (offer_nbr / 10.0)
             rule_groups.append(dict(source_institution=source_institution,
                                     source_discipline=source_discipline,
                                     group_number=group_number))
-          for rule_group in rule_groups:
-            print(f'{rule_group}')
         else:
           source_institution, offer_nbr, source_discipline = cursor.fetchone()
           if offer_nbr > 4:
             conflicts.write('Bogus offer_nbr ({}) for source_course_id {}.\n{}'.format(offer_nbr,
-                                                                                source_course_id))
+                                                                                source_course_id,
+                                                                                record))
             offer_nbr = 1
           group_number = float(record.src_equivalency_component) + (offer_nbr / 10.0)
           rule_groups.append(dict(source_institution=source_institution,
