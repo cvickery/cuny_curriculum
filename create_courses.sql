@@ -22,7 +22,8 @@ CREATE TABLE courses (
   course_status text,
   discipline_status text,
   can_schedule text,
-  attributes text,  -- semicolon-separated list of course attribute descriptions
+  attributes text, -- semicolon-separated list of name:value of course attributes
+  attribute_descriptions text,  -- semicolon-separated list of course attribute descriptions
   primary key (course_id, offer_nbr),
   foreign key (institution, career) references cuny_careers,
   foreign key (institution, discipline) references disciplines

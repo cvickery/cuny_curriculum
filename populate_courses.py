@@ -47,30 +47,11 @@ if args.report:
   print("""Catalog file\t{} ({})\nRequisites file\t{} ({})\nAttributes file\t{} ({})
         """.format(cat_file, cat_date, req_file, req_date, att_file, att_date  ))
 
-# Update the attributes table for all colleges
-cursor.execute("delete from course_attributes")
-with open(att_file, newline='') as csvfile:
-  att_reader = csv.reader(csvfile)
-  cols = None
-  for row in att_reader:
-    if cols == None:
-      row[0] = row[0].replace('\ufeff', '')
-      if 'Institution' == row[0]:
-        cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
-    else:
-      q = ("insert into course_attributes values ('{}', '{}', '{}', '{}')".format(
-          row[cols.index('course_id')],
-          row[cols.index('institution')],
-          row[cols.index('course_attribute')],
-          row[cols.index('course_attribute_value')]))
-      cursor.execute(q)
-db.commit()
-
 # Cache institutions
 cursor.execute('select * from institutions')
 all_colleges = [inst.code for inst in cursor.fetchall()]
 
-# Cache a dictionary of course requisites; key is (institution, discipline, catalog)
+# Cache a dictionary of course requisites; key is (institution, discipline, catalog_nbr)
 with open(req_file, newline='') as csvfile:
   req_reader = csv.reader(csvfile)
   requisites = {}
@@ -143,14 +124,19 @@ with open(cat_file, newline='') as csvfile:
       course_id = int(r.course_id)
 
       # Checking course attributes
-      lookup_cursor.execute("""select string_agg(description, '; ') as attributes
+      lookup_cursor.execute("""select string_agg(attribute_name||':'||attribute_value, '; ')
+                                        as attributes,
+                                      string_agg(description, '; ')
+                                        as attribute_descriptions
                                  from course_attributes, attributes
                                 where course_id = %s
                                   and name = attribute_name
                                   and value = attribute_value""",
                             (course_id,))
-      attributes = lookup_cursor.fetchone().attributes
-      if attributes == None: attributes = 'None'
+      attributes, attribute_descriptions = lookup_cursor.fetchone()
+      if attributes == None:
+        attributes = 'None'
+        attribute_descriptions = ''
 
       offer_nbr = int(r.offer_nbr)
       try:
@@ -238,12 +224,12 @@ with open(cat_file, newline='') as csvfile:
                              %s, %s, %s, %s,
                              %s, %s, %s, %s, %s,
                              %s, %s, %s, %s, %s,
-                             %s, %s, %s)""",
+                             %s, %s, %s, %s)""",
                           (course_id, offer_nbr, equivalence_group, institution, cuny_subject,
                            department, discipline, catalog_number, title,
                            Json(components), contact_hours, min_credits, max_credits, primary_component,
                            requisite_str, designation, description, career, course_status,
-                           discipline_status, can_schedule, attributes))
+                           discipline_status, can_schedule, attributes, attribute_descriptions))
           num_courses += 1
         except psycopg2.Error as e:
           print(e.pgerror)
@@ -263,5 +249,33 @@ if args.report:
 
 # The date the catalog information for institutions was updated
 cursor.execute("update institutions set date_updated='{}'".format(cat_date))
+
+# Update the attributes table for all colleges, now that the courses it references are there
+if args.progress:
+  print('\nPopulating course_attributes table', file=sys.stderr)
+cursor.execute("delete from course_attributes")
+with open(att_file, newline='') as csvfile:
+  att_reader = csv.reader(csvfile)
+  cols = None
+  for row in att_reader:
+    if cols == None:
+      row[0] = row[0].replace('\ufeff', '')
+      if 'Institution' == row[0]:
+        cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
+    else:
+      # Check the referenced course actually exists
+      cursor.execute('select * from courses where course_id = %s and offer_nbr = %s',
+                     (row[cols.index('course_id')],
+                      row[cols.index('course_offering_nbr')]))
+      if cursor.rowcount == 0:
+        print(f'Course attributes {row} references a non-existent course.')
+      else:
+        cursor.execute('insert into course_attributes values (%s, %s, %s, %s, %s)',
+                      ( row[cols.index('course_id')],
+                        row[cols.index('course_offering_nbr')],
+                        row[cols.index('institution')],
+                        row[cols.index('course_attribute')],
+                        row[cols.index('course_attribute_value')]))
+
 db.commit()
 db.close()
