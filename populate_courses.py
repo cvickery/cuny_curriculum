@@ -71,6 +71,53 @@ with open(req_file, newline='') as csvfile:
         requisites[key] = value
 if args.debug: print('{:,} requisites'.format(len(requisites)))
 
+# cache course_attributes and attribute_descriptions
+
+#  attribute descriptions are keyed by (name, value)
+attribute_descriptions = dict()
+with open('latest_queries/SR742A___CRSE_ATTRIBUTE_VALUE.csv') as csvfile:
+  reader = csv.reader(csvfile)
+  cols = None
+  for line in reader:
+    if cols == None:
+      if 'Crse Attr' == line[0]:
+        cols = [val.lower().replace(' ', '_').replace('/', '_') for val in line]
+        Row = namedtuple('Row', cols)
+    else:
+      row = Row._make(line)
+      key = (row.crse_attr, row.crsatr_val)
+      attribute_descriptions[key] = row.formal_description
+
+# Each name_value pair must appear in attribute_descriptions and must occur no more than once per
+# (course_id, offer_nbr).
+# Report anomalies.
+Name_Value = namedtuple('Name_Value', 'name value')
+attribute_pairs = dict()
+with open(att_file, newline='') as csvfile:
+  att_reader = csv.reader(csvfile)
+  cols = None
+  for line in att_reader:
+    if cols == None:
+      line[0] = line[0].replace('\ufeff', '')
+      if 'Institution' == line[0]:
+        cols = [val.lower().replace(' ', '_').replace('/', '_') for val in line]
+        Row = namedtuple('Row', cols)
+    else:
+      row = Row._make(line)
+      key = (int(row.course_id), int(row.course_offering_nbr))
+      name_value = Name_Value._make((row.course_attribute, row.course_attribute_value))
+      if name_value not in attribute_descriptions.keys():
+        print(
+        '{:6}: Attempt to add {}, which is not in attribute_descriptions, to attribute_pairs.'\
+        .format(row.course_id, name_value))
+      else:
+        if key not in attribute_pairs.keys():
+          attribute_pairs[key] = []
+        if name_value in attribute_pairs[key]:
+          print(f'ERROR: Attempt to re-add {name_value} to attribute_pairs[{key}]')
+        else:
+          attribute_pairs[key].append(name_value)
+
 # Now process the rows from the courses query.
 Component = namedtuple('Component', 'component component_contact_hours')
 total_rows = 0
@@ -122,23 +169,18 @@ with open(cat_file, newline='') as csvfile:
           discipline == 'JOUR':
         continue
       course_id = int(r.course_id)
-
-      # Checking course attributes
-      lookup_cursor.execute("""select string_agg(attribute_name||':'||attribute_value, '; ')
-                                        as attributes,
-                                      string_agg(description, '; ')
-                                        as attribute_descriptions
-                                 from course_attributes, attributes
-                                where course_id = %s
-                                  and name = attribute_name
-                                  and value = attribute_value""",
-                            (course_id,))
-      attributes, attribute_descriptions = lookup_cursor.fetchone()
-      if attributes == None:
-        attributes = 'None'
-        attribute_descriptions = ''
-
       offer_nbr = int(r.offer_nbr)
+      key = (course_id, offer_nbr)
+
+      # Lookup attribute_pairs and their descriptions for this (course_id, offer_nbr)
+      if key not in attribute_pairs.keys():
+        course_attributes = 'None'
+        course_attribute_descriptions = 'No course attributes'
+      else:
+        course_attributes = '; '.join(f'{name}:{value}' for name, value in attribute_pairs[key])
+        course_attribute_desriptions = '; '.join(attribute_descriptions[(name, value)]
+                                                 for name, value in attribute_pairs[key])
+
       try:
         equivalence_group = int(r.equiv_course_group)
       except:
@@ -229,7 +271,7 @@ with open(cat_file, newline='') as csvfile:
                            department, discipline, catalog_number, title,
                            Json(components), contact_hours, min_credits, max_credits, primary_component,
                            requisite_str, designation, description, career, course_status,
-                           discipline_status, can_schedule, attributes, attribute_descriptions))
+                           discipline_status, can_schedule, course_attributes, course_attribute_descriptions))
           num_courses += 1
         except psycopg2.Error as e:
           print(e.pgerror)
@@ -249,33 +291,6 @@ if args.report:
 
 # The date the catalog information for institutions was updated
 cursor.execute("update institutions set date_updated='{}'".format(cat_date))
-
-# Update the attributes table for all colleges, now that the courses it references are there
-if args.progress:
-  print('\nPopulating course_attributes table', file=sys.stderr)
-cursor.execute("delete from course_attributes")
-with open(att_file, newline='') as csvfile:
-  att_reader = csv.reader(csvfile)
-  cols = None
-  for row in att_reader:
-    if cols == None:
-      row[0] = row[0].replace('\ufeff', '')
-      if 'Institution' == row[0]:
-        cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
-    else:
-      # Check the referenced course actually exists
-      cursor.execute('select * from courses where course_id = %s and offer_nbr = %s',
-                     (row[cols.index('course_id')],
-                      row[cols.index('course_offering_nbr')]))
-      if cursor.rowcount == 0:
-        print(f'Course attributes {row} references a non-existent course.')
-      else:
-        cursor.execute('insert into course_attributes values (%s, %s, %s, %s, %s)',
-                      ( row[cols.index('course_id')],
-                        row[cols.index('course_offering_nbr')],
-                        row[cols.index('institution')],
-                        row[cols.index('course_attribute')],
-                        row[cols.index('course_attribute_value')]))
 
 db.commit()
 db.close()

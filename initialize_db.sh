@@ -45,11 +45,11 @@ echo done.
 #   Divisions own departments (organizations)
 #   Departments own disciplines (subjects)
 #   Disciplines map to CUNY subjects (external subject areas)
-#   Disciplines own courses
-#   Courses have a requirement designation and a list of attributes
+#   Disciplines have courses
+#   Courses have a requirement designation
 #
-# The sequence of initializations, however, does not follow this
-# structure.
+# The sequence of initializations, however, does not quite follow this
+# structure:
 #   Careers references institutions, so create institutions first
 #   Divisions references departments, so create departments first
 #
@@ -105,22 +105,6 @@ echo -n CREATE TABLE designations... | tee -a init.log
 python3 designations.py >> init.log
 if [ $? -ne 0 ]
   then echo  -e '\nFAILED!'
-       exit
-fi
-echo done.
-
-echo -n CREATE TABLE attributes... | tee -a init.log
-python3 attributes.py >> init.log
-if [ $? -ne 0 ]
-  then echo -e '\nFAILED!'
-       exit
-fi
-echo done.
-
-echo -n CREATE TABLE course_attributes... | tee -a init_psql.log
-psql cuny_courses < course_attributes.sql >> init_psql.log
-if [ $? -ne 0 ]
-  then echo -e '\nFAILED!'
        exit
 fi
 echo done.
