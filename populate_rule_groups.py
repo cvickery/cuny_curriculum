@@ -36,7 +36,7 @@ cursor = db.cursor(cursor_factory=NamedTupleCursor)
 # Get most recent transfer_rules query file
 the_file = './latest_queries/QNS_CV_SR_TRNS_INTERNAL_RULES.csv'
 file_date = date\
-      .fromtimestamp(os.lstat(the_file).st_mtime).strftime('%Y-%m-%d')
+    .fromtimestamp(os.lstat(the_file).st_mtime).strftime('%Y-%m-%d')
 
 cursor.execute("""
                update updates
@@ -72,16 +72,16 @@ num_destination_courses = 0
 with open(the_file) as csvfile:
   csv_reader = csv.reader(csvfile)
   cols = None
-  line_num = 0;
+  line_num = 0
   for line in csv_reader:
-    if cols == None:
+    if cols is None:
       line[0] = line[0].replace('\ufeff', '')
       cols = [val.lower().replace(' ', '_').replace('/', '_') for val in line]
-      Record = namedtuple('Record', cols);
+      Record = namedtuple('Record', cols)
       if args.debug:
         print(cols)
         for col in cols:
-          print('{} = {}; '.format(col, cols.index(col), end = ''))
+          print('{} = {}; '.format(col, cols.index(col), end=''))
           print()
     else:
       line_num += 1
@@ -91,11 +91,12 @@ with open(the_file) as csvfile:
         secs_remaining = total_time - elapsed_time
         mins_remaining = int((secs_remaining) / 60)
         secs_remaining = int(secs_remaining - (mins_remaining * 60))
-        print('line {:,}/{:,} ({:.1f}%) {}:{:02} remaining.\r'.format(line_num,
-                                                num_lines,
-                                                100 * line_num / num_lines,
-                                                mins_remaining,
-                                                secs_remaining),
+        print('line {:,}/{:,} ({:.1f}%) {}:{:02} remaining.\r'
+              .format(line_num,
+                      num_lines,
+                      100 * line_num / num_lines,
+                      mins_remaining,
+                      secs_remaining),
               end='', file=sys.stderr)
       record = Record._make(line)
 
@@ -128,17 +129,19 @@ with open(the_file) as csvfile:
         if cursor.rowcount > 1:
           for course in cursor.fetchall():
             if args.debug:
-              print(f'{source_course_id}: {course.institution} {course.offer_nbr} {course.discipline}')
+              print('{}: {} {} {}'.format(source_course_id,
+                                          course.institution,
+                                          course.offer_nbr,
+                                          course.discipline))
             source_institution = course.institution
             offer_nbr = course.offer_nbr
             if offer_nbr > 4:
-              conflicts.write('Bogus offer_nbr ({}) for source_course_id {}.\n{}'.format(offer_nbr,
-                                                                                  source_course_id))
+              conflicts.write('Bogus offer_nbr ({}) for source_course_id {}.\n  {}\n'
+                              .format(offer_nbr, source_course_id))
               offer_nbr = 1
             if offer_nbr > 4:
-              conflicts.write('Bogus offer_nbr ({}) for source_course_id {}.\n{}'.format(offer_nbr,
-                                                                                  source_course_id,
-                                                                                  record))
+              conflicts.write('Bogus offer_nbr ({}) for source_course_id {}.\n  {}\n'
+                              .format(offer_nbr, source_course_id, record))
               offer_nbr = 1
             source_discipline = course.discipline
             group_number = float(record.src_equivalency_component) + (offer_nbr / 10.0)
@@ -148,9 +151,8 @@ with open(the_file) as csvfile:
         else:
           source_institution, offer_nbr, source_discipline = cursor.fetchone()
           if offer_nbr > 4:
-            conflicts.write('Bogus offer_nbr ({}) for source_course_id {}.\n{}'.format(offer_nbr,
-                                                                                source_course_id,
-                                                                                record))
+            conflicts.write('Bogus offer_nbr ({}) for source_course_id {}.\n  {}\n'
+                            .format(offer_nbr, source_course_id, record))
             offer_nbr = 1
           group_number = float(record.src_equivalency_component) + (offer_nbr / 10.0)
           rule_groups.append(dict(source_institution=source_institution,
@@ -160,7 +162,7 @@ with open(the_file) as csvfile:
         conflicts.write(f'Source Course ID {source_course_id} not found for {record}\n')
         continue
       if source_institution != src_institution:
-        conflicts.write("""Source institution ({}) != course institution ({})\n{}\n"""\
+        conflicts.write('Source institution ({}) != course institution ({})\n  {}\n'
                         .format(src_institution, source_institution, record))
         continue
 
@@ -171,31 +173,34 @@ with open(the_file) as csvfile:
                         group by institution""", (destination_course_id,))
       if cursor.rowcount > 0:
         if cursor.rowcount > 1:
-          conflicts.write('Multiple destination institutions ({}) for {}. {}'.format(cursor.rowcount,
-                                                                             destination_course_id,
-                                                                             record))
+          conflicts.write('Multiple destination institutions ({}) for {}.\n  {}\n'
+                          .format(cursor.rowcount, destination_course_id, record))
           continue
         destination_institution = cursor.fetchone().institution
       else:
-        conflicts.write(f'No active courses with destination_course_id {destination_course_id} for {record}')
+        conflicts.write('No active courses with destination_course_id {} for {}\n'
+                        .format(destination_course_id, record))
         continue
       if destination_institution != dest_institution:
-        conflicts.write("""Destination institution ({}) != course institution ({})\n{}\n"""\
+        conflicts.write('Destination institution ({}) != course institution ({})\n  {}\n'
                         .format(dest_institution, destination_institution, record))
         continue
 
       # Create or look up the rule group(s)
       try:
         for rule_group in rule_groups:
-          cursor.execute('insert into rule_groups values (%s, %s, %s, %s) on conflict do nothing',
-                       (rule_group['source_institution'],
-                        rule_group['source_discipline'],
-                        rule_group['group_number'],
-                        destination_institution))
+          cursor.execute("""insert into rule_groups values (%s, %s, %s, %s)
+                         on conflict do nothing""",
+                         (rule_group['source_institution'],
+                          rule_group['source_discipline'],
+                          rule_group['group_number'],
+                          destination_institution))
           num_groups += cursor.rowcount
-          if args.debug: print(f'{cursor.query}\n  Rows inserted {cursor.rowcount}')
+          if args.debug:
+            print(f'{cursor.query}\n  Rows inserted {cursor.rowcount}')
       except psycopg2.Error as e:
-        print(f'ERROR creating/updating rule group for {source_course_id}, {destination_course_id}',
+        print('ERROR creating/updating rule group for {}, {}'
+              .format(source_course_id, destination_course_id),
               file=sys.stderr)
         print(cursor.query)
         print(e.pgerror, file=sys.stderr)
@@ -204,27 +209,29 @@ with open(the_file) as csvfile:
       # Add the source course(s)
       for rule_group in rule_groups:
         cursor.execute("""
-                     insert into source_courses values(default, '{}', '{}', {}, '{}', {}, {}, {})
-                     on conflict do nothing
-                     """.format(rule_group['source_institution'],
-                                rule_group['source_discipline'],
-                                rule_group['group_number'],
-                                destination_institution,
-                                source_course_id,
-                                min_gpa,
-                                max_gpa))
+                       insert into source_courses values(default,
+                         '{}', '{}', {}, '{}', {}, {}, {})
+                       on conflict do nothing"""
+                       .format(rule_group['source_institution'],
+                               rule_group['source_discipline'],
+                               rule_group['group_number'],
+                               destination_institution,
+                               source_course_id,
+                               min_gpa,
+                               max_gpa))
         num_source_courses += cursor.rowcount
       # Add the destination course (to each rule_group)
       for rule_group in rule_groups:
         cursor.execute("""
-                     insert into destination_courses values(default, '{}', '{}', {}, '{}', {}, {})
-                     on conflict do nothing
-                     """.format(rule_group['source_institution'],
-                                rule_group['source_discipline'],
-                                rule_group['group_number'],
-                                destination_institution,
-                                destination_course_id,
-                                transfer_credits))
+                       insert into destination_courses values(default,
+                         '{}', '{}', {}, '{}', {}, {})
+                       on conflict do nothing """
+                       .format(rule_group['source_institution'],
+                               rule_group['source_discipline'],
+                               rule_group['group_number'],
+                               destination_institution,
+                               destination_course_id,
+                               transfer_credits))
         num_destination_courses += cursor.rowcount
   if args.progress:
     print('', file=sys.stderr)
