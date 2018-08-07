@@ -1,6 +1,7 @@
-# Identify rows from the internal rules query where the discipline/catalog# differ between the rule
-# and the actual catalog info. Create and populate the bogus_rules table; generate a log
-# file with same info. (The db table is not used in the app, but is useful for reporting to CUNY.)
+# Identify rows from the internal rules query where the discipline/catalog differ
+# between the rule and the actual catalog info. Create and populate the bogus_rules
+# table; generate a log file with same info. (The db table is not used in the app, but
+# is useful for reporting to CUNY.)
 
 import psycopg2
 from psycopg2.extras import NamedTupleCursor
@@ -37,10 +38,12 @@ if args.debug:
 
 # Get most recent transfer_rules query file
 csvfile_name = './latest_queries/QNS_CV_SR_TRNS_INTERNAL_RULES.csv'
-file_date = date.fromtimestamp(os.lstat(csvfile_name).st_birthtime).strftime('%Y-%m-%d')
+file_date = date.fromtimestamp(os.lstat(csvfile_name).st_birthtime)\
+    .strftime('%Y-%m-%d')
 logfile_name = './bogus_rules_report_{}.log'.format(file_date)
 
-if args.debug: print('rules file: {}'.format(csvfile_name))
+if args.debug:
+  print('rules file: {}'.format(csvfile_name))
 
 cursor.execute('drop table if exists bogus_rules')
 cursor.execute("""
@@ -72,13 +75,13 @@ with open(logfile_name, 'w') as logfile:
     cols = None
     row_num = 0
     for row in csv_reader:
-      if cols == None:
+      if cols is None:
         row[0] = row[0].replace('\ufeff', '')
         cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
         Record = namedtuple('Record', cols)
         if args.debug:
           for col in cols:
-            print('{} = {}; '.format(col, cols.index(col), end = ''))
+            print('{} = {}; '.format(col, cols.index(col), end=''))
           print()
       else:
         count_records += 1
@@ -89,11 +92,12 @@ with open(logfile_name, 'w') as logfile:
             secs_remaining = total_time - elapsed_time
             mins_remaining = int((secs_remaining) / 60)
             secs_remaining = int(secs_remaining - (mins_remaining * 60))
-            print('line {:,}/{:,} ({:.1f}%) {}:{:02} remaining.\r'.format(count_records,
-                                                    num_records,
-                                                    100 * count_records / num_records,
-                                                    mins_remaining,
-                                                    secs_remaining),
+            print('line {:,}/{:,} ({:.1f}%) {}:{:02} remaining.\r'
+                  .format(count_records,
+                          num_records,
+                          100 * count_records / num_records,
+                          mins_remaining,
+                          secs_remaining),
                   file=sys.stderr,
                   end='')
         if len(row) != len(cols):
@@ -127,14 +131,17 @@ with open(logfile_name, 'w') as logfile:
           bogus_source_discipline = record.source_discipline
           bogus_source_catalog_number = record.source_catalog_num
         else:
-          if args.debug: print('src_info', src_info)
+          if args.debug:
+            print('src_info', src_info)
           if src_info[0][0] != record.source_discipline:
             bogus_source_discipline = record.source_discipline
           # Check numeric part of catalog number only
           src_num = re.search('\d+', src_info[0][1])
-          if src_num: src_num = src_num.group(0)
+          if src_num:
+            src_num = src_num.group(0)
           cat_num = re.search('\d+', record.source_catalog_num)
-          if cat_num: cat_num = cat_num.group(0)
+          if cat_num:
+            cat_num = cat_num.group(0)
           if src_num != cat_num:
             # ... but record the actual number from the CF query result
             bogus_source_catalog_number = record.source_catalog_num.strip()
@@ -152,21 +159,24 @@ with open(logfile_name, 'w') as logfile:
           bogus_destination_discipline = record.destination_discipline
           bogus_destination_catalog_number = record.destination_catalog_num
         else:
-          if args.debug: print('dst_info', dst_info)
+          if args.debug:
+            print('dst_info', dst_info)
           if dst_info[0][0] != record.destination_discipline:
             bogus_destination_discipline = record.destination_discipline
           dst_num = re.search('\d+', dst_info[0][1])
-          if dst_num: dst_num = dst_num.group(0)
+          if dst_num:
+            dst_num = dst_num.group(0)
           cat_num = re.search('\d+', record.destination_catalog_num)
-          if cat_num: cat_num = cat_num.group(0)
+          if cat_num:
+            cat_num = cat_num.group(0)
           if dst_num != cat_num:
             bogus_destination_catalog_number = record.destination_catalog_num.strip()
 
-        if  source_course_id_is_bogus or \
-            bogus_source_discipline or \
-            bogus_source_catalog_number or \
-            destination_course_id_is_bogus or bogus_destination_discipline or \
-            bogus_destination_catalog_number:
+        if source_course_id_is_bogus or \
+           bogus_source_discipline or \
+           bogus_source_catalog_number or \
+           destination_course_id_is_bogus or bogus_destination_discipline or \
+           bogus_destination_catalog_number:
           num_bogus += 1
           rule_group_key = '{}-{}-{}-{}'.format(record.source_institution,
                                                 record.source_discipline,
@@ -175,7 +185,8 @@ with open(logfile_name, 'w') as logfile:
 
           cursor.execute("""
                           insert into bogus_rules
-                          values (default, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s )
+                          values (default,
+                          %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s )
                          """, (record.source_institution,
                                record.source_discipline,
                                record.src_equivalency_component,
@@ -190,30 +201,28 @@ with open(logfile_name, 'w') as logfile:
                                destination_course_id_is_bogus,
                                bogus_destination_discipline,
                                bogus_destination_catalog_number))
-          logfile.write('\n{}-{}-{}-{}: {} {} {} {} {} {} {} {}'.format(
-                                                              record.source_institution,
-                                                              record.source_discipline,
-                                                              record.src_equivalency_component,
-                                                              record.destination_institution,
+          logfile.write('\n{}-{}-{}-{}: {} {} {} {} {} {} {} {}'
+                        .format(record.source_institution,
+                                record.source_discipline,
+                                record.src_equivalency_component,
+                                record.destination_institution,
 
-                                                              source_course_id,
-                                                              source_course_id_is_bogus,
-                                                              bogus_source_discipline,
-                                                              bogus_source_catalog_number,
+                                source_course_id,
+                                source_course_id_is_bogus,
+                                bogus_source_discipline,
+                                bogus_source_catalog_number,
 
-                                                              destination_course_id,
-                                                              destination_course_id_is_bogus,
-                                                              bogus_destination_discipline,
-                                                              bogus_destination_catalog_number))
+                                destination_course_id,
+                                destination_course_id_is_bogus,
+                                bogus_destination_discipline,
+                                bogus_destination_catalog_number))
 
-  logfile.write('\nFound {:,} bogus records ({:.2f}%) out of {:,}.\n'.format(num_bogus,
-                                                              100 *num_bogus / num_records,
-                                                              num_records))
+  logfile.write('\nFound {:,} bogus records ({:.2f}%) out of {:,}.\n'
+                .format(num_bogus, 100 * num_bogus / num_records, num_records))
 
 db.commit()
 db.close()
 if args.progress:
   print('', file=sys.stderr)
-print('\rFound {:,} bogus records ({:.2f}%) out of {:,}.'.format(num_bogus,
-                                                              100 *num_bogus / num_records,
-                                                              num_records))
+print('\rFound {:,} bogus records ({:.2f}%) out of {:,}.'
+      .format(num_bogus, 100 * num_bogus / num_records, num_records))
