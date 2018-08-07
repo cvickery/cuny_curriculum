@@ -1,3 +1,5 @@
+# Generate a report showing active courses where the number of contact hours is not the
+# sum of the component contact hours.
 import psycopg2
 from psycopg2.extras import NamedTupleCursor
 from collections import namedtuple
@@ -24,14 +26,15 @@ for row in cursor.fetchall():
     attributes = row.attributes
     if len(attributes) > 20:
       attributes = attributes[0:17] + '...'
-    print('{:06} {} {:>6} {:<8} {} {:<4} {:<20} {:6.1f} {:6.1f} {}'.format(row.course_id,
-                                                     row.institution,
-                                                     row.discipline,
-                                                     row.catalog_number,
-                                                     row.course_status,
-                                                     row.designation,
-                                                     attributes,
-                                                     row.contact_hours,
-                                                     hours,
-                                                     row.components))
+    print('{:06} {} {:>6} {:<8} {} {:<4} {:<20} {:6.1f} {:6.1f} {}'
+          .format(row.course_id,
+                  row.institution,
+                  row.discipline,
+                  row.catalog_number,
+                  row.course_status,
+                  row.designation,
+                  attributes,
+                  row.contact_hours,
+                  hours,
+                  row.components))
 exit()
