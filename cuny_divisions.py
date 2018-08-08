@@ -43,40 +43,65 @@ cursor.execute("""
 institutions = [institution.code for institution in cursor.fetchall()]
 
 # Get list of known departments
+departments = dict()
 cursor.execute("""
-                select department
+                select department, institution
                 from cuny_departments
                 group by department
                """)
-departments = [d.department for d in cursor.fetchall()]
+for row in cursor.fetchall():
+  if row.institution not in departments.keys():
+    departments[row.institution] = []
+  departments[row.institution].append(row.department)
 
+Course = namedtuple('Course', 'discipline catalog_number')
 # Open the report file
-with open ('./divisions_report_{}.log'.format(datetime.now().strftime('%Y-%m-%d')), 'w') \
-  as report:
+with open('./divisions_report_{}.log'.format(datetime.now().strftime('%Y-%m-%d')), 'w') as report:
   anomalies = 0
+  courses = dict()
   # Process the catalog file
   with open(cat_file, newline='') as csvfile:
     cat_reader = csv.reader(csvfile)
     cols = None
     divisions = dict()
     for row in cat_reader:
-      if cols == None:
+      if cols is None:
         row[0] = row[0].replace('\ufeff', '')
         if 'Institution' == row[0]:
           cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
           Col = namedtuple('Col', cols)
       else:
         row = Col._make(row)
-        institution = row.institution
-        if institution not in institutions: continue
-        department = row.acad_org
-        division = row.acad_group
         course_id = int(row.course_id)
+        offer_nbr = int(row.offer_nbr)
+        discipline = row.subject.strip()
+        catalog_number = row.catalog_number.strip()
+        courses[(course_id, offer_nbr)] = Course(discipline, catalog_number)
+
+        # If active-only, skip rows for inactive courses
         status = row.crse_catalog_status
-        if args.active_only and status != 'A': continue
-        # Ignore courses where the department is not in cuny_departments
-        if department not in departments: continue
-        if args.debug: print(institution, department, division, course_id)
+        can_schedule = row.schedule_course
+        if args.active_only and (status != 'A') or can_schedule != 'Y':
+          continue
+
+        # Report and ignore rows with unknown institution
+        institution = row.institution
+        if institution not in institutions:
+          report.write(f'Unknown institution for {course_id:06}: {institution}.\n')
+          continue
+
+        department = row.acad_org
+        # Ignore known bogus departments
+        if department == 'PEES-BKL' or department == 'SOC-YRK' or department == 'JOUR-GRD':
+          continue
+        # Report and ignore rows where the department is not in cuny_departments for the institution
+        if department not in departments[institution]:
+          report.write(f'Unknown department for {course_id:06}: {institution} {department}.\n')
+          continue
+        division = row.acad_group
+
+        if args.debug:
+          print(institution, department, division, course_id)
         key = (institution, department)
         found = False
         if key in divisions.keys():
@@ -115,19 +140,26 @@ with open ('./divisions_report_{}.log'.format(datetime.now().strftime('%Y-%m-%d'
           if other[1] > value[1]:
             value = other
         report.write(' Using {}.\n'.format(value[0]))
-        # For each course that needs to be fixed, show its course_id, the wrong division, and the
-        # correct one.
+        # For each course that needs to be fixed, show its course_id, division, department, the
+        # wrong division, and the correct one.
         for other in divisions[key]:
           if other[0] != value[0]:
             for course_id in other[2]:
-              report.write('  {}: Change group from {} to {}.\n'.format(course_id, other[0], value[0]))
+              report.write(' Changing division for {:06} {:>5} {:<8}({}, {:>10}) from {:<5} to {}\n'
+                           .format(course_id,
+                                   courses[(course_id, 1)].discipline,
+                                   courses[(course_id, 1)].catalog_number,
+                                   key[0],
+                                   key[1],
+                                   other[0],
+                                   value[0]))
               anomalies += 1
-      cursor.execute( """
-                        insert into cuny_divisions values('{}', '{}', '{}', {})
-                      """.format(key[0], value[0], key[1], value[1]))
+      cursor.execute("insert into cuny_divisions values('{}', '{}', '{}', {})"
+                     .format(key[0], value[0], key[1], value[1]))
 #
   suffix = 's'
-  if anomalies == 1: suffix = ''
+  if anomalies == 1:
+    suffix = ''
   report.write('{:,} course{} found with inconsistent group{}.\n'.format(anomalies, suffix, suffix))
 
 db.commit()

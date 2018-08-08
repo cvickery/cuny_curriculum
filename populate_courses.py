@@ -17,7 +17,6 @@ start_time = perf_counter()
 parser = argparse.ArgumentParser()
 parser.add_argument('--debug', '-d', action='store_true')
 parser.add_argument('--progress', '-p', action='store_true')
-parser.add_argument('--report', '-r', action='store_true')
 args = parser.parse_args()
 
 if args.progress:
@@ -26,6 +25,7 @@ db = psycopg2.connect('dbname=cuny_courses')
 cursor = db.cursor(cursor_factory=NamedTupleCursor)
 lookup_cursor = db.cursor(cursor_factory=NamedTupleCursor)
 
+logs = open('populate_courses.log', 'w')
 # Get the three query files needed, and be sure they are in sync
 cat_file = './latest_queries/QNS_QCCV_CU_CATALOG_NP.csv'
 req_file = './latest_queries/QNS_QCCV_CU_REQUISITES_NP.csv'
@@ -34,18 +34,19 @@ cat_date = date.fromtimestamp(os.lstat(cat_file).st_birthtime).strftime('%Y-%m-%
 req_date = date.fromtimestamp(os.lstat(req_file).st_birthtime).strftime('%Y-%m-%d')
 att_date = date.fromtimestamp(os.lstat(att_file).st_birthtime).strftime('%Y-%m-%d')
 if not ((cat_date == req_date) and (req_date == att_date)):
-  print('*** FILE DATES DO NOT MATCH ***')
+  logs.write('*** FILE DATES DO NOT MATCH ***\n')
+  print('*** FILE DATES DO NOT MATCH ***', file=sys.stderr)
   for d, file in [[att_date, att_file], [cat_date, cat_file], [req_date, req_file]]:
-    print('  {} {}'.format(d, file))
+    print('  {} {}'.format(d, file), file=sys.stderr)
     exit()
 cursor.execute("""
                update updates
                set update_date = '{}', file_name = '{}'
                where table_name = 'courses'""".format(cat_date, cat_file))
 
-if args.report:
+if args.debug:
   print("""Catalog file\t{} ({})\nRequisites file\t{} ({})\nAttributes file\t{} ({})
-        """.format(cat_file, cat_date, req_file, req_date, att_file, att_date  ))
+        """.format(cat_file, cat_date, req_file, req_date, att_file, att_date))
 
 # Cache institutions
 cursor.execute('select * from institutions')
@@ -57,7 +58,7 @@ with open(req_file, newline='') as csvfile:
   requisites = {}
   cols = None
   for row in req_reader:
-    if cols == None:
+    if cols is None:
       row[0] = row[0].replace('\ufeff', '')
       if 'Institution' == row[0]:
         cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
@@ -69,7 +70,8 @@ with open(req_file, newline='') as csvfile:
                row[cols.index('subject')],
                row[cols.index('catalog')].strip())
         requisites[key] = value
-if args.debug: print('{:,} requisites'.format(len(requisites)))
+if args.debug:
+  print('{:,} requisites'.format(len(requisites)))
 
 # cache course_attributes and attribute_descriptions
 
@@ -79,7 +81,7 @@ with open('latest_queries/SR742A___CRSE_ATTRIBUTE_VALUE.csv') as csvfile:
   reader = csv.reader(csvfile)
   cols = None
   for line in reader:
-    if cols == None:
+    if cols is None:
       if 'Crse Attr' == line[0]:
         cols = [val.lower().replace(' ', '_').replace('/', '_') for val in line]
         Row = namedtuple('Row', cols)
@@ -97,7 +99,7 @@ with open(att_file, newline='') as csvfile:
   att_reader = csv.reader(csvfile)
   cols = None
   for line in att_reader:
-    if cols == None:
+    if cols is None:
       line[0] = line[0].replace('\ufeff', '')
       if 'Institution' == line[0]:
         cols = [val.lower().replace(' ', '_').replace('/', '_') for val in line]
@@ -107,14 +109,14 @@ with open(att_file, newline='') as csvfile:
       key = (int(row.course_id), int(row.course_offering_nbr))
       name_value = Name_Value._make((row.course_attribute, row.course_attribute_value))
       if name_value not in attribute_descriptions.keys():
-        print(
-        '{:6}: Attempt to add {}, which is not in attribute_descriptions, to attribute_pairs.'\
-        .format(row.course_id, name_value))
+        logs.write(
+            '{:6}: Attempt to add {}, which is not in attribute_descriptions, to attribute_pairs.\n'
+            .format(row.course_id, name_value))
       else:
         if key not in attribute_pairs.keys():
           attribute_pairs[key] = []
         if name_value in attribute_pairs[key]:
-          print(f'ERROR: Attempt to re-add {name_value} to attribute_pairs[{key}]')
+          logs.write(f'ERROR: Attempt to re-add {name_value} to attribute_pairs[{key}]\n')
         else:
           attribute_pairs[key].append(name_value)
 
@@ -143,11 +145,11 @@ with open(cat_file, newline='') as csvfile:
                                                                           total_rows,
                                                                           num_courses,
                                                                           remaining_minutes,
-                                                                          remaining_seconds) ,
+                                                                          remaining_seconds),
             end='',
             file=sys.stderr)
 
-    if cols == None:
+    if cols is None:
       row[0] = row[0].replace('\ufeff', '')
       if 'Institution' == row[0]:
         cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
@@ -164,9 +166,9 @@ with open(cat_file, newline='') as csvfile:
       department = r.acad_org
       discipline = r.subject
       if department == 'PEES-BKL' or \
-          department == 'SOC-YRK' or \
-          department == 'JOUR-GRD' or \
-          discipline == 'JOUR':
+         department == 'SOC-YRK' or \
+         department == 'JOUR-GRD' or \
+         discipline == 'JOUR':
         continue
       course_id = int(r.course_id)
       offer_nbr = int(r.offer_nbr)
@@ -183,7 +185,7 @@ with open(cat_file, newline='') as csvfile:
 
       try:
         equivalence_group = int(r.equiv_course_group)
-      except:
+      except ValueError:
         equivalence_group = None
       institution = r.institution
       catalog_number = r.catalog_number.strip()
@@ -192,15 +194,17 @@ with open(cat_file, newline='') as csvfile:
       contact_hours = float(r.course_contact_hours)
       min_credits = float(r.min_units)
       max_credits = float(r.max_units)
-      lookup_query = """select contact_hours, primary_component, min_credits, max_credits, components
-                          from courses
-                         where course_id = %s
-                           and offer_nbr = %s
-                           and discipline = %s
-                           and catalog_number = %s"""
+      lookup_query = """
+          select contact_hours, primary_component, min_credits, max_credits, components
+            from courses
+           where course_id = %s
+             and offer_nbr = %s
+             and discipline = %s
+             and catalog_number = %s"""
       lookup_cursor.execute(lookup_query, (course_id, offer_nbr, discipline, catalog_number))
       if lookup_cursor.rowcount > 0:
         if lookup_cursor.rowcount > 1:
+          logs.write(f'{lookup_query} returned multiple rows\n')
           print(f'{lookup_query} returned multiple rows', file=sys.stderr)
           exit()
         else:
@@ -210,12 +214,11 @@ with open(cat_file, newline='') as csvfile:
              primary_component != lookup.primary_component or \
              min_credits != lookup.min_credits or \
              max_credits != lookup.max_credits:
-            print('Inconsistent hours/credits/component for {}-{} {} {}'.format(course_id,
-                                                                                offer_nbr,
-                                                                                discipline,
-                                                                                catalog_number),
-                  file=sys.stderr)
-            exit
+            logs.write('Inconsistent hours/credits/component for {}-{} {} {}\n'
+                       .format(course_id, offer_nbr, discipline, catalog_number))
+            print('Inconsistent hours/credits/component for {}-{} {} {}'
+                  .format(course_id, offer_nbr, discipline, catalog_number), file=sys.stderr)
+            exit()
           components = [Component._make(c) for c in lookup.components]
           if component not in components:
             components.append(component)
@@ -230,16 +233,19 @@ with open(cat_file, newline='') as csvfile:
                               and offer_nbr = %s
                               and discipline = %s
                               and catalog_number = %s"""
-            lookup_cursor.execute(update_query, (Json(components),
-                                               course_id, offer_nbr, discipline, catalog_number))
+            lookup_cursor.execute(update_query,
+                                  (Json(components),
+                                   course_id,
+                                   offer_nbr,
+                                   discipline,
+                                   catalog_number))
           else:
-            if args.report:
-              print('Repeated component: {} {} {} {} {} :: {}'.format(course_id,
-                                                                      offer_nbr,
-                                                                      institution,
-                                                                      discipline,
-                                                                      catalog_number,
-                                                                      component))
+            logs.write('Repeated component: {} {} {} {} {} :: {}\n'.format(course_id,
+                                                                           offer_nbr,
+                                                                           institution,
+                                                                           discipline,
+                                                                           catalog_number,
+                                                                           component))
       else:
         components = [component]
         cuny_subject = r.subject_external_area
@@ -264,33 +270,40 @@ with open(cat_file, newline='') as csvfile:
           cursor.execute("""insert into courses values
                             (%s, %s, %s, %s, %s,
                              %s, %s, %s, %s,
+                             %s, %s, %s, %s,
+                             %s,
                              %s, %s, %s, %s, %s,
-                             %s, %s, %s, %s, %s,
-                             %s, %s, %s, %s)""",
-                          (course_id, offer_nbr, equivalence_group, institution, cuny_subject,
-                           department, discipline, catalog_number, title,
-                           Json(components), contact_hours, min_credits, max_credits, primary_component,
-                           requisite_str, designation, description, career, course_status,
-                           discipline_status, can_schedule, course_attributes, course_attribute_descriptions))
+                             %s, %s, %s,
+                             %s)
+                         """,
+                         (course_id, offer_nbr, equivalence_group, institution, cuny_subject,
+                          department, discipline, catalog_number, title,
+                          Json(components), contact_hours, min_credits, max_credits,
+                          primary_component,
+                          requisite_str, designation, description, career, course_status,
+                          discipline_status, can_schedule, course_attributes,
+                          course_attribute_descriptions))
           num_courses += 1
         except psycopg2.Error as e:
-          print(e.pgerror)
+          logs.write(e.pgerror)
+          print(e.pgerror, file=sys.stderr)
           exit(e.pgerror)
-if args.progress:
-  print('', file=sys.stderr)
-if args.report:
-  run_time = perf_counter() - start_time
-  minutes = int(run_time / 60.)
-  min_suffix = 's'
-  if minutes == 1: min_suffix = ''
-  seconds = run_time - (minutes * 60)
-  print('Inserted {:,} courses in {} minute{} and {:0.1f} seconds.'.format(num_courses,
-                                                                           minutes,
-                                                                           min_suffix,
-                                                                           seconds))
+run_time = perf_counter() - start_time
+minutes = int(run_time / 60.)
+min_suffix = 's'
+if minutes == 1:
+  min_suffix = ''
+seconds = run_time - (minutes * 60)
+logs.write('Inserted {:,} courses in {} minute{} and {:0.1f} seconds.\n'.format(num_courses,
+                                                                                minutes,
+                                                                                min_suffix,
+                                                                                seconds))
 
 # The date the catalog information for institutions was updated
 cursor.execute("update institutions set date_updated='{}'".format(cat_date))
+
+if args.progress:
+  print('', file=sys.stderr)
 
 db.commit()
 db.close()

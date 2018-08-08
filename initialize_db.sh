@@ -86,7 +86,7 @@ fi
 echo done.
 
 echo -n CREATE TABLE cuny_divisions... | tee -a init.log
-python3 cuny_divisions.py >> init.log
+python3 cuny_divisions.py --active_only >> init.log
 if [ $? -ne 0 ]
   then echo  -e '\nFAILED!'
        exit
@@ -126,7 +126,7 @@ fi
 echo done.
 
 echo -n POPULATE courses... | tee -a init.log
-python3 populate_courses.py --progress --report > populate_courses.log
+python3 populate_courses.py --progress >> init.log
 if [ $? -ne 0 ]
   then echo -e '\nFAILED!'
        exit
@@ -134,7 +134,7 @@ fi
 echo done.
 
 echo -n CHECK component contact hours... | tee -a init.log
-python3 check_total_hours.py > contact_hours.log
+python3 check_total_hours.py > check_contact_hours.log
 if [ $? -ne 0 ]
   then echo -e '\nFAILED!'
        exit
