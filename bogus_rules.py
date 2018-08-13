@@ -128,13 +128,13 @@ with open(logfile_name, 'w') as logfile:
         src_info = [row for row in cursor.fetchall()]
         if len(src_info) == 0:
           source_course_id_is_bogus = True
-          bogus_source_discipline = record.source_discipline
+          bogus_source_discipline = record.component_subject_area
           bogus_source_catalog_number = record.source_catalog_num
         else:
           if args.debug:
             print('src_info', src_info)
-          if src_info[0][0] != record.source_discipline:
-            bogus_source_discipline = record.source_discipline
+          if src_info[0][0] != record.component_subject_area:
+            bogus_source_discipline = record.component_subject_area
           # Check numeric part of catalog number only
           src_num = re.search('\d+', src_info[0][1])
           if src_num:
@@ -179,7 +179,7 @@ with open(logfile_name, 'w') as logfile:
            bogus_destination_catalog_number:
           num_bogus += 1
           rule_group_key = '{}-{}-{}-{}'.format(record.source_institution,
-                                                record.source_discipline,
+                                                record.component_subject_area,
                                                 record.src_equivalency_component,
                                                 record.destination_discipline)
 
@@ -188,7 +188,7 @@ with open(logfile_name, 'w') as logfile:
                           values (default,
                           %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s )
                          """, (record.source_institution,
-                               record.source_discipline,
+                               record.component_subject_area,
                                record.src_equivalency_component,
                                record.destination_institution,
 
@@ -203,7 +203,7 @@ with open(logfile_name, 'w') as logfile:
                                bogus_destination_catalog_number))
           logfile.write('\n{}-{}-{}-{}: {} {} {} {} {} {} {} {}'
                         .format(record.source_institution,
-                                record.source_discipline,
+                                record.component_subject_area,
                                 record.src_equivalency_component,
                                 record.destination_institution,
 
