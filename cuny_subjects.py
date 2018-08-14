@@ -18,7 +18,7 @@ db = psycopg2.connect('dbname=cuny_courses')
 cursor = db.cursor()
 
 # Internal Subjects (disciplines)
-discp_file = './latest_queries/QNS_CV_CUNY_DISCIPLINES.csv'
+discp_file = './latest_queries/QNS_CV_CUNY_SUBJECT_TABLE.csv'
 extern_file = './latest_queries/QNS_CV_CUNY_SUBJECTS.csv'
 discp_date = date.fromtimestamp(os.lstat(discp_file).st_birthtime).strftime('%Y-%m-%d')
 extern_date = date.fromtimestamp(os.lstat(extern_file).st_birthtime).strftime('%Y-%m-%d')
@@ -32,8 +32,8 @@ cursor.execute("""
                set update_date = '{}', file_name = '{}'
                where table_name = 'subjects'""".format(extern_date, extern_file))
 
-if args.debug: print('cuny_subjects.py:\n  disciplines: {}\n  cuny_subjects: {}'.format(discp_file,
-                                                                                      extern_file))
+if args.debug:
+  print('cuny_subjects.py:\n  disciplines: {}\n  cuny_subjects: {}'.format(discp_file, extern_file))
 # Get list of known departments
 cursor.execute("""
                 select department
