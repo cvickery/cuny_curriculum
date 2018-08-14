@@ -55,6 +55,10 @@ cursor.execute("""select *
                   order by code""")
 known_institutions = [inst.code for inst in cursor.fetchall()]
 
+cursor.execute("""select institution, discipline
+                  from disciplines""")
+valid_disciplines = cursor.fetchall()
+
 start_time = perf_counter()
 
 """ Populate the three rule information tables
@@ -98,6 +102,7 @@ with open(the_file) as csvfile:
                       mins_remaining,
                       secs_remaining),
               end='', file=sys.stderr)
+
       record = Record._make(line)
 
       # 2018-07-19: The following two tests never fail
@@ -108,6 +113,14 @@ with open(the_file) as csvfile:
       dest_institution = record.destination_institution
       if dest_institution not in known_institutions:
         conflicts.write('Unknown institution: {}\n'.format(dest_institution))
+        continue
+
+      # The source_discipline for the rule group may differ from the disciplines of the source
+      # courses. What we call the source_discipline, CF calls the Component Subject Area.
+      source_discipline = record.component_subject_area
+      if (record.source_institution, record.component_subject_area) not in valid_disciplines:
+        conflicts.write('({}, {}) is not a valid institution/discipline pair\n'
+                        .format(record.source_institution, record.component_subject_area))
         continue
 
       # Assemble the components of the rule group(s)
@@ -143,7 +156,6 @@ with open(the_file) as csvfile:
               conflicts.write('Bogus offer_nbr ({}) for source_course_id {}.\n  {}\n'
                               .format(offer_nbr, source_course_id, record))
               offer_nbr = 1
-            source_discipline = course.discipline
             group_number = float(record.src_equivalency_component) + (offer_nbr / 10.0)
             rule_groups.append(dict(source_institution=source_institution,
                                     source_discipline=source_discipline,
@@ -160,10 +172,6 @@ with open(the_file) as csvfile:
                                   group_number=group_number))
       else:
         conflicts.write(f'Source Course ID {source_course_id} not found for {record}\n')
-        continue
-      if source_institution != src_institution:
-        conflicts.write('Source institution ({}) != course institution ({})\n  {}\n'
-                        .format(src_institution, source_institution, record))
         continue
 
       cursor.execute("""select institution
