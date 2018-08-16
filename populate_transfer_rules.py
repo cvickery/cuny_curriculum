@@ -184,10 +184,12 @@ if args.progress:
   mins = int(secs / 60)
   secs = int(secs - 60 * mins)
   print(f'\nEnd processing csv file in {mins}:{secs:02} minutes', file=sys.stderr)
+  print('Start looking up courses')
   start_time = perf_counter()
 
 # Create list of source disciplines for each rule
 #   Report and drop any course lookups that fail
+#   Likewise for destination courses: report inactives
 course_id_cache = dict()
 source_disciplines = dict()
 bogus_keys = set()
@@ -234,6 +236,8 @@ if num_bogus_keys > 0:
   for key in bogus_keys:
     del source_courses[key]
     del destination_courses[key]
+    if key in source_disciplines.keys():
+      del source_disciplines[key]
 
 if args.report:
   print("""\n{:,} Source courses\n{:,} Source disciplines\n{:,} Destination courses\n.
