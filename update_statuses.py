@@ -10,9 +10,9 @@ cursor = db.cursor(cursor_factory=NamedTupleCursor)
 
 # Clear all existing status bits: only status changes from the events table
 # will be reflected in the rules table.
-cursor.execute('select count(*) as num_rules from rule_groups where status != 0')
+cursor.execute('select count(*) as num_rules from transfer_rules where status != 0')
 print('  Reset status for {:,} rules ...'.format(cursor.fetchone().num_rules))
-cursor.execute('update rule_groups set status = 0 where status != 0')
+cursor.execute('update transfer_rules set status = 0 where status != 0')
 
 # Initialize the bitmasks dict for this script to work from
 cursor.execute('select * from review_status_bits')
@@ -33,12 +33,12 @@ for event in events:
   if float(group_number) == int(group_number):
     group_number = float(group_number) + 0.1
   cursor.execute("""select status
-                      from rule_groups
-                     where source_institution = %s
+                      from transfer_rules
+                     where subject_area = %s
                        and source_discipline = %s
                        and group_number = %s
                        and destination_institution = %s
-                 """, (event.source_institution,
+                 """, (event.subject_area,
                        event.discipline,
                        event.group_number,
                        event.destination_institution))
@@ -47,13 +47,13 @@ for event in events:
   status = status | bitmasks[event.event_type]
   # print('new status:', status)
   cursor.execute("""
-                  update rule_groups set status = {}
-                   where source_institution = '{}'
+                  update transfer_rules set status = {}
+                   where subject_area = '{}'
                      and source_discipline = '{}'
                      and group_number = {}
                      and destination_institution = '{}'
                """.format(status,
-                          event.source_institution,
+                          event.subject_area,
                           event.discipline,
                           event.group_number,
                           event.destination_institution))
