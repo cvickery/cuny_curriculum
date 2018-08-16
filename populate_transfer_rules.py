@@ -39,8 +39,33 @@ parser.add_argument('--progress', '-p', action='store_true')  # to stderr
 parser.add_argument('--report', '-r', action='store_true')    # to stdout
 args = parser.parse_args()
 
+
+# Bogus_Course_Error
+# =================================================================================================
+class Failed_Course_Error(Exception):
+  """Exception raised for course lookup failures.
+
+  Attributes:
+      message -- explanation of the error
+  """
+
+  def __init__(self, message):
+      self.message = message
+
+
+# mk_rule_str()
+# -------------------------------------------------------------------------------------------------
+def mk_rule_str(rule):
+  """ Convert a rule tuple to a hyphen-separated string.
+  """
+  return '{}-{}-{}-{}'.format(rule.source_institution,
+                              rule.destination_institution,
+                              rule.subject_area,
+                              rule.group_number)
+
+
 if args.progress:
-  print('', file=sys.stderr)
+  print('\nInitializing.', file=sys.stderr)
 
 db = psycopg2.connect('dbname=cuny_courses')
 cursor = db.cursor(cursor_factory=NamedTupleCursor)
@@ -71,7 +96,7 @@ cursor.execute("""select institution, discipline
                   from disciplines""")
 valid_disciplines = [(record.institution, record.discipline) for record in cursor.fetchall()]
 
-conflicts = open('rule_group_conflicts.log', 'w')
+conflicts = open('transfer_rule_conflicts.log', 'w')
 
 # Clear the three tables
 cursor.execute('truncate source_courses, destination_courses, transfer_rules')
@@ -88,6 +113,8 @@ transfer_rules = dict()
 source_courses = dict()
 destination_courses = dict()
 
+if args.progress:
+  print('\nStart processing csv file.', file=sys.stderr)
 start_time = perf_counter()
 with open(cf_rules_file) as csvfile:
   csv_reader = csv.reader(csvfile)
@@ -151,108 +178,69 @@ with open(cf_rules_file) as csvfile:
                                                     record.max_grade_pts))
       destination_courses[primary_key].add(Destination_Course(int(record.destination_course_id),
                                                               record.units_taken))
-      if record.source_institution == 'QCC01' and\
-         record.destination_institution == 'QNS01' and\
-         record.component_subject_area == 'PH' and\
-         record.src_equivalency_component == '0036':
-        print(record)
-        print(source_courses[primary_key])
-        print(destination_courses[primary_key])
-        print()
-      # # The source course_id might reference multiple (cross-listed) courses with different
-      # # offer_nbrs. In that case, create multiple identical rules, appending the offer_nbr as a
-      # # trailing decimal digit.
-      # cursor.execute("""select institution, offer_nbr, discipline
-      #                   from courses
-      #                   where course_id = %s""", (source_course_id,))
-      # if cursor.rowcount == 0:
-      #   conflicts.write(f'Source Course ID {source_course_id} not found for {record}\n')
-      #   continue
-      # for course in cursor.fetchall():
-      #   if args.debug:
-      #     print('{}: {} {} {}'.format(source_course_id,
-      #                                 course.institution,
-      #                                 course.offer_nbr,
-      #                                 course.discipline))
-      #   source_institution = course.institution
-      #   offer_nbr = course.offer_nbr
-      #   if offer_nbr > 4:
-      #     conflicts.write('Bogus offer_nbr ({}) for source_course_id {}.\n  {}\n'
-      #                     .format(offer_nbr, source_course_id))
-      #     offer_nbr = 1
-      #   group_number = float() + (offer_nbr / 10.0)
-      #   rules.append(dict(source_institution=source_institution,
-      #                           source_discipline=source_discipline,
-      #                           group_number=group_number,
-      #                           offer_nbr=offer_nbr))
 
-      # cursor.execute("""select institution
-      #                   from courses
-      #                   where course_id = %s
-      #                     and course_status = 'A'
-      #                   group by institution""", (destination_course_id,))
-      # if cursor.rowcount > 0:
-      #   if cursor.rowcount > 1:
-      #     conflicts.write('Multiple destination institutions ({}) for {}.\n  {}\n'
-      #                     .format(cursor.rowcount, destination_course_id, record))
-      #     continue
-      #   destination_institution = cursor.fetchone().institution
-      # else:
-      #   conflicts.write('No active courses with destination_course_id {} for {}\n'
-      #                   .format(destination_course_id, record))
-      #   continue
-      # if destination_institution != dest_institution:
-      #   conflicts.write('Destination institution ({}) != course institution ({})\n  {}\n'
-      #                   .format(dest_institution, destination_institution, record))
-      #   continue
+if args.progress:
+  secs = perf_counter() - start_time
+  mins = int(secs / 60)
+  secs = int(secs - 60 * mins)
+  print(f'\nEnd processing csv file in {mins}:{secs:02} minutes', file=sys.stderr)
+  start_time = perf_counter()
 
-      # # Create or look up the rule group(s)
-      # try:
-      #   for rule_group in rules:
-      #     cursor.execute("""insert into rules values (%s, %s, %s, %s)
-      #                    on conflict do nothing""",
-      #                    (rule_group['source_institution'],
-      #                     rule_group['source_discipline'],
-      #                     rule_group['group_number'],
-      #                     destination_institution))
-      #     num_groups += cursor.rowcount
-      #     if args.debug:
-      #       print(f'{cursor.query}\n  Rows inserted {cursor.rowcount}')
-      # except psycopg2.Error as e:
-      #   print('ERROR creating/updating rule group for {}, {}'
-      #         .format(source_course_id, destination_course_id),
-      #         file=sys.stderr)
-      #   print(cursor.query)
-      #   print(e.pgerror, file=sys.stderr)
-      #   exit(1)
+# Create list of source disciplines for each rule
+#   Report and drop any course lookups that fail
+course_id_cache = dict()
+source_disciplines = dict()
+bogus_keys = set()
+for key in source_courses.keys():
+  try:
+    source_disciplines_list = []
+    for course in source_courses[key]:
+      if course.course_id not in course_id_cache.keys():
+        cursor.execute("""select course_id, offer_nbr, institution, discipline, course_status
+                          from courses
+                          where course_id = %s""", (course.course_id,))
+        if cursor.rowcount == 0:
+          conflicts.write('Source course lookup failed for {:06} in rule {}. Rule deleted.\n'
+                          .format(course.course_id, mk_rule_str(key)))
+          raise Failed_Course_Error('course.course_id')
+        else:
+          course_id_cache[course.course_id] = cursor.fetchall()
+      for course_info in course_id_cache[course.course_id]:
+        source_disciplines_list.append(course_info.discipline)
+      source_disciplines[key] = ':'.join(source_disciplines_list)
+    for course in destination_courses[key]:
+      if course.course_id not in course_id_cache.keys():
+        cursor.execute("""select course_id, offer_nbr, institution, discipline, course_status
+                          from courses
+                          where course_id = %s""", (course.course_id,))
+        if cursor.rowcount == 0:
+          conflicts.write('Destination course lookup failed for {:06} in rule {}. Rule deleted.\n'
+                          .format(course.course_id, mk_rule_str(key)))
+          raise Failed_Course_Error('course.course_id')
+        else:
+          course_id_cache[course.course_id] = cursor.fetchall()
+        for course_info in course_id_cache[course.course_id]:
+          if course_info.course_status != 'A':
+            conflicts.write('Inactive destination course_id ({:06}) in rule {}. Rule retained.\n'.
+                            format(course.course_id, mk_rule_str(key)))
 
-      # # Add the source course(s)
-      # for rule_group in rules:
-      #   cursor.execute("""
-      #                  insert into source_courses values(default,
-      #                    '{}', '{}', {}, '{}', {}, {}, {})
-      #                  on conflict do nothing"""
-      #                  .format(rule_group['source_institution'],
-      #                          rule_group['source_discipline'],
-      #                          rule_group['group_number'],
-      #                          destination_institution,
-      #                          source_course_id,
-      #                          min_gpa,
-      #                          max_gpa))
-      #   num_source_courses += cursor.rowcount
-      # # Add the destination course (to each rule_group)
-      # for rule_group in rules:
-      #   cursor.execute("""
-      #                  insert into destination_courses values(default,
-      #                    '{}', '{}', {}, '{}', {}, {})
-      #                  on conflict do nothing """
-      #                  .format(rule_group['source_institution'],
-      #                          rule_group['source_discipline'],
-      #                          rule_group['group_number'],
-      #                          destination_institution,
-      #                          destination_course_id,
-      #                          transfer_credits))
-      #   num_destination_courses += cursor.rowcount
+  except Failed_Course_Error as fce:
+    bogus_keys.add(key)
+
+num_bogus_keys = len(bogus_keys)
+if num_bogus_keys > 0:
+  if args.progress:
+    print(f'Removing {num_bogus_keys} rule keys.', file=sys.stderr)
+  for key in bogus_keys:
+    del source_courses[key]
+    del destination_courses[key]
+
+if args.report:
+  print("""\n{:,} Source courses\n{:,} Source disciplines\n{:,} Destination courses\n.
+        """.format(len(source_courses),
+                   len(source_disciplines),
+                   len(destination_courses)))
+
 if args.progress:
   print('', file=sys.stderr)
 if args.report:
