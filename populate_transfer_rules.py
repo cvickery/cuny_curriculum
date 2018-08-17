@@ -183,20 +183,23 @@ if args.progress:
   secs = perf_counter() - start_time
   mins = int(secs / 60)
   secs = int(secs - 60 * mins)
-  print(f'\nEnd processing csv file in {mins}:{secs:02} minutes', file=sys.stderr)
-  print('Start looking up courses')
+  print(f'\n  That took {mins}:{secs:02} minutes', file=sys.stderr)
+  print('Start looking up courses', file=sys.stderr)
   start_time = perf_counter()
 
 # Create list of source disciplines for each rule
 #   Report and drop any course lookups that fail
 #   Likewise for destination courses: report inactives
 course_id_cache = dict()
+bogus_course_ids = set()
 source_disciplines = dict()
 bogus_keys = set()
 for key in source_courses.keys():
   try:
     source_disciplines_list = []
     for course in source_courses[key]:
+      if course.course_id in bogus_course_ids:
+        raise Failed_Course_Error(course.course_id)
       if course.course_id not in course_id_cache.keys():
         cursor.execute("""select course_id, offer_nbr, institution, discipline, course_status
                           from courses
@@ -204,7 +207,8 @@ for key in source_courses.keys():
         if cursor.rowcount == 0:
           conflicts.write('Source course lookup failed for {:06} in rule {}. Rule deleted.\n'
                           .format(course.course_id, mk_rule_str(key)))
-          raise Failed_Course_Error('course.course_id')
+          bogus_course_ids.add(course.course_id)
+          raise Failed_Course_Error(course.course_id)
         else:
           course_id_cache[course.course_id] = cursor.fetchall()
       for course_info in course_id_cache[course.course_id]:
@@ -225,38 +229,77 @@ for key in source_courses.keys():
           if course_info.course_status != 'A':
             conflicts.write('Inactive destination course_id ({:06}) in rule {}. Rule retained.\n'.
                             format(course.course_id, mk_rule_str(key)))
-
   except Failed_Course_Error as fce:
     bogus_keys.add(key)
+if args.progress:
+  secs = perf_counter() - start_time
+  mins = int(secs / 60)
+  secs = int(secs - 60 * mins)
+  print(f'\n  That took {mins}:{secs:02} minutes')
+  start_time = perf_counter()
 
+# Prune rules that reference non-existent course_ids
 num_bogus_keys = len(bogus_keys)
 if num_bogus_keys > 0:
   if args.progress:
-    print(f'Removing {num_bogus_keys} rule keys.', file=sys.stderr)
+    print(f'Removing {num_bogus_keys} bogus rule keys.', file=sys.stderr)
   for key in bogus_keys:
     del source_courses[key]
     del destination_courses[key]
     if key in source_disciplines.keys():
       del source_disciplines[key]
-
-if args.report:
-  print("""\n{:,} Source courses\n{:,} Source disciplines\n{:,} Destination courses\n.
-        """.format(len(source_courses),
-                   len(source_disciplines),
-                   len(destination_courses)))
-
 if args.progress:
-  print('', file=sys.stderr)
-if args.report:
-  num_rules = len(source_courses.keys())
-  num_source_courses = sum([len(course) for course in source_courses])
-  num_destination_courses = sum([len(course) for course in destination_courses])
-  print("""\n{:,} Rules\n{:,} Source courses\n{:,} Destination courses
-        """.format(num_rules, num_source_courses, num_destination_courses))
   secs = perf_counter() - start_time
   mins = int(secs / 60)
   secs = int(secs - 60 * mins)
-  print(f'Completed in {mins}:{secs:02} minutes')
+  print(f'\n  That took {mins}:{secs:02} minutes')
+  start_time = perf_counter()
+
+if args.report:
+  print('  {:,} Source courses\n  {:,} Source disciplines\n  {:,} Destination courses'
+        .format(len(source_courses), len(source_disciplines), len(destination_courses)))
+
+# # Clone rules that reference cross-listed courses
+# This should not be necessary: the source disciplines are all listed, as well as all the
+# course_ids. (But maybe I need to record the cuny subjects too?)
+# if args.progress:
+#   print('Checking for cross-listed source courses.', file=sys.stderr)
+# query = """
+#   select course_id from courses
+#   where offer_nbr > 1 and offer_nbr < 5
+#   group by course_id
+#   order by course_id
+#         """
+# cursor.execute(query)
+# cross_listed = [id.course_id for id in cursor.fetchall()]
+# for key in source_courses.keys():
+
+# Populate the db tables
+if args.progress:
+  print('Populating the tables.\n', file=sys.stderr)
+total_keys = len(source_courses.keys())
+keys_so_far = 0
+for key in source_courses.keys():
+  keys_so_far += 1
+  if args.progress and 0 == keys_so_far % 100000:
+    print(f'\r{keys_so_far:,}/{total_keys:,}', file=sys.stderr, end='')
+  key_asdict = key._asdict()
+  cursor.execute('insert into transfer_rules values (%s, %s, %s, %s, %s)',
+                 [key_asdict[k] for k in key_asdict.keys()] + [source_disciplines[key]])
+
+if args.progress:
+  secs = perf_counter() - start_time
+  mins = int(secs / 60)
+  secs = int(secs - 60 * mins)
+  print(f'\n  That took {mins}:{secs:02} minutes')
+  cursor.execute('select count(*) from transfer_rules')
+  num_rules = cursor.fetchone()[0]
+  print(f'There are {num_rules}', file=sys.stderr)
+
+if args.report:
+  num_rules = len(source_courses.keys())
+  print('\n{:,} Rules'.format(num_rules))
+
 db.commit()
 db.close()
 conflicts.close()
