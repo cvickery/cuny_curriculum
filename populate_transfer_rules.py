@@ -281,11 +281,40 @@ total_keys = len(source_courses.keys())
 keys_so_far = 0
 for key in source_courses.keys():
   keys_so_far += 1
-  if args.progress and 0 == keys_so_far % 100000:
-    print(f'\r{keys_so_far:,}/{total_keys:,}', file=sys.stderr, end='')
+  if args.progress and 0 == keys_so_far % 1000:
+    print(f'\r{keys_so_far:,}/{total_keys:,} keys. {100 * keys_so_far / total_keys:.1f}%',
+          file=sys.stderr, end='')
   key_asdict = key._asdict()
+  primary_key = [key_asdict[k] for k in key_asdict.keys()]
+  rule_values = primary_key + [source_disciplines[key]]
   cursor.execute('insert into transfer_rules values (%s, %s, %s, %s, %s)',
-                 [key_asdict[k] for k in key_asdict.keys()] + [source_disciplines[key]])
+                 rule_values)
+  for source_course in source_courses[key]:
+    source_values = primary_key + [source_course.course_id,
+                                   source_course.min_gpa,
+                                   source_course.max_gpa]
+    cursor.execute("""insert into source_courses (
+                                    source_institution,
+                                    destination_institution,
+                                    subject_area,
+                                    group_number,
+                                    course_id,
+                                    min_gpa,
+                                    max_gpa)
+                                  values (%s, %s, %s, %s, %s, %s, %s)
+                   """, source_values)
+  for destination_course in destination_courses[key]:
+    destination_values = primary_key + [destination_course.course_id,
+                                        destination_course.transfer_credits]
+    cursor.execute("""insert into destination_courses (
+                                    source_institution,
+                                    destination_institution,
+                                    subject_area,
+                                    group_number,
+                                    course_id,
+                                    transfer_credits)
+                                  values (%s, %s, %s, %s, %s, %s)
+                   """, destination_values)
 
 if args.progress:
   secs = perf_counter() - start_time
@@ -294,7 +323,7 @@ if args.progress:
   print(f'\n  That took {mins}:{secs:02} minutes')
   cursor.execute('select count(*) from transfer_rules')
   num_rules = cursor.fetchone()[0]
-  print(f'There are {num_rules}', file=sys.stderr)
+  print(f'\nThere are {num_rules} rules', file=sys.stderr)
 
 if args.report:
   num_rules = len(source_courses.keys())
