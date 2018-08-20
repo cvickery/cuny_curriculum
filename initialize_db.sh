@@ -119,6 +119,7 @@ echo done.
 
 echo -n CREATE TABLE courses... | tee -a init_psql.log
 psql cuny_courses < create_courses.sql >> init_psql.log
+psql cuny_courses < view_courses.sql >> init_psql.log
 if [ $? -ne 0 ]
   then echo -e '\nFAILED!'
        exit
@@ -152,6 +153,7 @@ echo done.
 
 echo -n CREATE TABLE rule_groups, source_courses, destination_courses... | tee -a init_psql.log
 psql cuny_courses < create_rule_groups.sql >> init_psql.log
+psql cuny_courses < view_rules.sql >> init_psql.log
 if [ $? -ne 0 ]
   then echo -e '\nFAILED!'
        exit
