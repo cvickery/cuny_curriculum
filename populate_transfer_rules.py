@@ -39,6 +39,8 @@ parser.add_argument('--progress', '-p', action='store_true')  # to stderr
 parser.add_argument('--report', '-r', action='store_true')    # to stdout
 args = parser.parse_args()
 
+app_start = perf_counter()
+
 
 # Bogus_Course_Error
 # =================================================================================================
@@ -106,7 +108,7 @@ cursor.execute('truncate source_courses, destination_courses, transfer_rules')
 Primary_Key = namedtuple('Primary_Key',
                          'source_institution destination_institution subject_area group_number')
 Source_Course = namedtuple('Source_Course',
-                           'course_id min_gpa max_gpa')
+                           'course_id min_credits max_credits min_gpa max_gpa')
 Destination_Course = namedtuple('Destination_Course',
                                 'course_id, transfer_credits')
 transfer_rules = dict()
@@ -114,7 +116,7 @@ source_courses = dict()
 destination_courses = dict()
 
 if args.progress:
-  print('\nStart processing csv file.', file=sys.stderr)
+  print('\nProcessing csv file.', file=sys.stderr)
 start_time = perf_counter()
 with open(cf_rules_file) as csvfile:
   csv_reader = csv.reader(csvfile)
@@ -174,6 +176,8 @@ with open(cf_rules_file) as csvfile:
         source_courses[primary_key] = set()
         destination_courses[primary_key] = set()
       source_courses[primary_key].add(Source_Course(int(record.source_course_id),
+                                                    record.src_min_units,
+                                                    record.src_max_units,
                                                     record.min_grade_pts,
                                                     record.max_grade_pts))
       destination_courses[primary_key].add(Destination_Course(int(record.destination_course_id),
@@ -183,8 +187,7 @@ if args.progress:
   secs = perf_counter() - start_time
   mins = int(secs / 60)
   secs = int(secs - 60 * mins)
-  print(f'\n  That took {mins}:{secs:02} minutes', file=sys.stderr)
-  print('Start looking up courses', file=sys.stderr)
+  print(f'\n  That took {mins} min {secs} sec.\nLooking up courses:', file=sys.stderr)
   start_time = perf_counter()
 
 # Create list of source disciplines for each rule
@@ -194,14 +197,25 @@ course_id_cache = dict()
 bogus_course_ids = set()
 source_disciplines = dict()
 bogus_keys = set()
+total_keys = len(source_courses.keys())
+keys_so_far = 0
 for key in source_courses.keys():
+  keys_so_far += 1
+  if args.progress and 0 == keys_so_far % 1000:
+    print(f'\r{keys_so_far:,}/{total_keys:,} keys. {100 * keys_so_far / total_keys:.1f}%',
+          file=sys.stderr, end='')
   try:
-    source_disciplines_list = []
     for course in source_courses[key]:
       if course.course_id in bogus_course_ids:
         raise Failed_Course_Error(course.course_id)
       if course.course_id not in course_id_cache.keys():
-        cursor.execute("""select course_id, offer_nbr, institution, discipline, course_status
+        cursor.execute("""select course_id,
+                                 offer_nbr,
+                                 institution,
+                                 discipline,
+                                 min_credits,
+                                 max_credits,
+                                 course_status
                           from courses
                           where course_id = %s""", (course.course_id,))
         if cursor.rowcount == 0:
@@ -211,9 +225,10 @@ for key in source_courses.keys():
           raise Failed_Course_Error(course.course_id)
         else:
           course_id_cache[course.course_id] = cursor.fetchall()
+      source_disciplines_set = set()
       for course_info in course_id_cache[course.course_id]:
-        source_disciplines_list.append(course_info.discipline)
-      source_disciplines[key] = ':'.join(source_disciplines_list)
+        source_disciplines_set.add(course_info.discipline)
+      source_disciplines[key] = ':' + ':'.join(source_disciplines_set) + ':'
     for course in destination_courses[key]:
       if course.course_id not in course_id_cache.keys():
         cursor.execute("""select course_id, offer_nbr, institution, discipline, course_status
@@ -235,14 +250,13 @@ if args.progress:
   secs = perf_counter() - start_time
   mins = int(secs / 60)
   secs = int(secs - 60 * mins)
-  print(f'\n  That took {mins}:{secs:02} minutes')
+  print(f'\n  That took {mins} min {secs} sec.', file=sys.stderr)
+  print(f'\nRemoving {num_bogus_keys:,} rules that reference nonexistent courses.', file=sys.stderr)
   start_time = perf_counter()
 
 # Prune rules that reference non-existent course_ids
 num_bogus_keys = len(bogus_keys)
 if num_bogus_keys > 0:
-  if args.progress:
-    print(f'Removing {num_bogus_keys} bogus rule keys.', file=sys.stderr)
   for key in bogus_keys:
     del source_courses[key]
     del destination_courses[key]
@@ -252,7 +266,8 @@ if args.progress:
   secs = perf_counter() - start_time
   mins = int(secs / 60)
   secs = int(secs - 60 * mins)
-  print(f'\n  That took {mins}:{secs:02} minutes')
+  print(f'  That took {mins} min {secs} sec.', file=sys.stderr)
+  print('\nPopulating the tables.', file=sys.stderr)
   start_time = perf_counter()
 
 if args.report:
@@ -275,8 +290,6 @@ if args.report:
 # for key in source_courses.keys():
 
 # Populate the db tables
-if args.progress:
-  print('Populating the tables.\n', file=sys.stderr)
 total_keys = len(source_courses.keys())
 keys_so_far = 0
 for key in source_courses.keys():
@@ -287,48 +300,64 @@ for key in source_courses.keys():
   key_asdict = key._asdict()
   primary_key = [key_asdict[k] for k in key_asdict.keys()]
   rule_values = primary_key + [source_disciplines[key]]
-  cursor.execute('insert into transfer_rules values (%s, %s, %s, %s, %s)',
+  cursor.execute("""insert into transfer_rules (
+                                  source_institution,
+                                  destination_institution,
+                                  subject_area,
+                                  group_number,
+                                  source_disciplines)
+                                values (%s, %s, %s, %s, %s) returning id""",
                  rule_values)
+  rule_id = cursor.fetchone()[0]
   for source_course in source_courses[key]:
-    source_values = primary_key + [source_course.course_id,
-                                   source_course.min_gpa,
-                                   source_course.max_gpa]
+    source_values = [rule_id] + primary_key + [source_course.course_id,
+                                               source_course.min_credits,
+                                               source_course.max_credits,
+                                               source_course.min_gpa,
+                                               source_course.max_gpa]
     cursor.execute("""insert into source_courses (
+                                    rule_id,
                                     source_institution,
                                     destination_institution,
                                     subject_area,
                                     group_number,
                                     course_id,
+                                    min_credits,
+                                    max_credits,
                                     min_gpa,
                                     max_gpa)
-                                  values (%s, %s, %s, %s, %s, %s, %s)
+                                  values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                    """, source_values)
   for destination_course in destination_courses[key]:
-    destination_values = primary_key + [destination_course.course_id,
-                                        destination_course.transfer_credits]
+    destination_values = [rule_id] + primary_key + [destination_course.course_id,
+                                                    destination_course.transfer_credits]
     cursor.execute("""insert into destination_courses (
+                                    rule_id,
                                     source_institution,
                                     destination_institution,
                                     subject_area,
                                     group_number,
                                     course_id,
                                     transfer_credits)
-                                  values (%s, %s, %s, %s, %s, %s)
+                                  values (%s, %s, %s, %s, %s, %s, %s)
                    """, destination_values)
 
 if args.progress:
   secs = perf_counter() - start_time
   mins = int(secs / 60)
   secs = int(secs - 60 * mins)
-  print(f'\n  That took {mins}:{secs:02} minutes')
+  print(f'\n  That took {mins} min {secs} sec.', file=sys.stderr)
   cursor.execute('select count(*) from transfer_rules')
   num_rules = cursor.fetchone()[0]
   print(f'\nThere are {num_rules} rules', file=sys.stderr)
 
-if args.report:
-  num_rules = len(source_courses.keys())
-  print('\n{:,} Rules'.format(num_rules))
-
+conflicts.close()
 db.commit()
 db.close()
-conflicts.close()
+
+if args.report:
+  secs = perf_counter() - app_start
+  mins = int(secs / 60)
+  secs = int(secs - 60 * mins)
+  num_rules = len(source_courses.keys())
+  print(f'\nGenerated {num_rules:,} rules in {mins} min {secs} sec.')
