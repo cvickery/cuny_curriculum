@@ -246,6 +246,7 @@ for key in source_courses.keys():
                             format(course.course_id, mk_rule_str(key)))
   except Failed_Course_Error as fce:
     bogus_keys.add(key)
+num_bogus_keys = len(bogus_keys)
 if args.progress:
   secs = perf_counter() - start_time
   mins = int(secs / 60)
@@ -255,7 +256,6 @@ if args.progress:
   start_time = perf_counter()
 
 # Prune rules that reference non-existent course_ids
-num_bogus_keys = len(bogus_keys)
 if num_bogus_keys > 0:
   for key in bogus_keys:
     del source_courses[key]

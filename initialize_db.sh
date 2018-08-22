@@ -24,8 +24,8 @@ then
   pg_dump --data-only --table=events -f events-dump.sql cuny_courses
   # Convert old-style group numbers (ints) to floats
   #   This can away once all old-style reviews have been converted.
-  python3 fix_events_dump.py < events-dump.sql > t.sql
-  mv t.sql events-dump.sql
+  # python3 fix_events_dump.py < events-dump.sql > t.sql
+  # mv t.sql events-dump.sql
   echo done.
 fi
 
@@ -151,17 +151,17 @@ if [ $? -ne 0 ]
 fi
 echo done.
 
-echo -n CREATE TABLE rule_groups, source_courses, destination_courses... | tee -a init_psql.log
-psql cuny_courses < create_rule_groups.sql >> init_psql.log
-psql cuny_courses < view_rules.sql >> init_psql.log
+echo -n CREATE TABLE transfer_rules, source_courses, destination_courses... | tee -a init_psql.log
+psql cuny_courses < create_transfer_rules.sql >> init_psql.log
+psql cuny_courses < view_transfer_rules.sql >> init_psql.log
 if [ $? -ne 0 ]
   then echo -e '\nFAILED!'
        exit
 fi
 echo done.
 
-echo -n POPULATE rule_groups... | tee -a init.log
-python3 populate_rule_groups.py --progress --report >> init.log
+echo -n POPULATE transfer_rules... | tee -a init.log
+python3 populate_transfer_rules.py --progress --report >> init.log
 if [ $? -ne 0 ]
   then echo -e '\nFAILED!'
        exit

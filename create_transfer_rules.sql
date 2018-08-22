@@ -7,7 +7,7 @@ create table transfer_rules (
   subject_area text not null,
   group_number integer not null,
   source_disciplines text not null, -- colon-separated list of all source course disciplines
-  rule_status integer default 0,
+  review_status integer default 0,
   foreign key (source_institution) references institutions,
   foreign key (destination_institution) references institutions);
 -- primary key (source_institution, destination_institution, subject_area, group_number));
