@@ -185,32 +185,37 @@ if [ $? -ne 0 ]
 fi
 echo done.
 
-#echo CREATE TABLE pending_reviews...
-#echo CREATE TABLE event_types...
-echo -n CREATE TABLE events... | tee -a init_psql.log
-psql cuny_courses < reviews.sql >> init_psql.log
-if [ $? -ne 0 ]
-  then echo -e '\nFAILED!'
-       exit
-fi
-echo done.
+# Clear all existing status bits: only status changes from the events table
+# will be reflected in the rules table.
+cursor.execute('select count(*) as num_rules from transfer_rules where review_status != 0')
+print('  Reset status for {:,} rules ...'.format(cursor.fetchone().num_rules))
+cursor.execute('update transfer_rules set review_status = 0 where review_status != 0')
 
-if [ $do_events -eq 1 ]
-then
-  echo -n RESTORE previous events... | tee -a init_psql.log
-  psql cuny_courses < events-dump.sql >> init_psql.log
-  if [ $? -ne 0 ]
-    then echo -e '\nFAILED!'
-         exit
-  fi
-  echo done.
+# Initialize the bitmasks dict for this script to work from
+cursor.execute('select * from review_status_bits')
+Event_Type = namedtuple('Event_Type', [d[0] for d in cursor.description])
+event_types = map(Event_Type._make, cursor.fetchall())
+bitmasks = dict()
+for event_type in event_types:
+  bitmasks[event_type.abbr] = event_type.bitmask
 
-  echo -n UPDATE statuses... | tee -a init.log
-  python3 update_statuses.py >> init.log
-  if [ $? -ne 0 ]
-    then echo -e '\nFAILED!'
-         exit
-  fi
-  echo done.
-fi
-echo INITIALIZATION COMPLETE
+# Process the events table
+cursor.execute('select * from events')
+print('  Process {} events ...'.format(cursor.rowcount))
+events = cursor.fetchall()
+for event in events:
+  cursor.execute("""select review_status
+                      from transfer_rules
+                     where id = %s
+                 """, (event.rule_id,))
+  review_status = cursor.fetchone().review_status
+  # print('status is {}\n  event_type is {}\n  bitmask is {}'.format(status, event.event_type, bitmasks[event.event_type]))
+  review_status = review_status | bitmasks[event.event_type]
+  # print('new status:', status)
+  cursor.execute("""
+                  update transfer_rules set review_status = %s
+                   where id = %s
+               """, (review_status, event.rule_id))
+  db.commit()
+print('  Done')
+db.close()
