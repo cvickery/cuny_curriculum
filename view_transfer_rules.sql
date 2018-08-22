@@ -1,5 +1,5 @@
-drop view if exists view_rules, view_source_courses, view_destination_courses;
-create view view_rules as
+drop view if exists view_transfer_rules, view_source_courses, view_destination_courses;
+create view view_transfer_rules as
 (
   select  t.id as rule_id,
     t.source_institution || '-' ||
