@@ -6,6 +6,6 @@ create table updates (
   file_name text default 'unknown');
 
 insert into updates values ('courses');
-insert into updates values ('rules');
+insert into updates values ('transfer_rules');
 insert into updates values ('subjects');
 insert into updates values ('disciplines');

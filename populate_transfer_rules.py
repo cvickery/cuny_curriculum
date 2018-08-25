@@ -55,9 +55,9 @@ class Failed_Course_Error(Exception):
       self.message = message
 
 
-# mk_rule_str()
+# mk_rule_key()
 # -------------------------------------------------------------------------------------------------
-def mk_rule_str(rule):
+def mk_rule_key(rule):
   """ Convert a rule tuple to a hyphen-separated string.
   """
   return '{}-{}-{}-{}'.format(rule.source_institution,
@@ -220,7 +220,7 @@ for key in source_courses.keys():
                           where course_id = %s""", (course.course_id,))
         if cursor.rowcount == 0:
           conflicts.write('Source course lookup failed for {:06} in rule {}. Rule deleted.\n'
-                          .format(course.course_id, mk_rule_str(key)))
+                          .format(course.course_id, mk_rule_key(key)))
           bogus_course_ids.add(course.course_id)
           raise Failed_Course_Error(course.course_id)
         else:
@@ -236,14 +236,14 @@ for key in source_courses.keys():
                           where course_id = %s""", (course.course_id,))
         if cursor.rowcount == 0:
           conflicts.write('Destination course lookup failed for {:06} in rule {}. Rule deleted.\n'
-                          .format(course.course_id, mk_rule_str(key)))
+                          .format(course.course_id, mk_rule_key(key)))
           raise Failed_Course_Error('course.course_id')
         else:
           course_id_cache[course.course_id] = cursor.fetchall()
         for course_info in course_id_cache[course.course_id]:
           if course_info.course_status != 'A':
             conflicts.write('Inactive destination course_id ({:06}) in rule {}. Rule retained.\n'.
-                            format(course.course_id, mk_rule_str(key)))
+                            format(course.course_id, mk_rule_key(key)))
   except Failed_Course_Error as fce:
     bogus_keys.add(key)
 num_bogus_keys = len(bogus_keys)

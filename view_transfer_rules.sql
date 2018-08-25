@@ -2,12 +2,16 @@ drop view if exists view_transfer_rules, view_source_courses, view_destination_c
 create view view_transfer_rules as
 (
   select  t.id as rule_id,
+    t.source_institution,
+    t.destination_institution,
+    t.subject_area,
+    t.group_number,
+    t.source_disciplines,
+    t.review_status,
     t.source_institution || '-' ||
     t.destination_institution  || '-' ||
     t.subject_area || '-' ||
-    t.group_number,
-    t.source_disciplines,
-    t.review_status
+    t.group_number as rule_key
   from transfer_rules t
 );
 
