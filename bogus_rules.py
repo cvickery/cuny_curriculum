@@ -40,7 +40,7 @@ if args.debug:
 csvfile_name = './latest_queries/QNS_CV_SR_TRNS_INTERNAL_RULES.csv'
 file_date = date.fromtimestamp(os.lstat(csvfile_name).st_birthtime)\
     .strftime('%Y-%m-%d')
-logfile_name = './bogus_rules_report_{}.log'.format(file_date)
+logfile_name = './bogus_rules_report.log'
 
 if args.debug:
   print('rules file: {}'.format(csvfile_name))
@@ -73,6 +73,7 @@ num_records = sum(1 for line in open(csvfile_name))
 count_records = 0
 num_bogus = 0
 with open(logfile_name, 'w') as logfile:
+  logfile.write('Query Date: {}\n'.format(file_date))
   with open(csvfile_name) as csvfile:
     csv_reader = csv.reader(csvfile)
     cols = None
@@ -118,10 +119,10 @@ with open(logfile_name, 'w') as logfile:
         is_bogus = False
 
         # Check source course
-        real_source_discipline = 'NOT FOUND'
-        real_source_catalog_number = 'NOT FOUND'
+        real_source_discipline = 'NOT'
+        real_source_catalog_number = 'FOUND'
         bogus_source_discipline = record.component_subject_area
-        bogus_source_catalog_number = record.source_catalog_num
+        bogus_source_catalog_number = record.source_catalog_num.strip()
 
         source_course_id = int(record.source_course_id)
         cursor.execute("""
@@ -145,10 +146,10 @@ with open(logfile_name, 'w') as logfile:
             is_bogus = True
 
         # Check destination course
-        real_destination_discipline = 'NOT FOUND'
-        real_destination_catalog_number = 'NOT FOUND'
+        real_destination_discipline = 'NOT'
+        real_destination_catalog_number = 'FOUND'
         bogus_destination_discipline = record.destination_discipline
-        bogus_destination_catalog_number = record.destination_catalog_num
+        bogus_destination_catalog_number = record.destination_catalog_num.strip()
 
         destination_course_id = int(record.destination_course_id)
         cursor.execute("""
