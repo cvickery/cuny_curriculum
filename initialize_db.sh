@@ -2,6 +2,7 @@
 
 # Run the sequence of sql and python scripts to create and initialize the cuny_courses database.
 
+SECONDS=0
 # Default is to dump and restore events. But -n or --no-events suppresses it.
 do_events=1
 if [ $# -gt 0 ]
@@ -213,4 +214,4 @@ then
   fi
   echo done.
 fi
-echo INITIALIZATION COMPLETE
+echo INITIALIZATION COMPLETED in `@"$SECONDS" +'%-Mm %-Ss'` | tee -a init.log
