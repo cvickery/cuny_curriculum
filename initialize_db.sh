@@ -214,4 +214,4 @@ then
   fi
   echo done.
 fi
-echo INITIALIZATION COMPLETED in `@"$SECONDS" +'%-Mm %-Ss'` | tee -a init.log
+echo INITIALIZATION COMPLETED in `date -d @"$SECONDS" +'%-Mm %-Ss'` | tee -a init.log
