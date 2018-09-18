@@ -16,7 +16,7 @@ from collections import namedtuple
 import psycopg2
 from psycopg2.extras import NamedTupleCursor
 
-num_rows = 0;
+num_rows = 0
 conn = psycopg2.connect('dbname=cuny_courses')
 cursor = conn.cursor(cursor_factory=NamedTupleCursor)
 
@@ -29,11 +29,11 @@ cursor.execute("""
 total_rows = sum(1 for line in open('./latest_queries/QNS_CV_CRSE_EQUIV_TBL.csv'))
 with open('./latest_queries/QNS_CV_CRSE_EQUIV_TBL.csv') as csvfile:
   csv_reader = csv.reader(csvfile)
-  raw = next(csv_reader, False) # header row
+  raw = next(csv_reader, False)   # header row
   raw[0] = raw[0].replace('\ufeff', '')
   Equiv_Table_Row = namedtuple('Equiv_Table_Row',
                                [val.lower().replace(' ', '_').replace('/', '_') for val in raw])
-  raw = next(csv_reader, False) # first data row
+  raw = next(csv_reader, False)   # first data row
   while raw:
     num_rows += 1
     if 0 == num_rows % 1000:
@@ -43,9 +43,8 @@ with open('./latest_queries/QNS_CV_CRSE_EQUIV_TBL.csv') as csvfile:
       int(row.equivalent_course_group)
       cursor.execute('insert into crse_equiv_tbl values (%s, %s)', (row.equivalent_course_group,
                                                                     row.description))
-    except:
+    except ValueError:
       print('Invalid Index:', row)
-    raw = next(csv_reader, False) # next data row
-print(file=sys.stderr)
+    raw = next(csv_reader, False)   # next data row
 conn.commit()
 conn.close()
