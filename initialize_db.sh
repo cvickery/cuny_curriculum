@@ -31,12 +31,12 @@ then
 fi
 
 echo BEGIN INITIALIZATION
-echo -n DROP/CREATE cuny_courses ... | tee init_psql.log
+echo -n "DROP/CREATE cuny_courses... " | tee init_psql.log
 dropdb cuny_courses >> init_psql.log
 createdb cuny_courses >> init_psql.log
 echo done.
 
-echo -n CREATE TABLE updates ... | tee -a init_psql.log
+echo -n "CREATE TABLE updates... " | tee -a init_psql.log
 psql cuny_courses < updates.sql >> init_psql.log
 echo done.
 
@@ -54,14 +54,14 @@ echo done.
 #   Careers references institutions, so create institutions first
 #   Divisions references departments, so create departments first
 #
-echo -n CREATE TABLE institutions... | tee -a init_psql.log
+echo -n "CREATE TABLE institutions... " | tee -a init_psql.log
 psql cuny_courses < cuny_institutions.sql >> init_psql.log
 echo done.
 
 # Python scripts process query results, so check that they are all present
 # and report any mismatched dates.
 
-echo -n CHECK QUERY FILES... | tee init.log
+echo -n "CHECK QUERY FILES... " | tee init.log
 ./check_query_dates.sh > init.log
 if [ $? -ne 0 ]
   then echo "WARNING: mismatched dates."
@@ -70,7 +70,7 @@ fi
 
 # Now regenerate the tables that are based on query results
 #
-echo -n CREATE TABLE cuny_careers... | tee -a init.log
+echo -n "CREATE TABLE cuny_careers... " | tee -a init.log
 python3 cuny_careers.py >> init.log
 if [ $? -ne 0 ]
   then echo -e '\nFAILED!'
@@ -78,7 +78,7 @@ if [ $? -ne 0 ]
 fi
 echo done.
 
-echo -n CREATE TABLE cuny_departments... | tee -a init.log
+echo -n "CREATE TABLE cuny_departments... " | tee -a init.log
 python3 cuny_departments.py >> init.log
 if [ $? -ne 0 ]
   then echo  -e '\nFAILED!'
@@ -86,7 +86,7 @@ if [ $? -ne 0 ]
 fi
 echo done.
 
-echo -n CREATE TABLE cuny_divisions... | tee -a init.log
+echo -n "CREATE TABLE cuny_divisions... " | tee -a init.log
 python3 cuny_divisions.py --active_only >> init.log
 if [ $? -ne 0 ]
   then echo  -e '\nFAILED!'
@@ -94,7 +94,7 @@ if [ $? -ne 0 ]
 fi
 echo done.
 
-echo -n CREATE TABLE cuny_subjects... | tee -a init.log
+echo -n "CREATE TABLE cuny_subjects... " | tee -a init.log
 python3 cuny_subjects.py >> init.log
 if [ $? -ne 0 ]
   then echo  -e '\nFAILED!'
@@ -102,7 +102,7 @@ if [ $? -ne 0 ]
 fi
 echo done.
 
-echo -n CREATE TABLE designations... | tee -a init.log
+echo -n "CREATE TABLE designations... " | tee -a init.log
 python3 designations.py >> init.log
 if [ $? -ne 0 ]
   then echo  -e '\nFAILED!'
@@ -110,7 +110,7 @@ if [ $? -ne 0 ]
 fi
 echo done.
 
-echo -n CREATE TABLE crse_quiv_tbl... | tee -a init.log
+echo -n "CREATE TABLE crse_quiv_tbl... " | tee -a init.log
 python3 mk_crse_equiv_tbl.py >> init.log
 if [ $? -ne 0 ]
   then echo -e '\nFAILED!'
@@ -118,7 +118,7 @@ if [ $? -ne 0 ]
 fi
 echo done.
 
-echo -n CREATE TABLE courses... | tee -a init_psql.log
+echo -n "CREATE TABLE courses... " | tee -a init_psql.log
 psql cuny_courses < create_courses.sql >> init_psql.log
 psql cuny_courses < view_courses.sql >> init_psql.log
 if [ $? -ne 0 ]
@@ -127,7 +127,7 @@ if [ $? -ne 0 ]
 fi
 echo done.
 
-echo -n POPULATE courses... | tee -a init.log
+echo -n "POPULATE courses... " | tee -a init.log
 python3 populate_courses.py --progress >> init.log
 if [ $? -ne 0 ]
   then echo -e '\nFAILED!'
@@ -135,7 +135,7 @@ if [ $? -ne 0 ]
 fi
 echo done.
 
-echo -n CHECK component contact hours... | tee -a init.log
+echo -n "CHECK component contact hours... " | tee -a init.log
 python3 check_total_hours.py > check_contact_hours.log
 if [ $? -ne 0 ]
   then echo -e '\nFAILED!'
@@ -144,7 +144,7 @@ fi
 echo done.
 
 # Transfer rules
-echo -n CREATE TABLE review_status_bits... | tee -a init_psql.log
+echo -n "CREATE TABLE review_status_bits... " | tee -a init_psql.log
 psql cuny_courses < review_status_bits.sql >> init_psql.log
 if [ $? -ne 0 ]
   then echo -e '\nFAILED!'
@@ -152,7 +152,7 @@ if [ $? -ne 0 ]
 fi
 echo done.
 
-echo -n CREATE TABLE transfer_rules, source_courses, destination_courses... | tee -a init_psql.log
+echo -n "CREATE TABLEs transfer_rules source_courses destination_courses... " | tee -a init_psql.log
 psql cuny_courses < create_transfer_rules.sql >> init_psql.log
 psql cuny_courses < view_transfer_rules.sql >> init_psql.log
 if [ $? -ne 0 ]
@@ -161,7 +161,7 @@ if [ $? -ne 0 ]
 fi
 echo done.
 
-echo -n POPULATE transfer_rules... | tee -a init.log
+echo -n "POPULATE transfer_rules... " | tee -a init.log
 python3 populate_transfer_rules.py --progress --report >> init.log
 if [ $? -ne 0 ]
   then echo -e '\nFAILED!'
@@ -169,7 +169,7 @@ if [ $? -ne 0 ]
 fi
 echo done.
 
-echo -n CHECK bogus rules... | tee -a init.log
+echo -n "CHECK bogus rules... " | tee -a init.log
 python3 bogus_rules.py --progress >> init.log
 if [ $? -ne 0 ]
   then echo -e '\nFAILED!'
@@ -178,7 +178,7 @@ fi
 echo done.
 
 # Managing the rule review process
-echo -n CREATE TABLE sessions... | tee -a init_psql.log
+echo -n "CREATE TABLE sessions... " | tee -a init_psql.log
 psql cuny_courses < sessions.sql >> init_psql.log
 if [ $? -ne 0 ]
   then echo -e '\nFAILED!'
@@ -188,7 +188,7 @@ echo done.
 
 #echo CREATE TABLE pending_reviews...
 #echo CREATE TABLE event_types...
-echo -n CREATE TABLE events... | tee -a init_psql.log
+echo -n "CREATE TABLE events... " | tee -a init_psql.log
 psql cuny_courses < reviews-events.sql >> init_psql.log
 if [ $? -ne 0 ]
   then echo -e '\nFAILED!'
@@ -198,7 +198,7 @@ echo done.
 
 if [ $do_events -eq 1 ]
 then
-  echo -n RESTORE previous events... | tee -a init_psql.log
+  echo -n "RESTORE previous events... " | tee -a init_psql.log
   psql cuny_courses < events-dump.sql >> init_psql.log
   if [ $? -ne 0 ]
     then echo -e '\nFAILED!'
@@ -206,7 +206,7 @@ then
   fi
   echo done.
 
-  echo -n UPDATE review statuses... | tee -a init.log
+  echo -n "UPDATE review statuses... " | tee -a init.log
   python3 update_review_statuses.py >> init.log
   if [ $? -ne 0 ]
     then echo -e '\nFAILED!'
