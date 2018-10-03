@@ -349,7 +349,7 @@ if args.progress:
   print(f'\n  That took {mins} min {secs} sec.', file=sys.stderr)
   cursor.execute('select count(*) from transfer_rules')
   num_rules = cursor.fetchone()[0]
-  print(f'\nThere are {num_rules} rules', file=sys.stderr)
+  print(f'\nThere are {num_rules:,} rules', file=sys.stderr)
 
 conflicts.close()
 db.commit()
