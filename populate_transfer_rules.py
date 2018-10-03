@@ -18,8 +18,7 @@
 #           Note and eliminate rules that specifiy non-existent courses
 #           Note rules that specify inactive destination courses
 #           Build lists of source disciplines for all rules
-#     3. Clone rules with cross-listed courses so there is a rule for each one.
-#     4. Insert rules and course lists into database tables
+#     3. Insert rules and course lists into database tables
 
 import os
 import sys
