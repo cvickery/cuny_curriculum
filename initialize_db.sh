@@ -31,9 +31,14 @@ then
 fi
 
 echo BEGIN INITIALIZATION
+
 echo -n "DROP/CREATE cuny_courses... " | tee init_psql.log
 dropdb cuny_courses >> init_psql.log
 createdb cuny_courses >> init_psql.log
+echo done.
+
+echo -n "CREATE FUNCTION numeric_part... " | tee -a init_psql.log
+psql cuny_courses < numeric_part.sql >> init_psql.log
 echo done.
 
 echo -n "CREATE TABLE updates... " | tee -a init_psql.log
