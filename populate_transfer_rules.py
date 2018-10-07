@@ -103,7 +103,7 @@ conflicts = open('transfer_rule_conflicts.log', 'w')
 cursor.execute('truncate source_courses, destination_courses, transfer_rules')
 
 
-# All three dicts use the same key.
+# All three dicts use the same rule key.
 Primary_Key = namedtuple('Primary_Key',
                          'source_institution destination_institution subject_area group_number')
 Source_Course = namedtuple('Source_Course',
@@ -227,7 +227,7 @@ for key in source_courses.keys():
       source_disciplines_set = set()
       for course_info in course_id_cache[course.course_id]:
         source_disciplines_set.add(course_info.discipline)
-      source_disciplines[key] = ':' + ':'.join(source_disciplines_set) + ':'
+      source_disciplines[key] = ':' + ':'.join(sorted(source_disciplines_set)) + ':'
     for course in destination_courses[key]:
       if course.course_id not in course_id_cache.keys():
         cursor.execute("""select course_id, offer_nbr, institution, discipline, course_status
@@ -272,21 +272,6 @@ if args.progress:
 if args.report:
   print('  {:,} Source courses\n  {:,} Source disciplines\n  {:,} Destination courses'
         .format(len(source_courses), len(source_disciplines), len(destination_courses)))
-
-# # Clone rules that reference cross-listed courses
-# This should not be necessary: the source disciplines are all listed, as well as all the
-# course_ids. (But maybe I need to record the cuny subjects too?)
-# if args.progress:
-#   print('Checking for cross-listed source courses.', file=sys.stderr)
-# query = """
-#   select course_id from courses
-#   where offer_nbr > 1 and offer_nbr < 5
-#   group by course_id
-#   order by course_id
-#         """
-# cursor.execute(query)
-# cross_listed = [id.course_id for id in cursor.fetchall()]
-# for key in source_courses.keys():
 
 # Populate the db tables
 total_keys = len(source_courses.keys())
