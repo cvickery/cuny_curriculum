@@ -85,17 +85,19 @@ cursor.execute("""
                set update_date = '{}', file_name = '{}'
                where table_name = 'transfer_rules'""".format(file_date, cf_rules_file))
 
-# There be some garbage institution "names" in the transfer_rules, but the app’s institutions
-# table is “definitive”.
+# There be some garbage institution "names" in the transfer_rules, but the app’s
+# institutions table is “definitive”.
 cursor.execute("""select code
                   from institutions
                   order by code""")
 known_institutions = [record.code for record in cursor.fetchall()]
 
-# Use the disciplines table for reporting cases where the component_subject_area isn't there.
+# Use the disciplines table for reporting cases where the component_subject_area isn't
+# there.
 cursor.execute("""select institution, discipline
                   from disciplines""")
-valid_disciplines = [(record.institution, record.discipline) for record in cursor.fetchall()]
+valid_disciplines = [(record.institution, record.discipline)
+                     for record in cursor.fetchall()]
 
 conflicts = open('transfer_rule_conflicts.log', 'w')
 
@@ -159,8 +161,10 @@ with open(cf_rules_file) as csvfile:
                         .format(record.destination_institution))
         continue
 
-      # The source_discipline for the rule group may differ from the disciplines of the source
-      # courses. What we call the source_discipline, CF calls the Component Subject Area.
+      # The source_discipline for the rule group may differ from the disciplines of the
+      # source courses. What we call the source_discipline, CF calls the Component
+      # Subject Area, which in practice is an arbitrary string. The rules contain lists
+      # of all disciplines and cuny_subjects covered by each rule.
       if (record.source_institution, record.component_subject_area) not in valid_disciplines:
         # Report the problem, but accept the record.
         conflicts.write('({}, {}) not in cuny_subject_table. Record kept.\n'
@@ -189,9 +193,8 @@ if args.progress:
   print(f'\n  That took {mins} min {secs} sec.\nLooking up courses:', file=sys.stderr)
   start_time = perf_counter()
 
-# Create list of source disciplines for each rule
-#   Report and drop any course lookups that fail
-#   Likewise for destination courses: report inactives
+# Create list of source disciplines  and source cuny_subjects for each rule Report and
+# drop any course lookups that fail Likewise for destination courses: report inactives
 course_id_cache = dict()
 bogus_course_ids = set()
 source_disciplines = dict()
