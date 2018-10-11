@@ -111,7 +111,7 @@ Primary_Key = namedtuple('Primary_Key',
 Source_Course = namedtuple('Source_Course',
                            'course_id min_credits max_credits min_gpa max_gpa')
 Destination_Course = namedtuple('Destination_Course',
-                                'course_id, transfer_credits')
+                                'course_id transfer_credits')
 transfer_rules = dict()
 source_courses = dict()
 destination_courses = dict()
