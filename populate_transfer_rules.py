@@ -193,11 +193,12 @@ if args.progress:
   print(f'\n  That took {mins} min {secs} sec.\nLooking up courses:', file=sys.stderr)
   start_time = perf_counter()
 
-# Create list of source disciplines  and source cuny_subjects for each rule Report and
-# drop any course lookups that fail Likewise for destination courses: report inactives
+# Create list of source disciplines and source cuny_subjects for each rule. Report and
+# drop any course lookups that fail. Likewise for destination courses; report inactives
 course_id_cache = dict()
 bogus_course_ids = set()
 source_disciplines = dict()
+source_subjects = dict()
 bogus_keys = set()
 total_keys = len(source_courses.keys())
 keys_so_far = 0
@@ -208,13 +209,18 @@ for key in source_courses.keys():
           file=sys.stderr, end='')
   try:
     for course in source_courses[key]:
+      print(f'212 {course}')
       if course.course_id in bogus_course_ids:
         raise Failed_Course_Error(course.course_id)
+      assert 94933 not in course_id_cache.keys(), \
+      f'now what? {course}'
       if course.course_id not in course_id_cache.keys():
+        print(f'Adding {course.course_id} to course_id cache')
         cursor.execute("""select course_id,
                                  offer_nbr,
                                  institution,
                                  discipline,
+                                 cuny_subject,
                                  min_credits,
                                  max_credits,
                                  course_status
@@ -227,10 +233,17 @@ for key in source_courses.keys():
           raise Failed_Course_Error(course.course_id)
         else:
           course_id_cache[course.course_id] = cursor.fetchall()
+          print('233', course.course_id, course_id_cache[course.course_id])
+      else:
+        print(f'{course.course_id} was already cached')
       source_disciplines_set = set()
+      source_subjects_set = set()
       for course_info in course_id_cache[course.course_id]:
+        print('239', course.course_id, course_info)
         source_disciplines_set.add(course_info.discipline)
+        source_subjects_set.add(course_info.cuny_subject)
       source_disciplines[key] = ':' + ':'.join(sorted(source_disciplines_set)) + ':'
+      source_subjects[key] = ':' + ':'.join(sorted(source_subjects_set)) + ':'
     for course in destination_courses[key]:
       if course.course_id not in course_id_cache.keys():
         cursor.execute("""select course_id, offer_nbr, institution, discipline, course_status
@@ -286,14 +299,15 @@ for key in source_courses.keys():
           file=sys.stderr, end='')
   key_asdict = key._asdict()
   primary_key = [key_asdict[k] for k in key_asdict.keys()]
-  rule_values = primary_key + [source_disciplines[key]]
+  rule_values = primary_key + [source_disciplines[key] + source_subjects[key]]
   cursor.execute("""insert into transfer_rules (
                                   source_institution,
                                   destination_institution,
                                   subject_area,
                                   group_number,
-                                  source_disciplines)
-                                values (%s, %s, %s, %s, %s) returning id""",
+                                  source_disciplines,
+                                  source_subjects)
+                                values (%s, %s, %s, %s, %s, %s) returning id""",
                  rule_values)
   rule_id = cursor.fetchone()[0]
   for source_course in source_courses[key]:
