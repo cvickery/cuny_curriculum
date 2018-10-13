@@ -234,7 +234,7 @@ for key in source_courses.keys():
 
       source_disciplines_set = set()
       source_subjects_set = set()
-      for course_info in course_cache[course.course_id]:
+      for course_info in course_cache[source_course.course_id]:
         source_disciplines_set.add(course_info.discipline)
         source_subjects_set.add(course_info.cuny_subject)
       source_disciplines[key] = ':' + ':'.join(sorted(source_disciplines_set)) + ':'
