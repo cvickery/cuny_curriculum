@@ -7,6 +7,13 @@
 #   catalog description. (Mismatched institution and/or discipline.) Use the course_id and catalog
 #   info.
 #
+#   CF uses a pair of values (a string and an integer) to identify sets of related rule
+#   components. They call the string part the Component Subject Area, but it turns out to be
+#   an arbitrary string, which is sometimes an external subject area, maybe is a discipline, or
+#   maybe is just a string that somebody thought was a good idea, perhaps because it identifies
+#   a program ... or something. Anyway, we call it subject_area . They call the number the
+#   Src Equivalency Component, and we call it the group_number.
+#
 #   Deal with cross-listed courses by allowing a source or destination course_id to represent all
 #   offer_nbr values for “the course“.
 #
@@ -39,19 +46,6 @@ parser.add_argument('--report', '-r', action='store_true')    # to stdout
 args = parser.parse_args()
 
 app_start = perf_counter()
-
-
-# Failed_Course_Error
-# -------------------------------------------------------------------------------------------------
-class Failed_Course_Error(Exception):
-  """Exception raised for course lookup failures.
-
-  Attributes:
-      message -- explanation of the error
-  """
-
-  def __init__(self, message):
-      self.message = message
 
 
 # mk_rule_key()
@@ -105,8 +99,16 @@ valid_disciplines = [(record.institution, record.discipline)
 # Cache the information that might be used for all courses in the courses table.
 # Index by course_id; list info for each offer_nbr.
 cursor.execute("""
-               select course_id, offer_nbr, institution, discipline, cuny_subject, min_credits,
-               max_credits, course_status from courses""")
+               select course_id,
+                      offer_nbr,
+                      institution,
+                      discipline,
+                      catalog_number,
+                      numeric_part(catalog_number) as cat_num,
+                      cuny_subject,
+                      min_credits,
+                      max_credits,
+                      course_status from courses""")
 all_courses = cursor.fetchall()
 course_cache = dict([(course.course_id, []) for course in all_courses])
 for course in all_courses:
@@ -118,18 +120,27 @@ conflicts = open('transfer_rule_conflicts.log', 'w')
 # Clear the three db tables
 cursor.execute('truncate source_courses, destination_courses, transfer_rules')
 
-# The course dicts both use Rule_Key as their key type.
+# Templates for building the three tables
 Rule_Key = namedtuple('Rule_Key',
                       'source_institution destination_institution subject_area group_number')
-Source_Course = namedtuple('Source_Course',
-                           'course_id min_credits max_credits min_gpa max_gpa')
+Source_Course = namedtuple(
+    'Source_Course',
+    'course_id discipline cat_num cuny_subject min_credits max_credits min_gpa max_gpa')
 Destination_Course = namedtuple('Destination_Course',
-                                'course_id transfer_credits')
-source_courses = dict()
-destination_courses = dict()
+                                'course_id discipline cat_num cuny_subject transfer_credits')
+# Rules dict is keyed by Rule_Key. Values are lists of courses and sets of disciplines and subjects.
+SOURCE_COURSES = 0
+SOURCE_DISCIPLINES = 1
+SOURCE_SUBJECTS = 2
+DESTINATION_COURSES = 3
 
+rules_dict = dict()
+num_missing_courses = 0
+
+# Step 1: Go through the CF query file, extracting a dict of rules and associated courses.
+# -------------------------------------------------------------------------------------------------
 if args.progress:
-  print('\nStep 1/4: process csv file.', file=sys.stderr)
+  print('\nStep 1/2: Process the csv file.', file=sys.stderr)
 start_time = perf_counter()
 with open(cf_rules_file) as csvfile:
   csv_reader = csv.reader(csvfile)
@@ -162,142 +173,132 @@ with open(cf_rules_file) as csvfile:
               end='', file=sys.stderr)
 
       record = Record._make(line)
+      try:
+        rule_key = Rule_Key(record.source_institution,
+                            record.destination_institution,
+                            record.component_subject_area,
+                            int(record.src_equivalency_component))
+      except ValueError as e:
+        conflicts.write(f'Unable to construct Rule Key for {record}.\n{e}')
+        continue
+
+      if rule_key not in rules_dict.keys():
+        # SOURCE_COURSES, SOURCE_DISCIPLINES, SOURCE_SUBJECTS, DESTINATION_COURSES
+        rules_dict[rule_key] = ([], set(), set(), [])
 
       # 2018-07-19: The following two tests never fail
       if record.source_institution not in known_institutions:
-        conflicts.write('Unknown institution: {}. Record skipped.\n'
-                        .format(record.source_institution))
+        conflicts.write('Unknown institution: {} for rule {}. Rule ignored.\n'
+                        .format(record.source_institution, rule_key))
+        rules_dict.pop(rule_key)
         continue
       if record.destination_institution not in known_institutions:
-        conflicts.write('Unknown institution: {}. Record skipped.\n'
-                        .format(record.destination_institution))
+        conflicts.write('Unknown institution: {} for rule {}. Rule ignored.\n'
+                        .format(record.destination_institution, rule_key))
+        rules_dict.pop(rule_key)
         continue
 
-      # The source_discipline for the rule group may differ from the disciplines of the
-      # source courses. What we call the subject_area, CF calls the Component
-      # Subject Area, which in practice is an arbitrary string. The rules contain lists
-      # of all disciplines and cuny_subjects covered by source_courses for each rule.
       if (record.source_institution, record.component_subject_area) not in valid_disciplines:
-        # Report the problem, but accept the record.
-        conflicts.write('({}, {}) not in cuny_subject_table. Record kept.\n'
-                        .format(record.source_institution, record.component_subject_area))
+        # Report the anomaly, but accept the record.
+        conflicts.write(
+            'Notice: Component Subject Area {} not a CUNY Subject Area for rule {}. Record kept.\n'
+            .format(record.component_subject_area, rule_key))
 
-      rule_key = Rule_Key(record.source_institution,
-                          record.destination_institution,
-                          record.component_subject_area,
-                          record.src_equivalency_component)
+      # Process source_course_id
+      # ------------------------
+      course_id = int(record.source_course_id)
+      if course_id not in course_cache.keys():
+        conflicts.write('Source course {:06} not in cource catalog for rule {}. Rule ignored.\n'
+                        .format(source_course.course_id, rule_key))
+        rules_dict.pop(rule_key)
+        num_missing_courses += 1
+        continue
+      # Only one course gets added to the rule, but all (cross-listed) disciplines and subjects
+      courses = course_cache[course_id]
+      source_course = Source_Course(course_id,
+                                    courses[0].discipline,
+                                    float(courses[0].cat_num),
+                                    courses[0].cuny_subject,
+                                    record.src_min_units,
+                                    record.src_max_units,
+                                    record.min_grade_pts,
+                                    record.max_grade_pts)
+      rules_dict[rule_key][SOURCE_COURSES].append(source_course)
+      fail = False
+      for course in courses:
+        if course.cat_num < 0:
+          conflicts.write(
+              'Source course {:06} with non-numeric catalog number {} for rule {}. Rule ignored.\n'
+              .format(course_id, course.catalog_number, rule_key))
+          fail = True
+          break
+        rules_dict[rule_key][SOURCE_DISCIPLINES].add(course.discipline)
+        rules_dict[rule_key][SOURCE_SUBJECTS].add(course.cuny_subject)
+      if fail:
+        rules_dict.pop(rule_key)
+        continue
 
-      if rule_key not in source_courses.keys():
-        source_courses[rule_key] = set()
-        destination_courses[rule_key] = set()
-      source_courses[rule_key].add(Source_Course(int(record.source_course_id),
-                                                 record.src_min_units,
-                                                 record.src_max_units,
-                                                 record.min_grade_pts,
-                                                 record.max_grade_pts))
-      destination_courses[rule_key].add(Destination_Course(int(record.destination_course_id),
-                                                           record.units_taken))
-
-if args.progress:
-  secs = perf_counter() - start_time
-  mins = int(secs / 60)
-  secs = int(secs - 60 * mins)
-  print(f'\n  That took {mins} min {secs} sec.', file=sys.stderr)
-  print('\nStep 2/4: Look up courses:', file=sys.stderr)
-  start_time = perf_counter()
-
-# Create list of source disciplines and source cuny_subjects for each rule. Report and
-# drop any course lookups that fail. Likewise for destination courses; report inactives
-
-bogus_course_ids = set()
-source_disciplines = dict()
-source_subjects = dict()
-bogus_keys = set()
-total_keys = len(source_courses.keys())
-keys_so_far = 0
-for key in source_courses.keys():
-  keys_so_far += 1
-  if args.progress and 0 == keys_so_far % 1000:
-    print(f'\r{keys_so_far:,}/{total_keys:,} keys. {100 * keys_so_far / total_keys:.1f}%',
-          file=sys.stderr, end='')
-  try:
-
-    for source_course in source_courses[key]:
-      if source_course.course_id in bogus_course_ids:
-        raise Failed_Course_Error(source_course.course_id)
-
-      if source_course.course_id not in course_cache.keys():
-        conflicts.write('Source course {:06} not in cource catalog for rule {}. Rule deleted.\n'
-                        .format(source_course.course_id, mk_rule_key(key)))
-        bogus_course_ids.add(source_course.course_id)
-        raise Failed_Course_Error(source_course.course_id)
-
-      source_disciplines_set = set()
-      source_subjects_set = set()
-      for course_info in course_cache[source_course.course_id]:
-        source_disciplines_set.add(course_info.discipline)
-        source_subjects_set.add(course_info.cuny_subject)
-      source_disciplines[key] = ':' + ':'.join(sorted(source_disciplines_set)) + ':'
-      source_subjects[key] = ':' + ':'.join(sorted(source_subjects_set)) + ':'
-
-    for destination_course in destination_courses[key]:
-      if destination_course.course_id not in course_cache.keys():
-        conflicts.write('Destination course {:06} not in catalog for rule {}. Rule deleted.\n'
-                        .format(destination_course.course_id, mk_rule_key(key)))
-        raise Failed_Course_Error(destination_course.course_id)
-      if len(course_cache[destination_course.course_id]) > 1:
+      # Process destination_course_id
+      # -----------------------------
+      course_id = int(record.destination_course_id)
+      if course_id not in course_cache.keys():
+        conflicts.write('Destination course {:06} not in catalog for rule {}. Rule ignored.\n'
+                        .format(destination_course.course_id, rule_key))
+        rules_dict.pop(rule_key)
+        continue
+      courses = course_cache[course_id]
+      destination_course = Destination_Course(course_id,
+                                              courses[0].discipline,
+                                              float(courses[0].cat_num),
+                                              courses[0].cuny_subject,
+                                              record.units_taken)
+      rules_dict[rule_key][DESTINATION_COURSES].append(destination_course)
+      if len(courses) > 1:
         conflicts.write(
             'Destination course_id {:06} for rule {} is cross-listed {} times. Rule retained.\n'
-            .format(destination_course.course_id,
-                    mk_rule_key(key),
+            .format(destination_course.course_id, rule_key,
                     len(course_cache[destination_course.course_id])))
-      for course_info in course_cache[destination_course.course_id]:
-        if course_info.course_status != 'A':
+      fail = False
+      for course in courses:
+        if course.cat_num < 0:
+          conflicts.write('Destination course {:06} with non-numeric catalog number {} '
+                          + 'for rule {}. Rule ignored.\n'
+                          .format(course_id, course.catalog_number, rule_key))
+          fail = True
+          break
+        if course.course_status != 'A':
           conflicts.write('Inactive destination course_id ({:06}) in rule {}. Rule retained.\n'.
-                          format(course.course_id, mk_rule_key(key)))
+                          format(course_id, rule_key))
+      if fail:
+        rules_dict.pop(rule_key)
+        continue
 
-  except Failed_Course_Error as fce:
-    bogus_keys.add(key)
-
-num_bogus_keys = len(bogus_keys)
 if args.progress:
+  print(f'\n  Found {len(rules_dict.keys()):,} rules', file=sys.stderr)
   secs = perf_counter() - start_time
   mins = int(secs / 60)
   secs = int(secs - 60 * mins)
   print(f'\n  That took {mins} min {secs} sec.', file=sys.stderr)
-  print(f'\nStep 3/4: remove {num_bogus_keys:,} rules that reference nonexistent courses.',
-        file=sys.stderr)
+
+  print('\nStep 2: Add rules to the tables', file=sys.stderr)
   start_time = perf_counter()
 
-# Prune rules that reference non-existent course_ids
-if num_bogus_keys > 0:
-  for key in bogus_keys:
-    del source_courses[key]
-    del destination_courses[key]
-    if key in source_disciplines.keys():
-      del source_disciplines[key]
-if args.progress:
-  secs = perf_counter() - start_time
-  mins = int(secs / 60)
-  secs = int(secs - 60 * mins)
-  print(f'  That took {mins} min {secs} sec.', file=sys.stderr)
-  print('\nStep 4/4: populate the tables.', file=sys.stderr)
-  start_time = perf_counter()
-
-if args.report:
-  print('  {:,} Source courses\n  {:,} Source disciplines\n  {:,} Destination courses'
-        .format(len(source_courses), len(source_disciplines), len(destination_courses)))
-
-# Populate the db tables
-total_keys = len(source_courses.keys())
+# Step 2
+# -------------------------------------------------------------------------------------------------
+# Process the info for each rule, and add to the db.
+total_keys = len(rules_dict.keys())
 keys_so_far = 0
-for key in source_courses.keys():
+for rule_key in rules_dict.keys():
   keys_so_far += 1
   if args.progress and 0 == keys_so_far % 1000:
     print(f'\r{keys_so_far:,}/{total_keys:,} keys. {100 * keys_so_far / total_keys:.1f}%',
           file=sys.stderr, end='')
-  key_asdict = key._asdict()
-  rule_key = [key_asdict[k] for k in key_asdict.keys()]
+
+  # Build the colon-delimited discipline and subject strings
+  source_disciplines_str = ':' + ':'.join(sorted(rules_dict[rule_key][SOURCE_DISCIPLINES])) + ':'
+  source_subjects_str = ':' + ':'.join(sorted(rules_dict[rule_key][SOURCE_SUBJECTS])) + ':'
+
+  # Insert the rule, getting back it's id
   cursor.execute("""insert into transfer_rules (
                                   source_institution,
                                   destination_institution,
@@ -306,48 +307,49 @@ for key in source_courses.keys():
                                   source_disciplines,
                                   source_subjects)
                                 values (%s, %s, %s, %s, %s, %s) returning id""",
-                 rule_key + [source_disciplines[key], source_subjects[key]])
+                 rule_key + (source_disciplines_str, source_subjects_str))
   rule_id = cursor.fetchone()[0]
-  for source_course in source_courses[key]:
-    source_values = [rule_id] + rule_key + [source_course.course_id,
-                                            source_course.min_credits,
-                                            source_course.max_credits,
-                                            source_course.min_gpa,
-                                            source_course.max_gpa]
-    cursor.execute("""insert into source_courses (
+
+  # Sort and insert the source_courses
+  rules_dict[rule_key][SOURCE_COURSES].sort(key=lambda c: (c.discipline, c.cat_num))
+  for course in rules_dict[rule_key][SOURCE_COURSES]:
+    cursor.execute("""insert into source_courses
+                                  (
                                     rule_id,
-                                    source_institution,
-                                    destination_institution,
-                                    subject_area,
-                                    group_number,
                                     course_id,
+                                    discipline,
+                                    cat_num,
+                                    cuny_subject,
                                     min_credits,
                                     max_credits,
                                     min_gpa,
-                                    max_gpa)
-                                  values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                   """, source_values)
-  for destination_course in destination_courses[key]:
-    destination_values = [rule_id] + rule_key + [destination_course.course_id,
-                                                 destination_course.transfer_credits]
-    cursor.execute("""insert into destination_courses (
-                                    rule_id,
-                                    source_institution,
-                                    destination_institution,
-                                    subject_area,
-                                    group_number,
-                                    course_id,
-                                    transfer_credits)
-                                  values (%s, %s, %s, %s, %s, %s, %s)
-                   """, destination_values)
+                                    max_gpa
+                                  )
+                                  values (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                   """, (rule_id, ) + course)
 
+  # Sort and insert the destination_courses
+  rules_dict[rule_key][DESTINATION_COURSES].sort(key=lambda c: (c.discipline, c.cat_num))
+  for course in rules_dict[rule_key][DESTINATION_COURSES]:
+    cursor.execute("""insert into destination_courses
+                                  (
+                                    rule_id,
+                                    course_id,
+                                    discipline,
+                                    cat_num,
+                                    cuny_subject,
+                                    transfer_credits
+                                  )
+                                  values (%s, %s, %s, %s, %s, %s)
+                   """, (rule_id, ) + course)
+
+cursor.execute('select count(*) from transfer_rules')
+num_rules = cursor.fetchone()[0]
 if args.progress:
   secs = perf_counter() - start_time
   mins = int(secs / 60)
   secs = int(secs - 60 * mins)
   print(f'\n  That took {mins} min {secs} sec.', file=sys.stderr)
-  cursor.execute('select count(*) from transfer_rules')
-  num_rules = cursor.fetchone()[0]
   print(f'\nThere are {num_rules:,} rules', file=sys.stderr)
 
 conflicts.close()
@@ -358,5 +360,4 @@ if args.report:
   secs = perf_counter() - app_start
   mins = int(secs / 60)
   secs = int(secs - 60 * mins)
-  num_rules = len(source_courses.keys())
   print(f'\nGenerated {num_rules:,} rules in {mins} min {secs} sec.')

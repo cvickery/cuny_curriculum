@@ -174,13 +174,15 @@ if [ $? -ne 0 ]
 fi
 echo done.
 
-echo -n "CHECK bogus rules... " | tee -a init.log
-python3 bogus_rules.py --progress >> init.log
-if [ $? -ne 0 ]
-  then echo -e '\nFAILED!'
-       exit
-fi
-echo done.
+# The following takes too long, and doesn't really do more than
+# populate_transfer_rules.py already did. Historical Artifact.
+# echo -n "CHECK bogus rules... " | tee -a init.log
+# python3 bogus_rules.py --progress >> init.log
+# if [ $? -ne 0 ]
+#   then echo -e '\nFAILED!'
+#        exit
+# fi
+# echo done.
 
 # Managing the rule review process
 echo -n "CREATE TABLE sessions... " | tee -a init_psql.log

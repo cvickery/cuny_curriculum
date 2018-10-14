@@ -17,11 +17,14 @@ drop table if exists source_courses cascade;
 create table source_courses (
   id serial primary key,
   rule_id integer references transfer_rules,
-  source_institution text,
-  destination_institution text,
-  subject_area text,
-  group_number integer,
+  -- source_institution text,
+  -- destination_institution text,
+  -- subject_area text,
+  -- group_number integer,
   course_id integer, -- may reference multiple rows in courses if cross-listed
+  discipline text,
+  cat_num real,
+  cuny_subject text,
   min_credits real,
   max_credits real,
   min_gpa real,
@@ -33,11 +36,14 @@ drop table if exists destination_courses cascade;
 create table destination_courses (
   id serial primary key,
   rule_id integer references transfer_rules,
-  source_institution text,
-  destination_institution text,
-  subject_area text,
-  group_number integer,
+  -- source_institution text,
+  -- destination_institution text,
+  -- subject_area text,
+  -- group_number integer,
   course_id integer, -- may reference multiple rows in courses if cross-listed
+  discipline text,
+  cat_num real,
+  cuny_subject text,
   transfer_credits real);
 -- foreign key (source_institution, destination_institution, subject_area, group_number)
 --   references transfer_rules);
