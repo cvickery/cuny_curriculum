@@ -119,7 +119,7 @@ Source_Course = namedtuple(
     'course_id discipline cat_num cuny_subject min_credits max_credits min_gpa max_gpa')
 Destination_Course = namedtuple('Destination_Course',
                                 'course_id discipline cat_num cuny_subject transfer_credits')
-# Rules dict is keyed by Rule_Key. Values are lists of courses and sets of disciplines and subjects.
+# Rules dict is keyed by Rule_Key. Values are sets of courses and sets of disciplines and subjects.
 SOURCE_COURSES = 0
 SOURCE_DISCIPLINES = 1
 SOURCE_SUBJECTS = 2
@@ -175,7 +175,7 @@ with open(cf_rules_file) as csvfile:
 
       if rule_key not in rules_dict.keys():
         # SOURCE_COURSES, SOURCE_DISCIPLINES, SOURCE_SUBJECTS, DESTINATION_COURSES
-        rules_dict[rule_key] = ([], set(), set(), [])
+        rules_dict[rule_key] = (set(), set(), set(), set())
 
       # 2018-07-19: The following two tests never fail
       if record.source_institution not in known_institutions:
@@ -214,7 +214,7 @@ with open(cf_rules_file) as csvfile:
                                     record.src_max_units,
                                     record.min_grade_pts,
                                     record.max_grade_pts)
-      rules_dict[rule_key][SOURCE_COURSES].append(source_course)
+      rules_dict[rule_key][SOURCE_COURSES].add(source_course)
       fail = False
       for course in courses:
         if course.cat_num < 0:
@@ -243,7 +243,7 @@ with open(cf_rules_file) as csvfile:
                                               float(courses[0].cat_num),
                                               courses[0].cuny_subject,
                                               record.units_taken)
-      rules_dict[rule_key][DESTINATION_COURSES].append(destination_course)
+      rules_dict[rule_key][DESTINATION_COURSES].add(destination_course)
       if len(courses) > 1:
         conflicts.write(
             'Destination course_id {:06} for rule {} is cross-listed {} times. Rule retained.\n'
@@ -278,7 +278,7 @@ if args.progress:
 # -------------------------------------------------------------------------------------------------
 # Clear the three db tables and re-populate them.
 
-cursor.execute('truncate source_courses, destination_courses, transfer_rules')
+cursor.execute('truncate source_courses, destination_courses, transfer_rules cascade')
 # update the update date
 cursor.execute("""
                update updates
@@ -310,8 +310,8 @@ for rule_key in rules_dict.keys():
   rule_id = cursor.fetchone()[0]
 
   # Sort and insert the source_courses
-  rules_dict[rule_key][SOURCE_COURSES].sort(key=lambda c: (c.discipline, c.cat_num))
-  for course in rules_dict[rule_key][SOURCE_COURSES]:
+  for course in sorted(rules_dict[rule_key][SOURCE_COURSES],
+                       key=lambda c: (c.discipline, c.cat_num)):
     cursor.execute("""insert into source_courses
                                   (
                                     rule_id,
@@ -328,8 +328,8 @@ for rule_key in rules_dict.keys():
                    """, (rule_id, ) + course)
 
   # Sort and insert the destination_courses
-  rules_dict[rule_key][DESTINATION_COURSES].sort(key=lambda c: (c.discipline, c.cat_num))
-  for course in rules_dict[rule_key][DESTINATION_COURSES]:
+  for course in sorted(rules_dict[rule_key][DESTINATION_COURSES],
+                       key=lambda c: (c.discipline, c.cat_num)):
     cursor.execute("""insert into destination_courses
                                   (
                                     rule_id,
