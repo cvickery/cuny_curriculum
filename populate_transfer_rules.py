@@ -61,7 +61,6 @@ def mk_rule_key(rule):
 
 # Start Execution
 # =================================================================================================
-
 if args.progress:
   print('\nInitializing.', file=sys.stderr)
 
@@ -76,11 +75,6 @@ num_lines = sum(1 for line in open(cf_rules_file))
 
 if args.report:
   print('Transfer rules query file: {} {}'.format(file_date, cf_rules_file))
-
-cursor.execute("""
-               update updates
-               set update_date = '{}', file_name = '{}'
-               where table_name = 'transfer_rules'""".format(file_date, cf_rules_file))
 
 # There be some garbage institution "names" in the transfer_rules, but the app’s
 # institutions table is “definitive”.
@@ -116,9 +110,6 @@ for course in all_courses:
 
 # Logging file
 conflicts = open('transfer_rule_conflicts.log', 'w')
-
-# Clear the three db tables
-cursor.execute('truncate source_courses, destination_courses, transfer_rules')
 
 # Templates for building the three tables
 Rule_Key = namedtuple('Rule_Key',
@@ -280,12 +271,20 @@ if args.progress:
   secs = int(secs - 60 * mins)
   print(f'\n  That took {mins} min {secs} sec.', file=sys.stderr)
 
-  print('\nStep 2: Add rules to the tables', file=sys.stderr)
+  print('\nStep 2: Polulate the three tables', file=sys.stderr)
   start_time = perf_counter()
 
 # Step 2
 # -------------------------------------------------------------------------------------------------
-# Process the info for each rule, and add to the db.
+# Clear the three db tables and re-populate them.
+
+cursor.execute('truncate source_courses, destination_courses, transfer_rules')
+# update the update date
+cursor.execute("""
+               update updates
+               set update_date = '{}', file_name = '{}'
+               where table_name = 'transfer_rules'""".format(file_date, cf_rules_file))
+
 total_keys = len(rules_dict.keys())
 keys_so_far = 0
 for rule_key in rules_dict.keys():
