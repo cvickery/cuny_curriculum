@@ -2,7 +2,8 @@
 
 # Run the sequence of sql and python scripts to create and initialize the cuny_courses database.
 
-SECONDS=0
+
+# CHECK COMMAND LINE
 # Default is to dump and restore events. But -n or --no-events suppresses it.
 do_events=1
 if [ $# -gt 0 ]
@@ -15,6 +16,21 @@ then
   fi
 fi
 
+echo BEGIN INITIALIZATION
+SECONDS=0
+
+# Python scripts process query results, so check that they are all present.
+# Report any mismatched dates and abort if not all a-ok
+
+echo -n "CHECK QUERY FILES... " | tee init.log
+./check_query_dates.sh > init.log
+if [ $? -ne 0 ]
+  then echo "ERROR: mismatched query dates."
+       exit 1
+  else echo OK.
+fi
+
+# Save dumps table unless suppressed by command line
 if [ $do_events -eq 1 ]
 then
   # If the db has no events table (yet), re-use the existing events-dump.sql if there is one, or
@@ -29,8 +45,6 @@ then
   # mv t.sql events-dump.sql
   echo done.
 fi
-
-echo BEGIN INITIALIZATION
 
 echo -n "DROP/CREATE cuny_courses... " | tee init_psql.log
 dropdb cuny_courses >> init_psql.log
@@ -62,16 +76,6 @@ echo done.
 echo -n "CREATE TABLE institutions... " | tee -a init_psql.log
 psql cuny_courses < cuny_institutions.sql >> init_psql.log
 echo done.
-
-# Python scripts process query results, so check that they are all present
-# and report any mismatched dates.
-
-echo -n "CHECK QUERY FILES... " | tee init.log
-./check_query_dates.sh > init.log
-if [ $? -ne 0 ]
-  then echo "WARNING: mismatched dates."
-  else echo OK.
-fi
 
 # Now regenerate the tables that are based on query results
 #
