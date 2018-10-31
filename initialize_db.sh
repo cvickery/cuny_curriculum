@@ -27,7 +27,6 @@ echo -n "CHECK QUERY FILES... " | tee init.log
 if [ $? -ne 0 ]
   then echo "ERROR: mismatched query dates."
        exit 1
-  else echo OK.
 fi
 
 # Save dumps table unless suppressed by command line
