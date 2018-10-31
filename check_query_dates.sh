@@ -39,7 +39,7 @@
       fi
     done
   done
-  echo "Query dates okay"
+  echo "All queries are dated ${dates[0]}"
   for file in queries/*
   do
     if [[ 1 == `gstat -c %h $file` ]]
