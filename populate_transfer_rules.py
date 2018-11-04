@@ -114,11 +114,25 @@ conflicts = open('transfer_rule_conflicts.log', 'w')
 # Templates for building the three tables
 Rule_Key = namedtuple('Rule_Key',
                       'source_institution destination_institution subject_area group_number')
-Source_Course = namedtuple(
-    'Source_Course',
-    'course_id discipline cat_num cuny_subject min_credits max_credits min_gpa max_gpa')
-Destination_Course = namedtuple('Destination_Course',
-                                'course_id discipline cat_num cuny_subject transfer_credits')
+Source_Course = namedtuple('Source_Course', """
+                           course_id
+                           offer_count
+                           discipline
+                           catalog_number
+                           cat_num
+                           cuny_subject
+                           min_credits
+                           max_credits
+                           min_gpa
+                           max_gpa""")
+Destination_Course = namedtuple('Destination_Course', """
+                                course_id
+                                offer_count
+                                discipline
+                                catalog_number
+                                cat_num
+                                cuny_subject
+                                transfer_credits""")
 # Rules dict is keyed by Rule_Key. Values are sets of courses and sets of disciplines and subjects.
 SOURCE_COURSES = 0
 SOURCE_DISCIPLINES = 1
@@ -207,7 +221,9 @@ with open(cf_rules_file) as csvfile:
       # Only one course gets added to the rule, but all (cross-listed) disciplines and subjects
       courses = course_cache[course_id]
       source_course = Source_Course(course_id,
+                                    len(courses),
                                     courses[0].discipline,
+                                    courses[0].catalog_number,
                                     float(courses[0].cat_num),
                                     courses[0].cuny_subject,
                                     record.src_min_units,
@@ -239,7 +255,9 @@ with open(cf_rules_file) as csvfile:
         continue
       courses = course_cache[course_id]
       destination_course = Destination_Course(course_id,
+                                              len(courses),
                                               courses[0].discipline,
+                                              courses[0].catalog_number,
                                               float(courses[0].cat_num),
                                               courses[0].cuny_subject,
                                               record.units_taken)
@@ -271,7 +289,7 @@ if args.progress:
   secs = int(secs - 60 * mins)
   print(f'\n  That took {mins} min {secs} sec.', file=sys.stderr)
 
-  print('\nStep 2: Polulate the three tables', file=sys.stderr)
+  print('\nStep 2: Populate the three tables', file=sys.stderr)
   start_time = perf_counter()
 
 # Step 2
@@ -316,7 +334,9 @@ for rule_key in rules_dict.keys():
                                   (
                                     rule_id,
                                     course_id,
+                                    offer_count,
                                     discipline,
+                                    catalog_number,
                                     cat_num,
                                     cuny_subject,
                                     min_credits,
@@ -324,7 +344,7 @@ for rule_key in rules_dict.keys():
                                     min_gpa,
                                     max_gpa
                                   )
-                                  values (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                  values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                    """, (rule_id, ) + course)
 
   # Sort and insert the destination_courses
@@ -334,12 +354,14 @@ for rule_key in rules_dict.keys():
                                   (
                                     rule_id,
                                     course_id,
+                                    offer_count,
                                     discipline,
+                                    catalog_number,
                                     cat_num,
                                     cuny_subject,
                                     transfer_credits
                                   )
-                                  values (%s, %s, %s, %s, %s, %s)
+                                  values (%s, %s, %s, %s, %s, %s, %s, %s)
                    """, (rule_id, ) + course)
 
 cursor.execute('select count(*) from transfer_rules')
