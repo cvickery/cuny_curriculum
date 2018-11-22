@@ -21,7 +21,7 @@ conn = psycopg2.connect('dbname=cuny_courses')
 cursor = conn.cursor(cursor_factory=NamedTupleCursor)
 
 cursor.execute("""
-  drop table if exists crse_equiv_tbl;
+  drop table if exists crse_equiv_tbl cascade;
   create table crse_equiv_tbl (
     equivalent_course_group integer primary key,
     description text)

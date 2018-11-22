@@ -7,6 +7,9 @@
 #   catalog description. (Mismatched institution and/or discipline.) Use the course_id and catalog
 #   info.
 #
+#   Note rules where the actual source course min/max credits are not in the range specified in the
+#   rule. To avoid extra course lookups later, the source_courses get the actual course min/max.
+#
 #   CF uses a pair of values (a string and an integer) to identify sets of related rule
 #   components. They call the string part the Component Subject Area, but it turns out to be
 #   an arbitrary string, which is sometimes an external subject area, maybe is a discipline, or
@@ -220,14 +223,27 @@ with open(cf_rules_file) as csvfile:
         continue
       # Only one course gets added to the rule, but all (cross-listed) disciplines and subjects
       courses = course_cache[course_id]
+      course = courses[0]
+      if float(course.min_credits) < float(record.src_min_units):
+        conflicts.write('Source course {:06} has {} min credits, but rule {} speifies {} min units'
+                        .format(course.course_id,
+                                course.min_credits,
+                                rule_key,
+                                record.src_min_units))
+      if float(course.max_credits) > float(record.src_max_units):
+        conflicts.write('Source course {:06} has {} max credits, but rule {} speifies {} max units'
+                        .format(course.course_id,
+                                course.max_credits,
+                                rule_key,
+                                record.src_max_units))
       source_course = Source_Course(course_id,
                                     len(courses),
-                                    courses[0].discipline,
-                                    courses[0].catalog_number,
-                                    float(courses[0].cat_num),
-                                    courses[0].cuny_subject,
-                                    record.src_min_units,
-                                    record.src_max_units,
+                                    course.discipline,
+                                    course.catalog_number,
+                                    float(course.cat_num),
+                                    course.cuny_subject,
+                                    course.min_credits,
+                                    course.max_credits,
                                     record.min_grade_pts,
                                     record.max_grade_pts)
       rules_dict[rule_key][SOURCE_COURSES].add(source_course)

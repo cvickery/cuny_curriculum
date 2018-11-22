@@ -128,7 +128,6 @@ echo done.
 
 echo -n "CREATE TABLE courses... " | tee -a init_psql.log
 psql cuny_courses < create_courses.sql >> init_psql.log
-psql cuny_courses < view_courses.sql >> init_psql.log
 if [ $? -ne 0 ]
   then echo -e '\nFAILED!'
        exit
