@@ -225,13 +225,15 @@ with open(cf_rules_file) as csvfile:
       courses = course_cache[course_id]
       course = courses[0]
       if float(course.min_credits) < float(record.src_min_units):
-        conflicts.write('Source course {:06} has {} min credits, but rule {} speifies {} min units'
+        conflicts.write('Source course {:06} has {} min credits, '
+                        'but rule {} speifies {} min units\n'
                         .format(course.course_id,
                                 course.min_credits,
                                 rule_key,
                                 record.src_min_units))
       if float(course.max_credits) > float(record.src_max_units):
-        conflicts.write('Source course {:06} has {} max credits, but rule {} speifies {} max units'
+        conflicts.write('Source course {:06} has {} max credits, '
+                        'but rule {} speifies {} max units\n'
                         .format(course.course_id,
                                 course.max_credits,
                                 rule_key,
