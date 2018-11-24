@@ -172,7 +172,7 @@ with open(cf_rules_file) as csvfile:
         secs_remaining = total_time - elapsed_time
         mins_remaining = int((secs_remaining) / 60)
         secs_remaining = int(secs_remaining - (mins_remaining * 60))
-        print('line {:,}/{:,} ({:.1f}%) Estimate {}:{:02} remaining.\r'
+        print('line {:,}/{:,} ({:.1f}%) Estimated time remaining: {}:{:02}\r'
               .format(line_num,
                       num_lines,
                       100 * line_num / num_lines,
