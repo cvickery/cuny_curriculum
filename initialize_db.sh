@@ -4,11 +4,11 @@
 
 # Summary of recommendations from http://petereisentraut.blogspot.com/2010/03/running-sql-scripts-with-psql.html
 # PGOPTIONS='--client-min-messages=warning' psql -X -q -a -1 -v ON_ERROR_STOP=1 --pset pager=off -d mydb -f dump.sql
+#   --client-min-messages=warning to suppress NOTICE messages
 #   -X suppress reading .psqlrc (where I set timing)
 #   -f rather than < to get line numbers when a command fails
-#   --client-min-messages=warning to suppress NOTICE messages
 #   -q to suppress CREATE TABLE, etc messages
-#   Others pertain more to restoring dump files and are not used here
+#   Others pertain more to restoring dump files, where a single transaction would make sense, and are not used here
 (
   export PGOPTIONS='--client-min-messages=warning'
 
