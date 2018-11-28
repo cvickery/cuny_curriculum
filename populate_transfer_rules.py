@@ -289,7 +289,7 @@ with open(cf_rules_file) as csvfile:
       for course in courses:
         if course.cat_num < 0:
           conflicts.write('Destination course {:06} with non-numeric catalog number {} '
-                          + 'for rule {}. Rule ignored.\n'
+                          'for rule {}. Rule ignored.\n'
                           .format(course_id, course.catalog_number, rule_key))
           fail = True
           break
