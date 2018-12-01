@@ -180,8 +180,8 @@ with open(cat_file, newline='') as csvfile:
         course_attribute_descriptions = 'No course attributes'
       else:
         course_attributes = '; '.join(f'{name}:{value}' for name, value in attribute_pairs[key])
-        course_attribute_desriptions = '; '.join(attribute_descriptions[(name, value)]
-                                                 for name, value in attribute_pairs[key])
+        course_attribute_descriptions = '; '.join(attribute_descriptions[(name, value)]
+                                                  for (name, value) in attribute_pairs[key])
 
       try:
         equivalence_group = int(r.equiv_course_group)
