@@ -73,10 +73,8 @@ with open(req_file, newline='') as csvfile:
 if args.debug:
   print('{:,} requisites'.format(len(requisites)))
 
-# cache course_attributes and attribute_descriptions
-
-#  attribute descriptions are keyed by (name, value)
-attribute_descriptions = dict()
+# Populate the course_attributes table; cache the (name, value) pairs
+attribute_keys = []
 with open('latest_queries/SR742A___CRSE_ATTRIBUTE_VALUE.csv') as csvfile:
   reader = csv.reader(csvfile)
   cols = None
@@ -88,12 +86,20 @@ with open('latest_queries/SR742A___CRSE_ATTRIBUTE_VALUE.csv') as csvfile:
     else:
       row = Row._make(line)
       key = (row.crse_attr, row.crsatr_val)
-      attribute_descriptions[key] = row.formal_description
+      if key in attribute_keys:
+        logs.write(f'ERROR: duplicate value for course_attributes key {key}. Ignored.\n')
+      else:
+        attribute_keys.append(key)
+        cursor.execute('insert into course_attributes values(%s, %s, %s)', (row.crse_attr,
+                                                                            row.crsatr_val,
+                                                                            row.formal_description))
+if args.progress:
+  print(f'Inserted {len(attribute_keys)} rows into table course_attributes.', file=sys.stderr)
 
-# Each name_value pair must appear in attribute_descriptions and must occur no more than once per
-# (course_id, offer_nbr).
+# Each (name, value) pair must appear must appear no more than once per (course_id, offer_nbr).
+# The attribute_pairs dict keys are (course_id, offer_nbr); the values are arrays of (name, value)
+# pairs.
 # Report anomalies.
-Name_Value = namedtuple('Name_Value', 'name value')
 attribute_pairs = dict()
 with open(att_file, newline='') as csvfile:
   att_reader = csv.reader(csvfile)
@@ -107,18 +113,24 @@ with open(att_file, newline='') as csvfile:
     else:
       row = Row._make(line)
       key = (int(row.course_id), int(row.course_offering_nbr))
-      name_value = Name_Value._make((row.course_attribute, row.course_attribute_value))
-      if name_value not in attribute_descriptions.keys():
+      name_value = (row.course_attribute, row.course_attribute_value)
+      # There are bogus (name, value) attributes in the attributes file that don’t appear in the
+      # SR742A___CRSE_ATTRIBUTE_VALUE query. Report, create bogus row in the course_attributes
+      # table, and then process the (course_id, offer_nbr) that referenced the bogus attribute
+      if name_value not in attribute_keys:
         logs.write(
-            '{:6}: Attempt to add {}, which is not in attribute_descriptions, to attribute_pairs.\n'
+            '{:6}: Reference to {}, which is not a known course_attribute. Adding “Bogus” row.\n'
             .format(row.course_id, name_value))
+        cursor.execute('insert into course_attributes values (%s, %s, %s)', (name_value[0],
+                                                                             name_value[1],
+                                                                             'Bogus'))
+        attribute_keys.append(name_value)
+      if key not in attribute_pairs.keys():
+        attribute_pairs[key] = []
+      if name_value in attribute_pairs[key]:
+        logs.write(f'ERROR: Attempt to re-add {name_value} to attribute_pairs[{key}]\n')
       else:
-        if key not in attribute_pairs.keys():
-          attribute_pairs[key] = []
-        if name_value in attribute_pairs[key]:
-          logs.write(f'ERROR: Attempt to re-add {name_value} to attribute_pairs[{key}]\n')
-        else:
-          attribute_pairs[key].append(name_value)
+        attribute_pairs[key].append(name_value)
 
 # Now process the rows from the courses query.
 Component = namedtuple('Component', 'component component_contact_hours')
@@ -177,11 +189,8 @@ with open(cat_file, newline='') as csvfile:
       # Lookup attribute_pairs and their descriptions for this (course_id, offer_nbr)
       if key not in attribute_pairs.keys():
         course_attributes = 'None'
-        course_attribute_descriptions = 'No course attributes'
       else:
         course_attributes = '; '.join(f'{name}:{value}' for name, value in attribute_pairs[key])
-        course_attribute_descriptions = '; '.join(attribute_descriptions[(name, value)]
-                                                  for (name, value) in attribute_pairs[key])
 
       try:
         equivalence_group = int(r.equiv_course_group)
@@ -273,16 +282,14 @@ with open(cat_file, newline='') as csvfile:
                              %s, %s, %s, %s,
                              %s,
                              %s, %s, %s, %s, %s,
-                             %s, %s, %s,
-                             %s)
+                             %s, %s, %s)
                          """,
                          (course_id, offer_nbr, equivalence_group, institution, cuny_subject,
                           department, discipline, catalog_number, title,
                           Json(components), contact_hours, min_credits, max_credits,
                           primary_component,
                           requisite_str, designation, description, career, course_status,
-                          discipline_status, can_schedule, course_attributes,
-                          course_attribute_descriptions))
+                          discipline_status, can_schedule, course_attributes))
           num_courses += 1
         except psycopg2.Error as e:
           logs.write(e.pgerror)

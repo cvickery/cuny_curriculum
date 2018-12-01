@@ -1,4 +1,12 @@
 DROP TABLE IF EXISTS courses cascade;
+DROP TABLE IF EXISTS course_attributes cascade;
+
+CREATE TABLE course_attributes (
+  name text,
+  value text,
+  description text,
+  primary key (name, value)
+);
 
 CREATE TABLE courses (
   course_id integer,
@@ -22,8 +30,7 @@ CREATE TABLE courses (
   course_status text,
   discipline_status text,
   can_schedule text,
-  attributes text, -- semicolon-separated list of name:value of course attributes
-  attribute_descriptions text,  -- semicolon-separated list of course attribute descriptions
+  attributes text, -- semicolon-separated list of name:value pairs
   primary key (course_id, offer_nbr),
   foreign key (institution, career) references cuny_careers,
   foreign key (institution, discipline) references disciplines
