@@ -202,7 +202,7 @@ with open(cf_rules_file) as csvfile:
                     record.crse_offer_view_eff_date]]
       effective_date = max([date(month=v[0], day=v[1], year=v[2]) for v in date_vals])
       if rule_key not in rules_dict.keys():
-        # SOURCE_COURSES, SOURCE_DISCIPLINES, SOURCE_SUBJECTS, DESTINATION_COURSES, Effective Date
+        # source_courses, source_disciplines, source_subjects, destination_courses, Effective Date
         rules_dict[rule_key] = Rule_Tuple(set(), set(), set(), set(), effective_date)
       elif effective_date > rules_dict[rule_key].effective_date:
         rules_dict[rule_key].effective_date.replace(year=effective_date.year,
@@ -263,7 +263,7 @@ with open(cf_rules_file) as csvfile:
                                     course.max_credits,
                                     record.min_grade_pts,
                                     record.max_grade_pts)
-      rules_dict[rule_key][SOURCE_COURSES].add(source_course)
+      rules_dict[rule_key].source_courses.add(source_course)
       fail = False
       for course in courses:
         if course.cat_num < 0:
@@ -272,8 +272,8 @@ with open(cf_rules_file) as csvfile:
               .format(course_id, course.catalog_number, rule_key))
           fail = True
           break
-        rules_dict[rule_key][SOURCE_DISCIPLINES].add(course.discipline)
-        rules_dict[rule_key][SOURCE_SUBJECTS].add(course.cuny_subject)
+        rules_dict[rule_key].source_disciplines.add(course.discipline)
+        rules_dict[rule_key].source_subjects.add(course.cuny_subject)
       if fail:
         rules_dict.pop(rule_key)
         continue
@@ -294,7 +294,7 @@ with open(cf_rules_file) as csvfile:
                                               float(courses[0].cat_num),
                                               courses[0].cuny_subject,
                                               record.units_taken)
-      rules_dict[rule_key][DESTINATION_COURSES].add(destination_course)
+      rules_dict[rule_key].destination_courses.add(destination_course)
       if len(courses) > 1:
         conflicts.write(
             'Destination course_id {:06} for rule {} is cross-listed {} times. Rule retained.\n'
