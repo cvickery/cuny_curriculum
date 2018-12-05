@@ -56,7 +56,7 @@ for row in cursor.fetchall():
 
 Course = namedtuple('Course', 'discipline catalog_number')
 # Open the report file
-with open('./divisions_report.log') as report:
+with open('./divisions_report.log', 'w') as report:
   anomalies = 0
   courses = dict()
   # Process the catalog file

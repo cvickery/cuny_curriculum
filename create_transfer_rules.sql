@@ -9,6 +9,7 @@ create table transfer_rules (
   source_disciplines text not null, -- colon-separated list of all source course disciplines
   source_subjects text not null, -- colon-separated list of all source course cuny_subjects
   review_status integer default 0,
+  effective_date date, -- latest effective date of any table/view in CF query
   foreign key (source_institution) references institutions,
   foreign key (destination_institution) references institutions);
 

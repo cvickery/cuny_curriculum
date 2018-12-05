@@ -141,7 +141,12 @@ SOURCE_COURSES = 0
 SOURCE_DISCIPLINES = 1
 SOURCE_SUBJECTS = 2
 DESTINATION_COURSES = 3
-
+Rule_Tuple = namedtuple('Rule_Tuple', """
+                        source_courses
+                        source_disciplines
+                        source_subjects
+                        destination_courses
+                        effective_date""")
 rules_dict = dict()
 num_missing_courses = 0
 
@@ -190,9 +195,23 @@ with open(cf_rules_file) as csvfile:
         conflicts.write(f'Unable to construct Rule Key for {record}.\n{e}')
         continue
 
+      # Determine the effective date of the row (the latest effective date of any of the tables
+      # that make up the CF query).
+      date_vals = [[int(f) for f in field.split('/')]for field in
+                   [record.transfer_subject_eff_date,
+                    record.transfer_component_eff_date,
+                    record.source_inst_eff_date,
+                    record.transfer_to_eff_date,
+                    record.crse_offer_eff_date,
+                    record.crse_offer_view_eff_date]]
+      effective_date = max([date(month=v[0], day=v[1], year=v[2]) for v in date_vals])
       if rule_key not in rules_dict.keys():
-        # SOURCE_COURSES, SOURCE_DISCIPLINES, SOURCE_SUBJECTS, DESTINATION_COURSES
-        rules_dict[rule_key] = (set(), set(), set(), set())
+        # SOURCE_COURSES, SOURCE_DISCIPLINES, SOURCE_SUBJECTS, DESTINATION_COURSES, Effective Date
+        rules_dict[rule_key] = Rule_Tuple(set(), set(), set(), set(), effective_date)
+      elif effective_date > rules_dict[rule_key].effective_date:
+        rules_dict[rule_key].effective_date.replace(year=effective_date.year,
+                                                    month=effective_date.month,
+                                                    day=effective_date.day)
 
       # 2018-07-19: The following two tests never fail
       if record.source_institution not in known_institutions:
@@ -330,8 +349,8 @@ for rule_key in rules_dict.keys():
           file=sys.stderr, end='')
 
   # Build the colon-delimited discipline and subject strings
-  source_disciplines_str = ':' + ':'.join(sorted(rules_dict[rule_key][SOURCE_DISCIPLINES])) + ':'
-  source_subjects_str = ':' + ':'.join(sorted(rules_dict[rule_key][SOURCE_SUBJECTS])) + ':'
+  source_disciplines_str = ':' + ':'.join(sorted(rules_dict[rule_key].source_disciplines)) + ':'
+  source_subjects_str = ':' + ':'.join(sorted(rules_dict[rule_key].source_subjects)) + ':'
 
   # Insert the rule, getting back it's id
   cursor.execute("""insert into transfer_rules (
@@ -340,13 +359,16 @@ for rule_key in rules_dict.keys():
                                   subject_area,
                                   group_number,
                                   source_disciplines,
-                                  source_subjects)
-                                values (%s, %s, %s, %s, %s, %s) returning id""",
-                 rule_key + (source_disciplines_str, source_subjects_str))
+                                  source_subjects,
+                                  effective_date)
+                                values (%s, %s, %s, %s, %s, %s, %s) returning id""",
+                 rule_key + (source_disciplines_str,
+                             source_subjects_str,
+                             rules_dict[rule_key].effective_date.isoformat()))
   rule_id = cursor.fetchone()[0]
 
   # Sort and insert the source_courses
-  for course in sorted(rules_dict[rule_key][SOURCE_COURSES],
+  for course in sorted(rules_dict[rule_key].source_courses,
                        key=lambda c: (c.discipline, c.cat_num)):
     cursor.execute("""insert into source_courses
                                   (
@@ -366,7 +388,7 @@ for rule_key in rules_dict.keys():
                    """, (rule_id, ) + course)
 
   # Sort and insert the destination_courses
-  for course in sorted(rules_dict[rule_key][DESTINATION_COURSES],
+  for course in sorted(rules_dict[rule_key].destination_courses,
                        key=lambda c: (c.discipline, c.cat_num)):
     cursor.execute("""insert into destination_courses
                                   (
