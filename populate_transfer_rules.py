@@ -137,10 +137,6 @@ Destination_Course = namedtuple('Destination_Course', """
                                 cuny_subject
                                 transfer_credits""")
 # Rules dict is keyed by Rule_Key. Values are sets of courses and sets of disciplines and subjects.
-SOURCE_COURSES = 0
-SOURCE_DISCIPLINES = 1
-SOURCE_SUBJECTS = 2
-DESTINATION_COURSES = 3
 Rule_Tuple = namedtuple('Rule_Tuple', """
                         source_courses
                         source_disciplines
