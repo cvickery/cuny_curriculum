@@ -52,6 +52,8 @@ mv temp.sql $gae_restore_file
 # To restore to the GAE:
 #   Start the SQL proxy server, save the events table, delete and recreate the db,
 #   restore as user postgres, restore the events table, update rule statuses.
+echo Begin rebuilding GAE database
+
 echo "Restore $gae_restore_file to GAE..."
 echo "  Starting pgproxy ..."
 pgproxy start
@@ -95,17 +97,11 @@ else echo "Error: see restore.log for details."
 fi
 sleep 2
 
-python3 update_statuses.py >> restore.log 2>&1
+python3 update_review_statuses.py >> restore.log 2>&1
 if [ $? -eq 0 ]
 then echo '  ... update statuses OK'
 else echo "Error: see restore.log for details."
      exit 1
 fi
-
-echo done.
-
-if [ $? -eq 0 ]
-then echo "OK"
-else echo "Error: see restore.log for details."
-fi
+echo Finished rebuilding GAE database.
 )
