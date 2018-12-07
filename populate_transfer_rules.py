@@ -322,7 +322,7 @@ if args.progress:
   secs = int(secs - 60 * mins)
   print(f'\n  That took {mins} min {secs} sec.', file=sys.stderr)
 
-  print('\nStep 2: Populate the three tables', file=sys.stderr)
+  print('\nStep 2/2: Populate the three tables', file=sys.stderr)
   start_time = perf_counter()
 
 # Step 2

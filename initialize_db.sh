@@ -57,15 +57,19 @@
   echo -n "DROP/CREATE cuny_courses... " | tee init_psql.log
   dropdb cuny_courses >> init_psql.log
   createdb cuny_courses >> init_psql.log
-  echo done.
+  echo done. | tee -a init_psql.log
 
   echo -n "CREATE FUNCTION numeric_part... " | tee -a init_psql.log
   psql -X -q -d cuny_courses -f numeric_part.sql >> init_psql.log
-  echo done.
+  echo done. | tee -a init_psql.log
+
+  echo -n "SET UP query_only ROLE ..." | tee -a init_psql.log
+  psql -X -q -d cuny_courses -f query_only_role.sql >> init_psql.log
+  echo done. | tee -a init_psql.log
 
   echo -n "CREATE TABLE updates... " | tee -a init_psql.log
   psql -X -q -d cuny_courses -f updates.sql >> init_psql.log
-  echo done.
+  echo done. | tee -a init_psql.log
 
   # The following is the organizational structure of the University:
   #   Students are undergraduate or graduate (careers) at a college
@@ -83,7 +87,7 @@
   #
   echo -n "CREATE TABLE institutions... " | tee -a init_psql.log
   psql -X -q -d cuny_courses -f cuny_institutions.sql >> init_psql.log
-  echo done.
+  echo done. | tee -a init_psql.log
 
   # Now regenerate the tables that are based on query results
   #
@@ -93,7 +97,7 @@
     then echo -e '\nFAILED!'
          exit
   fi
-  echo done.
+  echo done. | tee -a init.log
 
   echo -n "CREATE TABLE cuny_departments... " | tee -a init.log
   python3 cuny_departments.py >> init.log
@@ -101,7 +105,7 @@
     then echo  -e '\nFAILED!'
          exit
   fi
-  echo done.
+  echo done. | tee -a init.log
 
   echo -n "CREATE TABLE cuny_divisions... " | tee -a init.log
   python3 cuny_divisions.py --active_only >> init.log
@@ -109,7 +113,7 @@
     then echo  -e '\nFAILED!'
          exit
   fi
-  echo done.
+  echo done. | tee -a init.log
 
   echo -n "CREATE TABLE cuny_subjects... " | tee -a init.log
   python3 cuny_subjects.py >> init.log
@@ -117,7 +121,7 @@
     then echo  -e '\nFAILED!'
          exit
   fi
-  echo done.
+  echo done. | tee -a init.log
 
   echo -n "CREATE TABLE designations... " | tee -a init.log
   python3 designations.py >> init.log
@@ -125,7 +129,7 @@
     then echo  -e '\nFAILED!'
          exit
   fi
-  echo done.
+  echo done. | tee -a init.log
 
   echo -n "CREATE TABLE crse_quiv_tbl... " | tee -a init.log
   python3 mk_crse_equiv_tbl.py >> init.log
@@ -133,7 +137,7 @@
     then echo -e '\nFAILED!'
          exit
   fi
-  echo done.
+  echo done. | tee -a init.log
 
   echo -n "CREATE TABLE courses... " | tee -a init_psql.log
   psql -X -q -d cuny_courses -f create_courses.sql >> init_psql.log
@@ -141,7 +145,7 @@
     then echo -e '\nFAILED!'
          exit
   fi
-  echo done.
+  echo done. | tee -a init.log
 
   echo -n "POPULATE courses... " | tee -a init.log
   python3 populate_courses.py --progress >> init.log
@@ -149,7 +153,7 @@
     then echo -e '\nFAILED!'
          exit
   fi
-  echo done.
+  echo done. | tee -a init.log
 
   echo -n "CHECK component contact hours... " | tee -a init.log
   python3 check_total_hours.py > check_contact_hours.log
@@ -157,7 +161,7 @@
     then echo -e '\nFAILED!'
          exit
   fi
-  echo done.
+  echo done. | tee -a init.log
 
   # Transfer rules
   echo -n "CREATE TABLE review_status_bits... " | tee -a init_psql.log
@@ -166,7 +170,7 @@
     then echo -e '\nFAILED!'
          exit
   fi
-  echo done.
+  echo done. | tee -a init.log
 
   echo -n "CREATE TABLEs transfer_rules source_courses destination_courses... " | tee -a init_psql.log
   psql -X -q -d cuny_courses -f create_transfer_rules.sql >> init_psql.log
@@ -175,7 +179,7 @@
     then echo -e '\nFAILED!'
          exit
   fi
-  echo done.
+  echo done. | tee -a init.log
 
   echo -n "POPULATE transfer_rules... " | tee -a init.log
   python3 populate_transfer_rules.py --progress --report >> init.log
@@ -183,7 +187,7 @@
     then echo -e '\nFAILED!'
          exit
   fi
-  echo done.
+  echo done. | tee -a init.log
 
   # The following takes too long, and doesn't really do more than
   # populate_transfer_rules.py already did. Historical Artifact.
@@ -202,7 +206,7 @@
     then echo -e '\nFAILED!'
          exit
   fi
-  echo done.
+  echo done. | tee -a init.log
 
   #echo CREATE TABLE pending_reviews...
   #echo CREATE TABLE event_types...
@@ -212,7 +216,7 @@
     then echo -e '\nFAILED!'
          exit
   fi
-  echo done.
+  echo done. | tee -a init.log
 
   if [ $do_events -eq 1 ]
   then
@@ -222,7 +226,7 @@
       then echo -e '\nFAILED!'
            exit
     fi
-    echo done.
+    echo done. | tee -a init.log
 
     echo -n "UPDATE review statuses... " | tee -a init.log
     python3 update_review_statuses.py >> init.log
@@ -230,7 +234,7 @@
       then echo -e '\nFAILED!'
            exit
     fi
-    echo done.
+    echo done. | tee -a init.log
   fi
   echo INITIALIZATION COMPLETED in `date -d @"$SECONDS" +'%-Mm %-Ss'` | tee -a init.log
 )
