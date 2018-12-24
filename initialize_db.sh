@@ -189,6 +189,15 @@
   fi
   echo done. | tee -a init.log
 
+  echo -n "SPEEDUP transfer_rule lookups... " | tee -a init.log
+  python3 mk_subject_rule_map.py --progress --report >> init.log
+  if [ $? -ne 0 ]
+    then echo -e '\nFAILED!'
+         exit
+  fi
+  echo done. | tee -a init.log
+
+
   # The following takes too long, and doesn't really do more than
   # populate_transfer_rules.py already did. Historical Artifact.
   # echo -n "CHECK bogus rules... " | tee -a init.log

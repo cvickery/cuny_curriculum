@@ -1,4 +1,6 @@
-""" Speed up transfer rule lookups
+""" Speed up transfer rule lookups.
+    1. Create the eponymous subject-rule map table.
+    2. Index the rule_id field of source_courses and destination_courses
 """
 import os
 import sys
