@@ -38,7 +38,7 @@
          exit 1
   fi
 
-  # Save dumps table unless suppressed by command line
+  # Save events table unless suppressed by command line
   if [ $do_events -eq 1 ]
   then
     # If the db has no events table (yet), re-use the existing events-dump.sql if there is one, or
@@ -46,10 +46,10 @@
     touch events-dump.sql
     echo -n SAVE EVENTS TABLE ...
     # events-dump.sql won’t be changed if "no matching tables found"
-    pg_dump --data-only --table=events -f events-dump.sql cuny_courses
+    pg_dump --data-only --table=events -f events-dump_`date -I`.sql cuny_courses
     # Convert old-style group numbers (ints) to floats
-    #   This can away once all old-style reviews have been converted.
-    # python3 fix_events_dump.py < events-dump.sql > t.sql
+    #   This can go away once all old-style reviews have been converted.
+    # python3 fix_events_dump.py < events-dump_`date -I`.sql > t.sql
     # mv t.sql events-dump.sql
     echo done.
   fi
@@ -190,7 +190,7 @@
   echo done. | tee -a init.log
 
   echo -n "SPEEDUP transfer_rule lookups... " | tee -a init.log
-  python3 mk_subject_rule_map.py --progress --report >> init.log
+  python3 mk_subject-rule_map.py --progress >> init.log
   if [ $? -ne 0 ]
     then echo -e '\nFAILED!'
          exit

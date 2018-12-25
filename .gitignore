@@ -32,7 +32,7 @@ Icon*
 
 /query_downloads/
 
-/events-dump.sql
+/events-dump*.sql
 
 /compliance/
 
