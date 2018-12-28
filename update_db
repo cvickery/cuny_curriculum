@@ -44,24 +44,10 @@
          exit 1
   fi
 
-  # Enter update_db mode if local server is running
-  echo -n "RESTART Postgres ..." | tee -a init.log
-  brew services restart postgresql
-  if [[ $? -ne 0 ]]
-    then echo -e '\nFAILED!'
-         exit
-  fi
-  #  Wait for postgres to restart
-  sleep 2
-
-  echo -n "CHECK transfer app... " | tee -a init.log
-  ps -fe | ack '[g]unicorn|main.py' > /dev/null
-  if [[ $? -eq 0 ]]
-  then curl --silent http://localhost:5000/_status/start_update > /dev/null
-       sleep 1
-       echo " update_db mode set" | tee -a init.log
-  else echo " app not running" | tee -a init.log
-  fi
+  # Enter update_db mode
+  echo -n "START_UPDATE ..." | tee -a init.log
+  psql access_control -c \
+        "update access_control set start_time = now() where event_type = 'update_db'"
 
   # Save events table unless suppressed by command line
   if [ $do_events -eq 1 ]
@@ -80,10 +66,15 @@
   fi
 
   echo -n "DROP cuny_courses... " | tee init_psql.log
+  # Kill any existing connections to the db
+  brew services restart postgresql
+  sleep 2
+  # Do the drop
   dropdb cuny_courses >> init_psql.log
   if [[ $? -ne 0 ]]
     then  echo -e '\nFAILED!'
-          curl --silent http://localhost:5000/_status/end_update > /dev/null
+          psql access_control -c \
+          "update access_control set start_time = NULL where event_type = 'update_db'"
           exit
   fi
   echo -n "CREATE cuny_courses... " | tee -a init_psql.log
@@ -284,7 +275,10 @@
   # Exit update_db mode if local server is running
   ps -fe | ack '[g]unicorn|main.py' > /dev/null
   if [[ $? == 0 ]]
-  then curl --silent http://localhost:5000/_status/end_update > /dev/null
+  then
+        psql access_control -c \
+        "update access_control set start_time = NULL where event_type = 'update_db'"
+
   fi
 
 
