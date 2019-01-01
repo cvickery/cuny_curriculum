@@ -64,11 +64,14 @@
     echo done. | tee -a init_psql.log
   fi
 
-  echo -n "DROP cuny_courses... " | tee -a init_psql.log
   # Kill any existing connections to the db
+  echo -n "RESTART postgres ..." | tee -a init_psql.log
   brew services restart postgresql | tee -a init_psql.log
-  sleep 2
+  echo -n "wait for postgres restart to complete ..." | tee -a init_psql.log
+  sleep 10
+  echo done. | tee -a init_psql.log
   # Do the drop
+  echo -n "DROP cuny_courses... " | tee -a init_psql.log
   dropdb cuny_courses >> init_psql.log | tee -a init_psql.log
   if [[ $? -ne 0 ]]
     then  echo -e '\nFAILED!'
@@ -277,4 +280,5 @@
         "update access_control set start_time = NULL where event_type = 'update_db'"
 
   echo UPDATE COMPLETED in `date -d @"$SECONDS" +'%-Mm %-Ss'` | tee -a init.log
+
 )
