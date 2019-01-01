@@ -22,23 +22,35 @@
   # CHECK COMMAND LINE
   # Default is to dump and restore events. But -n or --no-events suppresses it.
   do_events=1
-  if [ $# -gt 0 ]
-  then
-    if [ $# -eq 1 -a $1 = --no-events -o $1 = -n ]
+  force_update=0
+  while [ $# -gt 0 ]
+  do
+    if [[ ( "$1" == "--no-events" ) || ( "$1" == "-n" ) ]]
     then do_events=0
+    elif [[ ( "$1" == "--force-update" ) || ( "$1" == "-f" ) ]]
+      then force_update=1
     else
-      echo "usage: $0 [--no-events]"
+      echo "usage: $0 [--no-events] [--force-update]"
       exit 1
     fi
-  fi
+    shift
+  done
 
   echo BEGIN INITIALIZATION
   SECONDS=0
 
+  # Try downloading new queries
+  echo -n "DOWNLOAD new query files... " | tee init.log
+  get_cuny
+  if [[ $? -eq 1 && $force_update -eq 0 ]]
+  then  echo "No new query files. Use --force_update to update anyway."
+        exit 1
+  fi
+
   # Python scripts process query results, so check that they are all present.
   # Report any mismatched dates and abort if not all a-ok
 
-  echo -n "CHECK QUERY FILES... " | tee init.log
+  echo -n "CHECK QUERY FILES... " | tee -a init.log
   ./check_query_dates.sh > init.log
   if [ $? -ne 0 ]
     then echo "ERROR: mismatched query dates."
