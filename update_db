@@ -20,7 +20,8 @@
   export EVENTS_TABLE=events-dump_`date +'%F_%H:%M'`.sql
 
   # CHECK COMMAND LINE
-  # Default is to dump and restore events. But -n or --no-events suppresses it.
+  # Dump and restore events table. But -n or --no-events suppresses that.
+  # Do update only if there are new query files, but -f or --force-update overrides that.
   do_events=1
   force_update=0
   while [ $# -gt 0 ]
@@ -43,7 +44,7 @@
   echo -n "DOWNLOAD new query files... " | tee init.log
   get_cuny
   if [[ $? -eq 1 && $force_update -eq 0 ]]
-  then  echo "No new query files. Use --force_update to update anyway."
+  then  echo "No new query files. Use --force-update to update anyway."
         exit 1
   fi
 
