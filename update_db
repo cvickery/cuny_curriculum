@@ -293,6 +293,6 @@
   psql  access_control -c \
         "update access_control set start_time = NULL where event_type = 'update_db'"
 
-  echo UPDATE COMPLETED in `date -d @"$SECONDS" +'%-Mm %-Ss'` | tee -a init.log
+  echo UPDATE COMPLETED in `gdate -d @"$SECONDS" +'%-Mm %-Ss'` | tee -a init.log
 
 )
