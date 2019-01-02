@@ -58,10 +58,11 @@
          exit 1
   fi
 
-  # Enter update_db mode
+  # Enter update_db mode and give time for running queries to complete
   echo "START update_db mode" | tee -a init.log
   psql access_control -c \
         "update access_control set start_time = now() where event_type = 'update_db'"
+  sleep 10
 
   # Save events table unless suppressed by command line
   if [ $do_events -eq 1 ]
