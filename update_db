@@ -42,7 +42,7 @@
 
   # Try downloading new queries
   echo -n "DOWNLOAD new query files... " | tee init.log
-  get_cuny
+  /Users/vickery/bin/get_cuny
   if [[ $? -eq 1 && $force_update -eq 0 ]]
   then  echo "No new query files. Use --force-update to update anyway."
         exit 1
