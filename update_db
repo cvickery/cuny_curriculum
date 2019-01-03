@@ -20,32 +20,47 @@
   export EVENTS_TABLE=events-dump_`date +'%F_%H:%M'`.sql
 
   # CHECK COMMAND LINE
-  # Dump and restore events table. But -n or --no-events suppresses that.
-  # Do update only if there are new query files, but -f or --force-update overrides that.
-  do_events=1
-  force_update=0
+  # Dump and restore events table. But -n, --no_events or the NO_EVENTS environment variable equal
+  # to 1 or true suppresses that.
+  # Do update only if there are new query files, but -f, --force_update or the FORCE_UPDATE
+  # environment variable equal to 1 or true overrides that.
+  # If you want to force update and not even try to download new queries, set SKIP_DOWNLOAD to 1
+  # or true.
+  no_events=$NO_EVENTS
+  force_update=$FORCE_UPDATE
+  skip_download=$SKIP_DOWNLOAD
+
   while [ $# -gt 0 ]
   do
-    if [[ ( "$1" == "--no-events" ) || ( "$1" == "-n" ) ]]
-    then do_events=0
-    elif [[ ( "$1" == "--force-update" ) || ( "$1" == "-f" ) ]]
+    if [[ ( "$1" == "--no_events" ) || ( "$1" == "-n" ) ]]
+    then no_events=1
+    elif [[ ( "$1" == "--force_update" ) || ( "$1" == "-f" ) ]]
       then force_update=1
+    elif [[ ( "$1" == "--skip_download") || ( "$1" == "-s" ) ]]
+      then skip_download=1
     else
-      echo "usage: $0 [--no-events] [--force-update]"
+      echo "usage: $0 [--no_events] [--force_update] [--skip_download]"
       exit 1
     fi
     shift
   done
 
+  echo no_events is $no_events
+  echo force_update is $force_update
+  echo skip_download is $skip_download
+
   echo BEGIN INITIALIZATION
   SECONDS=0
 
   # Try downloading new queries
-  echo -n "DOWNLOAD new query files... " | tee init.log
-  /Users/vickery/bin/get_cuny
-  if [[ $? -eq 1 && $force_update -eq 0 ]]
-  then  echo "No new query files. Use --force-update to update anyway."
-        exit 1
+  if [[ ! ( $skip_download == 1 || $skip_download == true ) ]]
+  then
+    echo -n "DOWNLOAD new query files... " | tee init.log
+    /Users/vickery/bin/get_cuny
+    if [[ $? -eq 1 && $force_update != 1 && $force_update != true ]]
+    then  echo "No new query files. Use --force_update to update anyway." | tee -a init.log
+          exit 1
+    fi
   fi
 
   # Python scripts process query results, so check that they are all present.
@@ -65,7 +80,7 @@
   sleep 10
 
   # Save events table unless suppressed by command line
-  if [ $do_events -eq 1 ]
+  if [[ $no_events != 1 && no_events != true ]]
   then
     echo -n SAVE events table to $EVENTS_TABLE ... | tee init_psql.log
     pg_dump --data-only --table=events -f $EVENTS_TABLE cuny_courses | tee -a init_psql.log

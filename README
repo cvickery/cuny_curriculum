@@ -1,14 +1,24 @@
+2019-01-02
+
+Updated the list of queries; there are twelve of them now.
+The cron job is now set up to run the update_db script at noon on Tuesdays.
+The Google Cloud Environment is no longer being used: the app is hosted on babbage using a gunicorn
+server running there.
+
 2017-12-19
 Here are the queries that run each Tuesday morning. The get_cuny command should be run as a cron job after
 Tumbleweed receives the files, and then I need a script that extracts events, re-initializes the db,
 restores the events and rule statuses, and updates the db in the Google App Engine.
 
+  ACAD_CAREER_TBL
+  QCCV_RQMNT_DESIG_TBL
   QNS_CV_ACADEMIC_ORGANIZATIONS
-  QNS_CV_CUNY_DISCIPLINES
   QNS_CV_CUNY_SUBJECTS
   QNS_CV_CUNY_SUBJECT_TABLE
   QNS_CV_SR_TRNS_INTERNAL_RULES
   QNS_QCCV_COURSE_ATTRIBUTES_NP       <== the attribute names by course_id
-  SR742___CRSE_ATTRIBUTE_VALUE        <== The possible values in the attributes table
   QNS_QCCV_CU_CATALOG_NP
   QNS_QCCV_CU_REQUISITES_NP
+  SR701____INSTITUTION_TABLE
+  SR742A___CRSE_ATTRIBUTE_VALUE       <== The possible values in the attributes table
+  QNS_CV_CRSE_EQUIV_TBL
