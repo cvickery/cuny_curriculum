@@ -18,6 +18,7 @@ create table source_courses (
   id serial primary key,
   rule_id integer references transfer_rules,
   course_id integer,
+  offer_nbr integer,
   offer_count integer,  -- greater than 1 for cross-listed courses
   discipline text,
   catalog_number text, -- "the" catalog number
@@ -33,6 +34,7 @@ create table destination_courses (
   id serial primary key,
   rule_id integer references transfer_rules,
   course_id integer,
+  offer_nbr integer,
   offer_count integer,  -- greater than 1 for cross-listed courses
   discipline text,
   catalog_number text,  -- "the" catalog number

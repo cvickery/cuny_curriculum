@@ -119,6 +119,7 @@ Rule_Key = namedtuple('Rule_Key',
                       'source_institution destination_institution subject_area group_number')
 Source_Course = namedtuple('Source_Course', """
                            course_id
+                           offer_nbr
                            offer_count
                            discipline
                            catalog_number
@@ -130,6 +131,7 @@ Source_Course = namedtuple('Source_Course', """
                            max_gpa""")
 Destination_Course = namedtuple('Destination_Course', """
                                 course_id
+                                offer_nbr
                                 offer_count
                                 discipline
                                 catalog_number
@@ -167,7 +169,7 @@ with open(cf_rules_file) as csvfile:
           print()
     else:
       line_num += 1
-      if args.progress and line_num % 1000 == 0:
+      if args.progress and line_num % 10000 == 0:
         elapsed_time = perf_counter() - start_time
         total_time = num_lines * elapsed_time / line_num
         secs_remaining = total_time - elapsed_time
@@ -230,6 +232,7 @@ with open(cf_rules_file) as csvfile:
       # Process source_course_id
       # ------------------------
       course_id = int(record.source_course_id)
+      offer_nbr = int(record.source_offer_nbr)
       if course_id not in course_cache.keys():
         conflicts.write('Source course {:06} not in cource catalog for rule {}. Rule ignored.\n'
                         .format(source_course.course_id, rule_key))
@@ -254,6 +257,7 @@ with open(cf_rules_file) as csvfile:
                                 rule_key,
                                 record.src_max_units))
       source_course = Source_Course(course_id,
+                                    offer_nbr,
                                     len(courses),
                                     course.discipline,
                                     course.catalog_number,
@@ -281,6 +285,7 @@ with open(cf_rules_file) as csvfile:
       # Process destination_course_id
       # -----------------------------
       course_id = int(record.destination_course_id)
+      offer_nbr = int(record.destination_offer_nbr)
       if course_id not in course_cache.keys():
         conflicts.write('Destination course {:06} not in catalog for rule {}. Rule ignored.\n'
                         .format(destination_course.course_id, rule_key))
@@ -288,6 +293,7 @@ with open(cf_rules_file) as csvfile:
         continue
       courses = course_cache[course_id]
       destination_course = Destination_Course(course_id,
+                                              offer_nbr,
                                               len(courses),
                                               courses[0].discipline,
                                               courses[0].catalog_number,
@@ -370,6 +376,7 @@ for rule_key in rules_dict.keys():
                                   (
                                     rule_id,
                                     course_id,
+                                    offer_nbr,
                                     offer_count,
                                     discipline,
                                     catalog_number,
@@ -380,7 +387,7 @@ for rule_key in rules_dict.keys():
                                     min_gpa,
                                     max_gpa
                                   )
-                                  values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                  values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                    """, (rule_id, ) + course)
 
   # Sort and insert the destination_courses
@@ -390,6 +397,7 @@ for rule_key in rules_dict.keys():
                                   (
                                     rule_id,
                                     course_id,
+                                    offer_nbr,
                                     offer_count,
                                     discipline,
                                     catalog_number,
@@ -397,7 +405,7 @@ for rule_key in rules_dict.keys():
                                     cuny_subject,
                                     transfer_credits
                                   )
-                                  values (%s, %s, %s, %s, %s, %s, %s, %s)
+                                  values (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                    """, (rule_id, ) + course)
 
 cursor.execute('select count(*) from transfer_rules')
