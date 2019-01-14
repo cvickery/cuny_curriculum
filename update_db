@@ -38,6 +38,7 @@
       then force_update=1
     elif [[ ( "$1" == "--skip_download") || ( "$1" == "-s" ) ]]
       then skip_download=1
+           force_update=1
     else
       echo "usage: $0 [--no_events] [--force_update] [--skip_download]"
       exit 1
@@ -284,7 +285,7 @@
   fi
   echo done. | tee -a init_psql.log
 
-  if [ $do_events -eq 1 ]
+  if [[ $no_events -ne 1 ]]
   then
     echo -n "RESTORE previous events from $EVENTS_TABLE ... " | tee -a init_psql.log
     psql -X -q -d cuny_courses -f $EVENTS_TABLE >> init_psql.log
