@@ -4,13 +4,15 @@
 drop view if exists view_courses cascade;
 create view view_courses as
 (
-  select  course_id,
-          offer_nbr,
-          institution,
-          discipline,
-          catalog_number,
+  select  course_id as id,
+          offer_nbr as offer,
+          institution as inst,
+          discipline as discp,
+          catalog_number as cat_num,
           substr(title, 1, 25) as title,
-          course_status,
-          designation
+          course_status as status,
+          designation as desig,
+          contact_hours as hr,
+          min_credits||'-'||max_credits as cr
   from courses
 )
