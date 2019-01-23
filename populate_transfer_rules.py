@@ -77,7 +77,7 @@ file_date = date\
 num_lines = sum(1 for line in open(cf_rules_file))
 
 if args.report:
-  print('Transfer rules query file: {} {}'.format(file_date, cf_rules_file))
+  print('\n  Transfer rules query file: {} {}'.format(file_date, cf_rules_file))
 
 # There be some garbage institution "names" in the transfer_rules, but the app’s
 # institutions table is “definitive”.
@@ -425,4 +425,4 @@ if args.report:
   secs = perf_counter() - app_start
   mins = int(secs / 60)
   secs = int(secs - 60 * mins)
-  print(f'\nGenerated {num_rules:,} rules in {mins} min {secs} sec.')
+  print(f'\n  Generated {num_rules:,} rules in {mins} min {secs} sec.')
