@@ -154,7 +154,7 @@ with open(cat_file, newline='') as csvfile:
       remaining_seconds = total_seconds - elapsed_seconds
       remaining_minutes = int(remaining_seconds / 60)
       remaining_seconds = int(remaining_seconds - remaining_minutes * 60)
-      print('\r' + 80 * ' ' +
+      print('\r' + 80 * ' '
             '\rRow {:,} / {:,}; {:,} courses; {}:{:02} remaining.'.format(num_rows,
                                                                           total_rows,
                                                                           num_courses,
