@@ -138,7 +138,8 @@ Destination_Course = namedtuple('Destination_Course', """
                                 cat_num
                                 cuny_subject
                                 transfer_credits""")
-# Rules dict is keyed by Rule_Key. Values are sets of courses and sets of disciplines and subjects.
+# Rules dict is keyed by Rule_Key. Values are sets of courses and sets of disciplines
+# and subjects.
 Rule_Tuple = namedtuple('Rule_Tuple', """
                         source_courses
                         source_disciplines
@@ -148,8 +149,8 @@ Rule_Tuple = namedtuple('Rule_Tuple', """
 rules_dict = dict()
 num_missing_courses = 0
 
-# Step 1: Go through the CF query file, extracting a dict of rules and associated courses.
-# -------------------------------------------------------------------------------------------------
+# Step 1: Go through the CF query file; extract a dict of rules and associated courses.
+# -----------------------------------------------------------------
 if args.progress:
   print('\nStep 1/2: Process the csv file.', file=sys.stderr)
 start_time = perf_counter()
@@ -193,8 +194,8 @@ with open(cf_rules_file) as csvfile:
         conflicts.write(f'Unable to construct Rule Key for {record}.\n{e}')
         continue
 
-      # Determine the effective date of the row (the latest effective date of any of the tables
-      # that make up the CF query).
+      # Determine the effective date of the row (the latest effective date of any of the
+      # tables that make up the CF query).
       date_vals = [[int(f) for f in field.split('/')]for field in
                    [record.transfer_subject_eff_date,
                     record.transfer_component_eff_date,
@@ -204,7 +205,8 @@ with open(cf_rules_file) as csvfile:
                     record.crse_offer_view_eff_date]]
       effective_date = max([date(month=v[0], day=v[1], year=v[2]) for v in date_vals])
       if rule_key not in rules_dict.keys():
-        # source_courses, source_disciplines, source_subjects, destination_courses, Effective Date
+        # source_courses, source_disciplines, source_subjects, destination_courses,
+        # Effective Date
         rules_dict[rule_key] = Rule_Tuple(set(), set(), set(), set(), effective_date)
       elif effective_date > rules_dict[rule_key].effective_date:
         rules_dict[rule_key].effective_date.replace(year=effective_date.year,
@@ -223,23 +225,25 @@ with open(cf_rules_file) as csvfile:
         rules_dict.pop(rule_key)
         continue
 
-      if (record.source_institution, record.component_subject_area) not in valid_disciplines:
+      if (record.source_institution, record.component_subject_area) \
+         not in valid_disciplines:
         # Report the anomaly, but accept the record.
         conflicts.write(
-            'Notice: Component Subject Area {} not a CUNY Subject Area for rule {}. Record kept.\n'
-            .format(record.component_subject_area, rule_key))
+            'Notice: Component Subject Area {} not a CUNY Subject Area for rule {}. '
+            'Record kept.\n'.format(record.component_subject_area, rule_key))
 
       # Process source_course_id
       # ------------------------
       course_id = int(record.source_course_id)
       offer_nbr = int(record.source_offer_nbr)
       if course_id not in course_cache.keys():
-        conflicts.write('Source course {:06} not in cource catalog for rule {}. Rule ignored.\n'
-                        .format(source_course.course_id, rule_key))
+        conflicts.write('Source course {:06}.{} not in course catalog for rule {}. '
+                        'Rule ignored.\n'.format(course_id, offer_nbr, rule_key))
         rules_dict.pop(rule_key)
         num_missing_courses += 1
         continue
-      # Only one course gets added to the rule, but all (cross-listed) disciplines and subjects
+      # Only one course gets added to the rule, but all (cross-listed) disciplines and
+      # subjects
       courses = course_cache[course_id]
       course = courses[0]
       if float(course.min_credits) < float(record.src_min_units):
@@ -272,8 +276,8 @@ with open(cf_rules_file) as csvfile:
       for course in courses:
         if course.cat_num < 0:
           conflicts.write(
-              'Source course {:06} with non-numeric catalog number {} for rule {}. Rule ignored.\n'
-              .format(course_id, course.catalog_number, rule_key))
+              'Source course {:06} with non-numeric catalog number {} for rule {}. '
+              'Rule ignored.\n'.format(course_id, course.catalog_number, rule_key))
           fail = True
           break
         rules_dict[rule_key].source_disciplines.add(course.discipline)
@@ -287,8 +291,8 @@ with open(cf_rules_file) as csvfile:
       course_id = int(record.destination_course_id)
       offer_nbr = int(record.destination_offer_nbr)
       if course_id not in course_cache.keys():
-        conflicts.write('Destination course {:06} not in catalog for rule {}. Rule ignored.\n'
-                        .format(destination_course.course_id, rule_key))
+        conflicts.write('Destination course {:06}.{} not in catalog for rule {}. '
+                        'Rule ignored.\n'.format(course_id, offer_nbr, rule_key))
         rules_dict.pop(rule_key)
         continue
       courses = course_cache[course_id]
@@ -303,9 +307,9 @@ with open(cf_rules_file) as csvfile:
       rules_dict[rule_key].destination_courses.add(destination_course)
       if len(courses) > 1:
         conflicts.write(
-            'Destination course_id {:06} for rule {} is cross-listed {} times. Rule retained.\n'
-            .format(destination_course.course_id, rule_key,
-                    len(course_cache[destination_course.course_id])))
+            'Destination course_id {:06} for rule {} is cross-listed {} times. '
+            'Rule retained.\n'.format(destination_course.course_id, rule_key,
+                                      len(course_cache[destination_course.course_id])))
       fail = False
       for course in courses:
         if course.cat_num < 0:

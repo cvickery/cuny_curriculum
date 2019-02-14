@@ -1,3 +1,5 @@
+#! /usr/local/bin/python3
+#
 import psycopg2
 from psycopg2.extras import NamedTupleCursor, Json
 
@@ -291,6 +293,8 @@ with open(cat_file, newline='') as csvfile:
                           requisite_str, designation, description, career, course_status,
                           discipline_status, can_schedule, course_attributes))
           num_courses += 1
+          if args.debug:
+            print(cursor.query)
         except psycopg2.Error as e:
           logs.write(e.pgerror)
           print(e.pgerror, file=sys.stderr)
