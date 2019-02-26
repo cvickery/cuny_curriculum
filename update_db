@@ -203,6 +203,11 @@
     then echo -e '\nFAILED!'
          exit
   fi
+  psql -X -q -d cuny_courses -f view_courses.sql >> init_psql.log
+  if [ $? -ne 0 ]
+    then echo -e '\nFAILED!'
+         exit
+  fi
   echo done. | tee -a init_psql.log
 
   echo -n "POPULATE courses... " | tee -a init.log
