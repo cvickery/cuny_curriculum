@@ -6,6 +6,19 @@
 (
   cd /Users/vickery/CUNY_Courses
 
+  skip_size_test=''
+  if [[ $# > 1 ]]
+  then  echo 'Usage: $0 [-s | --skip-size-test]'
+        exit -1
+  fi
+  if [[ $# > 0 ]]
+  then  if [[ $1 != '-s' && $1 != '--skip-size-test' ]]
+        then echo "Invalid option: $1"
+             echo 'Usage: $0 [-s | --skip-size-test]'
+             exit -1
+        fi
+          skip_size_test='skip'
+  fi
   # Clear the latest_queries folder
   rm -f latest_queries/*
 
@@ -40,6 +53,17 @@
     done
   done
   echo "OK: All queries are dated ${dates[0]}" >&2
+
+  # Check file sizes. They should be within 10% of last time. Use -s (--skip-size-test) to skip
+  # this test.
+  if [[ $skip_size_test != 'skip' ]]
+  then ./check_query_sizes.py
+       if [[ $? != 0 ]]
+       then exit -1
+       fi
+  fi
+
+
   for file in queries/*
   do
     if [[ 1 == `gstat -c %h $file` ]]
