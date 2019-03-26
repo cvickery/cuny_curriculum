@@ -290,6 +290,15 @@
   fi
   echo done. | tee -a init_psql.log
 
+  # Re-create view_only role
+  echo -n "GRANT select to view_only... " tee -a init_psql.log
+  psql -X -q -d cuny_courses -c 'grant select on all tables in schema public to view_only'
+  if [ $? -ne 0 ]
+    then echo -e '\nFAILED!'
+         exit
+  fi
+  echo done. | tee -a init_psql.log
+
   if [[ $no_events -ne 1 ]]
   then
     echo -n "RESTORE previous events from $EVENTS_TABLE ... " | tee -a init_psql.log
