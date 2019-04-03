@@ -121,8 +121,8 @@
   psql -X -q -d cuny_courses -f numeric_part.sql >> init_psql.log
   echo done. | tee -a init_psql.log
 
-  echo -n "SET UP query_only ROLE ..." | tee -a init_psql.log
-  psql -X -q -d cuny_courses -f query_only_role.sql >> init_psql.log
+  echo -n "SET UP view_only ROLE ..." | tee -a init_psql.log
+  psql -X -q -d cuny_courses -f view_only_role.sql >> init_psql.log
   echo done. | tee -a init_psql.log
 
   echo -n "CREATE TABLE updates... " | tee -a init_psql.log
@@ -284,15 +284,6 @@
   #echo CREATE TABLE event_types...
   echo -n "CREATE TABLE events... " | tee -a init_psql.log
   psql -X -q -d cuny_courses -f reviews-events.sql >> init_psql.log
-  if [ $? -ne 0 ]
-    then echo -e '\nFAILED!'
-         exit
-  fi
-  echo done. | tee -a init_psql.log
-
-  # Re-create view_only role
-  echo -n "GRANT select to view_only... " tee -a init_psql.log
-  psql -X -q -d cuny_courses -c 'grant select on all tables in schema public to view_only'
   if [ $? -ne 0 ]
     then echo -e '\nFAILED!'
          exit
