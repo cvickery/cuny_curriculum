@@ -23,13 +23,14 @@ with open(org_file) as csvfile:
   csv_reader = csv.reader(csvfile)
   cols = None
   for row in csv_reader:
-    if cols == None:
+    if cols is None:
       row[0] = row[0].replace('\ufeff', '')
       if row[0].lower() == 'acad org':
         cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
     else:
       institution = row[cols.index('institution')]
-      if institution == 'CUNY' or institution == 'UAPC1': continue
+      if institution == 'CUNY' or institution == 'UAPC1':
+        continue
       q = """insert into cuny_departments values('{}', '{}', '{}')""".format(
           row[cols.index('acad_org')],
           row[cols.index('institution')],
