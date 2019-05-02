@@ -2,5 +2,5 @@
 for inst in bar bcc bkl bmc cty csi grd hos htr jjc kcc lag law leh mec \
 ncc nyt qcc qns sps yrk
 do
-  python3 registered_programs.py -vdu $inst >$inst.out
+  python3 registered_programs.py -vu $inst >$inst.out
 done
