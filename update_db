@@ -299,6 +299,8 @@
            exit
     fi
     echo done. | tee -a init_psql.log
+    echo ARCHIVE the events table.
+    mv $EVENTS_TABLE ./event_dumps/
 
     echo -n "UPDATE review statuses... " | tee -a init.log
     python3 update_review_statuses.py >> init.log
@@ -317,3 +319,9 @@
   echo UPDATE COMPLETED in `gdate -d @"$SECONDS" +'%-Mm %-Ss'` | tee -a init.log
 
 )
+
+echo And now for the registered programs ...
+(
+  cd /Users/vickery/registered_programs
+  ./update_registered_programs.sh
+ )
