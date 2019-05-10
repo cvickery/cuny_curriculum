@@ -25,15 +25,18 @@ class struct:
 def analyze(institution, course_id, ranges):
   """
   """
-  global differ_only_in_D_Dminus
   global problems
+  if len(ranges) == 1:
+    # There can’t be an issue if there is only one rule
+    return
+    # Sort the ranges and be sure, for each pair, that there is no gap and no overlap
+  ranges_ok = True
   ranges = sorted(ranges)
-  if len(ranges) == 2:
-    if ranges[0][1] < ranges[1][0]:
-      return
-  if len(ranges) == 3:
-    if ranges[0][1] < ranges[1][0] and ranges[1][1] < ranges[2][0]:
-      return
+  for range in ranges:
+    pass  # for now ...
+  if ranges_ok:
+    return
+  # Add to the set of problems
   problems[(institution, frozenset(ranges))] += 1
 
 
@@ -41,7 +44,7 @@ conn = psycopg2.connect('dbname=cuny_courses')
 cursor = conn.cursor(cursor_factory=NamedTupleCursor)
 
 problems = defaultdict(int)
-last_row = struct(course_id=-1, institution='')
+previous_row = struct(course_id=-1, institution='')
 cursor.execute("""
                 select r.destination_institution as institution, r.id, s.course_id, min_gpa, max_gpa
                 from transfer_rules r, source_courses s
@@ -50,12 +53,12 @@ cursor.execute("""
                """)
 ranges = []
 for row in cursor.fetchall():
-  if last_row.course_id != row.course_id or last_row.institution != row.institution:
+  if previous_row.course_id != row.course_id or previous_row.institution != row.institution:
     if len(ranges) > 1:
-      analyze(last_row.institution, last_row.course_id, ranges)
+      analyze(previous_row.institution, previous_row.course_id, ranges)
     ranges = set()
   ranges.add((row.min_gpa, min(4.5, row.max_gpa)))
-  last_row = row
+  previous_row = row
 
 for key, count in problems.items():
   institution = key[0]
