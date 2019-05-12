@@ -23,7 +23,8 @@ class struct:
 
 
 def analyze(institution, course_id, ranges):
-  """
+  """ Report if a range has gaps or overlaps. In the report, tell the source course and the rule
+  sets. (think about the latter) Does not coalesce rule sets.
   """
   global problems
   if len(ranges) == 1:
@@ -32,8 +33,12 @@ def analyze(institution, course_id, ranges):
     # Sort the ranges and be sure, for each pair, that there is no gap and no overlap
   ranges_ok = True
   ranges = sorted(ranges)
-  for range in ranges:
-    pass  # for now ...
+  prev = ranges[0]
+  for range in ranges[1:]:
+    if (prev[1] > range[0]) or (abs(range[0] - prev[1]) > 0.3):
+      ranges_ok = False
+      break
+    prev = range
   if ranges_ok:
     return
   # Add to the set of problems
