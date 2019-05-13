@@ -45,7 +45,7 @@ def analyze(institution, course_id, ranges):
   for range in ranges[1:]:
     if range[0] - range_max > 0.3:
       gaps_ok = False
-    if range_max - range[1] > 0.3:  # TODO
+    if range_max - range[0] > 0.3:
       laps_ok = False
     range_max = range[1]
   if not gaps_ok:
