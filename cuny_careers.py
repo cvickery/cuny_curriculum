@@ -1,4 +1,5 @@
-  # Clear and re-populate the careers table.
+""" Clear and re-populate the careers table.
+"""
 
 import psycopg2
 import csv
@@ -19,13 +20,15 @@ with open('./latest_queries/ACAD_CAREER_TBL.csv') as csvfile:
   csv_reader = csv.reader(csvfile)
   cols = None
   for row in csv_reader:
-    if cols == None:
+    if cols is None:
       row[0] = row[0].replace('\ufeff', '')
       cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
     else:
-      if row[cols.index('institution')] == 'UAPC1': continue
+      if row[cols.index('institution')] in ['UAPC1', 'MHC01']:
+        continue
       is_graduate = 0
-      if row[cols.index('graduate')] == 'Y': is_graduate = 1
+      if row[cols.index('graduate')] == 'Y':
+        is_graduate = 1
       q = """insert into cuny_careers values('{}', '{}', '{}', cast({} as boolean))""".format(
           row[cols.index('institution')],
           row[cols.index('career')],

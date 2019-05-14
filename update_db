@@ -323,5 +323,5 @@
 echo And now for the registered programs ...
 (
   cd /Users/vickery/registered_programs
-  ./update_registered_programs.sh
+  ./update_registered_programs.sh > registered_programs.log
  )

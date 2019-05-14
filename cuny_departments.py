@@ -29,7 +29,7 @@ with open(org_file) as csvfile:
         cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
     else:
       institution = row[cols.index('institution')]
-      if institution == 'CUNY' or institution == 'UAPC1':
+      if institution in ['CUNY', 'UAPC1', 'MHC01']:
         continue
       q = """insert into cuny_departments values('{}', '{}', '{}')""".format(
           row[cols.index('acad_org')],

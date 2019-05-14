@@ -185,6 +185,8 @@ with open(cf_rules_file) as csvfile:
               end='', file=sys.stderr)
 
       record = Record._make(line)
+      if record.source_institution == 'MHC01' or record.destination_institution == 'MHC01':
+        pass
       try:
         rule_key = Rule_Key(record.source_institution,
                             record.destination_institution,

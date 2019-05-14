@@ -71,7 +71,7 @@ with open(extern_file) as csvfile:
   csv_reader = csv.reader(csvfile)
   cols = None
   for row in csv_reader:
-    if cols == None:
+    if cols is None:
       row[0] = row[0].replace('\ufeff', '')
       cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
       Record = namedtuple('Record', cols)
@@ -88,7 +88,7 @@ with open(discp_file) as csvfile:
   csv_reader = csv.reader(csvfile)
   cols = None
   for row in csv_reader:
-    if cols == None:
+    if cols is None:
       row[0] = row[0].replace('\ufeff', '')
       if row[0] == 'Institution':
         cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
@@ -108,7 +108,8 @@ with open(discp_file) as csvfile:
                     record.formal_description.replace('\'', '’'),
                     record.status,
                     external_subject_area))
-          if args.debug: print(cursor.query)
+          if args.debug:
+            print(cursor.query)
   db.commit()
 
 db.close()

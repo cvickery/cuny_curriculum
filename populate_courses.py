@@ -177,12 +177,16 @@ with open(cat_file, newline='') as csvfile:
       #    row[cols.index('schedule_course')] == 'Y':
 
       # There be departments that are bogus and/or in which we're not interested
+      # And Journalism
+      # And Macaulay
       department = r.acad_org
       discipline = r.subject
+      institution = r.institution
       if department == 'PEES-BKL' or \
          department == 'SOC-YRK' or \
          department == 'JOUR-GRD' or \
-         discipline == 'JOUR':
+         discipline == 'JOUR' or \
+         institution == 'MHC01':
         continue
       course_id = int(r.course_id)
       offer_nbr = int(r.offer_nbr)
@@ -198,7 +202,6 @@ with open(cat_file, newline='') as csvfile:
         equivalence_group = int(r.equiv_course_group)
       except ValueError:
         equivalence_group = None
-      institution = r.institution
       catalog_number = r.catalog_number.strip()
       component = Component._make([r.component_course_component, float(r.instructor_contact_hours)])
       primary_component = r.primary_component
