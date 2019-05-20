@@ -121,10 +121,6 @@
   psql -X -q -d cuny_courses -f numeric_part.sql >> init_psql.log
   echo done. | tee -a init_psql.log
 
-  echo -n "SET UP view_only ROLE ..." | tee -a init_psql.log
-  psql -X -q -d cuny_courses -f view_only_role.sql >> init_psql.log
-  echo done. | tee -a init_psql.log
-
   echo -n "CREATE TABLE updates... " | tee -a init_psql.log
   psql -X -q -d cuny_courses -f updates.sql >> init_psql.log
   echo done. | tee -a init_psql.log
@@ -310,6 +306,10 @@
     fi
     echo done. | tee -a init.log
   fi
+
+  echo -n "(Re-)Grant select access to view_only ROLE ..." | tee -a init_psql.log
+  psql -X -q -d cuny_courses -f view_only_role.sql >> init_psql.log
+  echo done. | tee -a init_psql.log
 
   # Exit update_db mode
   echo "END update_db mode" | tee -a init.log
