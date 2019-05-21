@@ -33,8 +33,7 @@ for file in os.listdir(latest_queries):
       cursor.execute('insert into query_sizes values (default, default, %s, %s)',
                      (file_name, file_size))
       if cursor.rowcount != 1:
-        print('Insert failed!')
-        exit(1)
+        exit('Insert failed!')
     else:
       previous_date, previous_size = cursor.fetchone()
       if abs(previous_size - file_size) > (0.1 * previous_size):
@@ -47,11 +46,10 @@ for file in os.listdir(latest_queries):
         cursor.execute('update query_sizes set query_size = %s where query_name = %s',
                        (file_size, file_name))
         if cursor.rowcount != 1:
-          print('Update failed!')
-          exit(1)
+          exit('Update failed!')
 db.commit()
 db.close()
 
 if fail:
-  exit(1)
+  exit('Query size error')
 exit(0)

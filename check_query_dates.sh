@@ -52,14 +52,15 @@
       fi
     done
   done
-  echo "OK: All queries are dated ${dates[0]}" >&2
+  echo "All queries are dated ${dates[0]}" >&2
 
   # Check file sizes. They should be within 10% of last time. Use -s (--skip-size-test) to skip
   # this test.
   if [[ $skip_size_test != 'skip' ]]
   then ./check_query_sizes.py
        if [[ $? != 0 ]]
-       then exit -1
+       then echo "Size check failed"
+            exit -1
        fi
   fi
 

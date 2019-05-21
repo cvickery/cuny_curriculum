@@ -65,12 +65,12 @@
   fi
 
   # Python scripts process query results, so check that they are all present.
-  # Report any mismatched dates and abort if not all a-ok
+  # Report any mismatched dates or truncated queries and abort if not all a-ok
 
   echo -n "CHECK QUERY FILES... " | tee -a init.log
   ./check_query_dates.sh > init.log
   if [ $? -ne 0 ]
-    then echo "ERROR: mismatched query dates."
+    then echo "ERROR: mismatched query dates or sizes."
          exit 1
   fi
 
