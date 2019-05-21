@@ -51,5 +51,5 @@ db.commit()
 db.close()
 
 if fail:
-  exit('Query size error')
+  exit('Query size error.')
 exit(0)
