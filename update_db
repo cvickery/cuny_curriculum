@@ -109,6 +109,7 @@
           "update access_control set start_time = NULL where event_type = 'update_db'"
           exit
   fi
+
   echo -n "CREATE cuny_courses... " | tee -a init_psql.log
   createdb cuny_courses >> init_psql.log
   if [[ $? -ne 0 ]]
@@ -141,6 +142,14 @@
   #
   echo -n "CREATE TABLE institutions... " | tee -a init_psql.log
   psql -X -q -d cuny_courses -f cuny_institutions.sql >> init_psql.log
+  echo done. | tee -a init_psql.log
+
+  echo -n "CREATE academic_programs... " | tee -a init_psql.log
+  python3 populate_programs.py >> init.log
+  if [[ $? -ne 0 ]]
+    then echo -e '\nFAILED!'
+         exit
+  fi
   echo done. | tee -a init_psql.log
 
   # Now regenerate the tables that are based on query results
