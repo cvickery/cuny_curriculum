@@ -11,7 +11,7 @@ cursor.execute("""
                drop table if exists academic_plans;
                create table academic_plans (
                program_id integer,
-               institution text,
+               institution text references institutions,
                academic_plan text,
                description text,
                primary key (program_id, institution, academic_plan))
