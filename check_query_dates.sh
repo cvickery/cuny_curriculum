@@ -64,12 +64,15 @@
        fi
   fi
 
-
+  # Archive queries
+  # If the number of hard links is 2, then it means the file is in Time Machine
   for file in queries/*
   do
-    if [[ 1 == `gstat -c %h $file` ]]
-    then mv $file query_archive/
-    fi
+#    if [[ 1 == `gstat -c %h $file` ]]
+#    then mv $file query_archive/
+#    fi
+#   2019-06-13: always archive them
+    mv $file query_archive
   done
   exit 0
  )
