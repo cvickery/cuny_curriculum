@@ -19,56 +19,114 @@
   export PGOPTIONS='--client-min-messages=warning'
   export EVENTS_TABLE=events-dump_`date +'%F_%H:%M'`.sql
 
-  # CHECK COMMAND LINE
-  # Dump and restore events table. But -n, --no_events or the NO_EVENTS environment variable equal
-  # to 1 or true suppresses that.
-  # Do update only if there are new query files, but -f, --force_update or the FORCE_UPDATE
-  # environment variable equal to 1 or true overrides that.
-  # If you want to force update and not even try to download new queries, set SKIP_DOWNLOAD to 1
-  # or true.
-  no_events=$NO_EVENTS
-  force_update=$FORCE_UPDATE
-  skip_download=$SKIP_DOWNLOAD
+  # COMMAND LINE ARGUMENTS AND ENVIRONMENT VARIABLES
+  # The update_db command normally runs with no arguments, but the normal process can be modified
+  # to help manual recovery from abnormalities in the processes of running CUNYfirst queries and
+  # transferring the resulting .CSV files to Tumbleweed.
+  #
+  # Dump and restore events table.
+  #   The update process deletes all tables in the cuny_courses database and then rebuilds everything
+  #   based on the information in the queries that ran on CUNYfirst. But the events table comes from
+  #   user input in reviewing transfer rules, not CUNYfirst, so it can't be rebuilt from CUNYfirst
+  #   data. Before dropping the db, the events table is dumped to a file, and then that file is
+  #   restored near the end of the update process.
+  #
+  #   The NO_EVENTS environment variable, the -ne, or the --no-events command line option can be
+  #   used to suppress the dump restore of the dumps table.
+  #
+  # Download queries from Tumbleweed.
+  #   The dozen or so CUNYfirst queries that are used to build the database are saved as .CSV files
+  #   and transferred to Tumbleweed by the CUNYfirst query scheduling system. The update process
+  #   transfers these query files to the local system, deletest them from Tumbleweed, passes them
+  #   through iconv to clean up text encoding issues, and saves them in the queries directory.
+  #
+  #   The SKIP_DOWNLOAD environment variable, the -sd, or the --skip-download command line option
+  #   can be to skip the download from Tumbleweed, iconv, and move into queries steps.
+  #
+  # Check the integrity of the query files.
+  #   Once the query files are in the queries folder, they are checked to be sure they are all,
+  #   that they were all created on the same date, that they all have non-zero sizes, and that their
+  #   sizes are within 10% of the sizes of the previous versions of the files. If all goes well,
+  #   the file names are normalized (by dropping the CUNYfirst process id part of the file name),
+  #   copied into the query_archives folder with their creation dates replacing their CUNYfirst
+  #   process id in their file names, and moved into the latest_queries folder with their process
+  #   ids removed for subsequent access by the update process steps to follow.
+  #
+  #   NO_SIZE_CHECK -ns --no-size-check
+  #   NO_DATE_CHECK -nd --no-date-check
+  #   NO_ARCHIVE -na --no-archive
+  #   These three can be used to suppress their respective steps.
+  #
+  # Update registered programs.
+  #   After the cuny_courses database update is finished, the table of academic programs registered
+  #   with the NYS Department of Education (registered_programs) takes place.
+  #
+  #   NO_PROGRAMS -np --no-programs
+  #   Suppress the registered_programs table update.
 
+  # Environment variables
+  for env_var in NO_EVENTS SKIP_DOWNLOAD NO_SIZE_CHECK NO_DATE_CHECK NO_ARCHIVE NO_PROGRAMS
+  do
+    if [[ `printenv` =~ $env_var ]]
+    then export `echo $env_var | tr A-Z a-z`=1
+    fi
+  done
+
+  # Command line arguments
   while [ $# -gt 0 ]
   do
-    if [[ ( "$1" == "--no_events" ) || ( "$1" == "-n" ) ]]
+    if [[ ( "$1" == "--no-events" ) || ( "$1" == "-ne" ) ]]
     then no_events=1
-    elif [[ ( "$1" == "--force_update" ) || ( "$1" == "-f" ) ]]
-      then force_update=1
-    elif [[ ( "$1" == "--skip_download") || ( "$1" == "-s" ) ]]
+    elif [[ ( "$1" == "--skip-download") || ( "$1" == "-sd" ) ]]
       then skip_download=1
-           force_update=1
+    elif [[ ( "$1" == "--no-size-check") || ( "$1" == "-ns" ) ]]
+      then no_size_check=1
+    elif [[ ( "$1" == "--no-size-check") || ( "$1" == "-ns" ) ]]
+      then no_date_check=1
+    elif [[ ( "$1" == "--no-archive") || ( "$1" == "-na" ) ]]
+      then no_archive=1
+    elif [[ ( "$1" == "--no-programs" ) || ( "$1" == "-np" ) ]]
+      then no_programs=1
     else
-      echo "usage: $0 [--no_events] [--force_update] [--skip_download]"
+      echo "Usage: $0 [-ne | --no-events] [-ns | --no-size-check] [-nd | --no-date-check]
+       [-na | --no-archive] [-sd | --skip_download] [-np | --no_programs]"
       exit 1
     fi
     shift
   done
 
-  echo no_events is $no_events
-  echo force_update is $force_update
-  echo skip_download is $skip_download
+  # # Uncomment for debugging
+  # for arg in no_events skip_download no_size_check no_date_check no_archive no_programs
+  # do
+  #   if [[ `printenv` =~ $arg ]]
+  #   then echo $arg is set
+  #   else echo $arg is not set
+  #   fi
+  # done
 
   echo BEGIN INITIALIZATION
   SECONDS=0
 
   # Try downloading new queries
-  if [[ ! ( $skip_download == 1 || $skip_download == true ) ]]
+  if [[ $skip_download != 1 ]]
   then
     echo -n "DOWNLOAD new query files... " | tee init.log
     /Users/vickery/bin/get_cuny
-    if [[ $? -eq 1 && $force_update != 1 && $force_update != true ]]
-    then  echo "No new query files. Use --force_update to update anyway." | tee -a init.log
+    if [[ $? -eq 1 ]]
+    then  echo "No new query files. Use --skip-download to update anyway." | tee -a init.log
           exit 1
     fi
   fi
 
   # Python scripts process query results, so check that they are all present.
-  # Report any mismatched dates or truncated queries and abort if not all a-ok
+  # Report any mismatched dates, truncated or abnormally-sized queries and abort if not all a-ok
 
-  echo -n "CHECK QUERY FILES... " | tee -a init.log
-  ./check_query_dates.sh > init.log
+  echo -n "CHECK & ARCHIVE QUERY FILES... " | tee -a init.log
+  args=''
+  [[ $no_size_check == 1 ]] && args="$args -s"
+  [[ $no_date_check == 1 ]] && args="$args -d"
+  [[ $no_archive == 1 ]] && args="$args -a"
+  ./check_queries.py $args > init.log
   if [ $? -ne 0 ]
     then echo "ERROR: mismatched query dates or sizes."
          exit 1
@@ -327,10 +385,13 @@
 
   echo UPDATE COMPLETED in `gdate -d @"$SECONDS" +'%-Mm %-Ss'` | tee -a init.log
 
-)
+if [[ ! ( $no_programs == 1 || $no_programs == true ) ]]
+then
+  echo And now for the registered programs ...
+  (
+    cd /Users/vickery/registered_programs
+    ./update_registered_programs.sh > registered_programs.log
+  )
+fi
 
-echo And now for the registered programs ...
-(
-  cd /Users/vickery/registered_programs
-  ./update_registered_programs.sh > registered_programs.log
- )
+)
