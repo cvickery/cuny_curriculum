@@ -110,10 +110,10 @@
   # Try downloading new queries
   if [[ $skip_download != 1 ]]
   then
-    echo -n "DOWNLOAD new query files... " | tee init.log
+    echo -n "DOWNLOAD new query files... " | tee update.log
     /Users/vickery/bin/get_cuny
     if [[ $? -eq 1 ]]
-    then  echo "No new query files. Use --skip-download to update anyway." | tee -a init.log
+    then  echo "No new query files. Use --skip-download to update anyway." | tee -a update.log
           exit 1
     fi
   fi
@@ -121,46 +121,52 @@
   # Python scripts process query results, so check that they are all present.
   # Report any mismatched dates, truncated or abnormally-sized queries and abort if not all a-ok
 
-  echo -n "CHECK & ARCHIVE QUERY FILES... " | tee -a init.log
-  args=''
-  [[ $no_size_check == 1 ]] && args="$args -s"
-  [[ $no_date_check == 1 ]] && args="$args -d"
-  [[ $no_archive == 1 ]] && args="$args -a"
-  ./check_queries.py $args > init.log
-  if [ $? -ne 0 ]
-    then echo "ERROR: mismatched query dates or sizes."
-         exit 1
+  if [[ $skip_download == 1 ]]
+  then echo "SKIPPING DOWNLOADS AND ALL QUERY FILE CHECKS." | tee -a update.log
+  else
+    echo -n "CHECK & ARCHIVE QUERY FILES... " | tee -a update.log
+    args=''
+    [[ $no_size_check == 1 ]] && args="$args -s"
+    [[ $no_date_check == 1 ]] && args="$args -d"
+    [[ $no_archive == 1 ]] && args="$args -a"
+    ./check_queries.py $args | tee -a update.log
+    if [ $? -ne 0 ]
+      then echo "ERROR: query checks failed." | tee -a update.log
+           exit 1
+      else echo "done." | tee -a update.log
+    fi
   fi
-
   # Enter update_db mode and give time for running queries to complete
-  echo "START update_db mode" | tee -a init.log
+  echo "START update_db mode" | tee -a update.log
   psql access_control -c \
         "update access_control set start_time = now() where event_type = 'update_db'"
   sleep 10
 
   # Save events table unless suppressed by command line
-  if [[ $no_events != 1 && no_events != true ]]
+  if [[ $no_events == 1 ]]
   then
-    echo -n SAVE events table to $EVENTS_TABLE ... | tee init_psql.log
-    pg_dump --data-only --table=events -f $EVENTS_TABLE cuny_courses | tee -a init_psql.log
+    echo "SKIPPING events table SAVE/RESTORE." | tee -a update.log
+  else
+    echo -n SAVE events table to $EVENTS_TABLE ... | tee update_psql.log
+    pg_dump --data-only --table=events -f $EVENTS_TABLE cuny_courses | tee -a update_psql.log
     if [[ $? -ne 0 ]]
       then  echo -e '\nFAILED!'
             psql access_control -c \
             "update access_control set start_time = NULL where event_type = 'update_db'"
-            exit
+            exit 1
     fi
-    echo done. | tee -a init_psql.log
+    echo done. | tee -a update_psql.log
   fi
 
   # Kill any existing connections to the db
-  echo -n "RESTART postgres ..." | tee -a init_psql.log
-  brew services restart postgresql | tee -a init_psql.log
-  echo -n "wait for postgres restart to complete ..." | tee -a init_psql.log
+  echo -n "RESTART postgres ..." | tee -a update_psql.log
+  brew services restart postgresql | tee -a update_psql.log
+  echo -n "wait for postgres restart to complete ..." | tee -a update_psql.log
   sleep 10
-  echo done. | tee -a init_psql.log
+  echo done. | tee -a update_psql.log
   # Do the drop
-  echo -n "DROP cuny_courses... " | tee -a init_psql.log
-  dropdb cuny_courses >> init_psql.log | tee -a init_psql.log
+  echo -n "DROP cuny_courses... " | tee -a update_psql.log
+  dropdb cuny_courses >> update_psql.log | tee -a update_psql.log
   if [[ $? -ne 0 ]]
     then  echo -e '\nFAILED!'
           psql access_control -c \
@@ -168,21 +174,21 @@
           exit
   fi
 
-  echo -n "CREATE cuny_courses... " | tee -a init_psql.log
-  createdb cuny_courses >> init_psql.log
+  echo -n "CREATE cuny_courses... " | tee -a update_psql.log
+  createdb cuny_courses >> update_psql.log
   if [[ $? -ne 0 ]]
     then echo -e '\nFAILED!'
          exit
   fi
-  echo done. | tee -a init_psql.log
+  echo done. | tee -a update_psql.log
 
-  echo -n "CREATE FUNCTION numeric_part... " | tee -a init_psql.log
-  psql -X -q -d cuny_courses -f numeric_part.sql >> init_psql.log
-  echo done. | tee -a init_psql.log
+  echo -n "CREATE FUNCTION numeric_part... " | tee -a update_psql.log
+  psql -X -q -d cuny_courses -f numeric_part.sql >> update_psql.log
+  echo done. | tee -a update_psql.log
 
-  echo -n "CREATE TABLE updates... " | tee -a init_psql.log
-  psql -X -q -d cuny_courses -f updates.sql >> init_psql.log
-  echo done. | tee -a init_psql.log
+  echo -n "CREATE TABLE updates... " | tee -a update_psql.log
+  psql -X -q -d cuny_courses -f updates.sql >> update_psql.log
+  echo done. | tee -a update_psql.log
 
   # The following is the organizational structure of the University:
   #   Students are undergraduate or graduate (careers) at a college
@@ -198,136 +204,136 @@
   #   Careers references institutions, so create institutions first
   #   Divisions references departments, so create departments first
   #
-  echo -n "CREATE TABLE institutions... " | tee -a init_psql.log
-  psql -X -q -d cuny_courses -f cuny_institutions.sql >> init_psql.log
-  echo done. | tee -a init_psql.log
+  echo -n "CREATE TABLE institutions... " | tee -a update_psql.log
+  psql -X -q -d cuny_courses -f cuny_institutions.sql >> update_psql.log
+  echo done. | tee -a update_psql.log
 
-  echo -n "CREATE academic_programs... " | tee -a init_psql.log
-  python3 populate_programs.py >> init.log
+  echo -n "CREATE academic_programs... " | tee -a update_psql.log
+  python3 populate_programs.py >> update.log
   if [[ $? -ne 0 ]]
     then echo -e '\nFAILED!'
          exit
   fi
-  echo done. | tee -a init_psql.log
+  echo done. | tee -a update_psql.log
 
   # Now regenerate the tables that are based on query results
   #
-  echo -n "CREATE TABLE cuny_careers... " | tee -a init.log
-  python3 cuny_careers.py >> init.log
+  echo -n "CREATE TABLE cuny_careers... " | tee -a update.log
+  python3 cuny_careers.py >> update.log
   if [ $? -ne 0 ]
     then echo -e '\nFAILED!'
          exit
   fi
-  echo done. | tee -a init.log
+  echo done. | tee -a update.log
 
-  echo -n "CREATE TABLE cuny_departments... " | tee -a init.log
-  python3 cuny_departments.py >> init.log
+  echo -n "CREATE TABLE cuny_departments... " | tee -a update.log
+  python3 cuny_departments.py >> update.log
   if [ $? -ne 0 ]
     then echo  -e '\nFAILED!'
          exit
   fi
-  echo done. | tee -a init.log
+  echo done. | tee -a update.log
 
-  echo -n "CREATE TABLE cuny_divisions... " | tee -a init.log
-  python3 cuny_divisions.py --active_only >> init.log
+  echo -n "CREATE TABLE cuny_divisions... " | tee -a update.log
+  python3 cuny_divisions.py --active_only >> update.log
   if [ $? -ne 0 ]
     then echo  -e '\nFAILED!'
          exit
   fi
-  echo done. | tee -a init.log
+  echo done. | tee -a update.log
 
-  echo -n "CREATE TABLE cuny_subjects... " | tee -a init.log
-  python3 cuny_subjects.py >> init.log
+  echo -n "CREATE TABLE cuny_subjects... " | tee -a update.log
+  python3 cuny_subjects.py >> update.log
   if [ $? -ne 0 ]
     then echo  -e '\nFAILED!'
          exit
   fi
-  echo done. | tee -a init.log
+  echo done. | tee -a update.log
 
-  echo -n "CREATE TABLE designations... " | tee -a init.log
-  python3 designations.py >> init.log
+  echo -n "CREATE TABLE designations... " | tee -a update.log
+  python3 designations.py >> update.log
   if [ $? -ne 0 ]
     then echo  -e '\nFAILED!'
          exit
   fi
-  echo done. | tee -a init.log
+  echo done. | tee -a update.log
 
-  echo -n "CREATE TABLE crse_quiv_tbl... " | tee -a init.log
-  python3 mk_crse_equiv_tbl.py >> init.log
+  echo -n "CREATE TABLE crse_quiv_tbl... " | tee -a update.log
+  python3 mk_crse_equiv_tbl.py >> update.log
   if [ $? -ne 0 ]
     then echo -e '\nFAILED!'
          exit
   fi
-  echo done. | tee -a init.log
+  echo done. | tee -a update.log
 
-  echo -n "CREATE TABLE courses... " | tee -a init_psql.log
-  psql -X -q -d cuny_courses -f create_courses.sql >> init_psql.log
+  echo -n "CREATE TABLE courses... " | tee -a update_psql.log
+  psql -X -q -d cuny_courses -f create_courses.sql >> update_psql.log
   if [ $? -ne 0 ]
     then echo -e '\nFAILED!'
          exit
   fi
-  psql -X -q -d cuny_courses -f view_courses.sql >> init_psql.log
+  psql -X -q -d cuny_courses -f view_courses.sql >> update_psql.log
   if [ $? -ne 0 ]
     then echo -e '\nFAILED!'
          exit
   fi
-  echo done. | tee -a init_psql.log
+  echo done. | tee -a update_psql.log
 
-  echo -n "POPULATE courses... " | tee -a init.log
-  python3 populate_courses.py --progress >> init.log
+  echo -n "POPULATE courses... " | tee -a update.log
+  python3 populate_courses.py --progress >> update.log
   if [ $? -ne 0 ]
     then echo -e '\nFAILED!'
          exit
   fi
-  echo done. | tee -a init.log
+  echo done. | tee -a update.log
 
-  echo -n "CHECK component contact hours... " | tee -a init.log
+  echo -n "CHECK component contact hours... " | tee -a update.log
   python3 check_total_hours.py > check_contact_hours.log
   if [ $? -ne 0 ]
     then echo -e '\nFAILED!'
          exit
   fi
-  echo done. | tee -a init.log
+  echo done. | tee -a update.log
 
   # Transfer rules
-  echo -n "CREATE TABLE review_status_bits... " | tee -a init_psql.log
-  psql -X -q -d cuny_courses -f review_status_bits.sql >> init_psql.log
+  echo -n "CREATE TABLE review_status_bits... " | tee -a update_psql.log
+  psql -X -q -d cuny_courses -f review_status_bits.sql >> update_psql.log
   if [ $? -ne 0 ]
     then echo -e '\nFAILED!'
          exit
   fi
-  echo done. | tee -a init_psql.log
+  echo done. | tee -a update_psql.log
 
-  echo -n "CREATE transfer_rules, source_courses, destination_courses... " | tee -a init_psql.log
-  psql -X -q -d cuny_courses -f create_transfer_rules.sql >> init_psql.log
-  psql -X -q -d cuny_courses -f view_transfer_rules.sql >> init_psql.log
+  echo -n "CREATE transfer_rules, source_courses, destination_courses... " | tee -a update_psql.log
+  psql -X -q -d cuny_courses -f create_transfer_rules.sql >> update_psql.log
+  psql -X -q -d cuny_courses -f view_transfer_rules.sql >> update_psql.log
   if [ $? -ne 0 ]
     then echo -e '\nFAILED!'
          exit
   fi
-  echo done. | tee -a init_psql.log
+  echo done. | tee -a update_psql.log
 
-  echo -n "POPULATE transfer_rules... " | tee -a init.log
-  python3 populate_transfer_rules.py --progress --report >> init.log
+  echo -n "POPULATE transfer_rules... " | tee -a update.log
+  python3 populate_transfer_rules.py --progress --report >> update.log
   if [ $? -ne 0 ]
     then echo -e '\nFAILED!'
          exit
   fi
-  echo done. | tee -a init.log
+  echo done. | tee -a update.log
 
-  echo -n "SPEEDUP transfer_rule lookups... " | tee -a init.log
-  python3 mk_subject-rule_map.py --progress >> init.log
+  echo -n "SPEEDUP transfer_rule lookups... " | tee -a update.log
+  python3 mk_subject-rule_map.py --progress >> update.log
   if [ $? -ne 0 ]
     then echo -e '\nFAILED!'
          exit
   fi
-  echo done. | tee -a init.log
+  echo done. | tee -a update.log
 
 
   # The following takes too long, and doesn't really do more than
   # populate_transfer_rules.py already did. Historical Artifact.
-  # echo -n "CHECK bogus rules... " | tee -a init.log
-  # python3 bogus_rules.py --progress >> init.log
+  # echo -n "CHECK bogus rules... " | tee -a update.log
+  # python3 bogus_rules.py --progress >> update.log
   # if [ $? -ne 0 ]
   #   then echo -e '\nFAILED!'
   #        exit
@@ -335,55 +341,55 @@
   # echo done.
 
   # Managing the rule review process
-  echo -n "CREATE TABLE sessions... " | tee -a init_psql.log
-  psql -X -q -d cuny_courses -f sessions.sql >> init_psql.log
+  echo -n "CREATE TABLE sessions... " | tee -a update_psql.log
+  psql -X -q -d cuny_courses -f sessions.sql >> update_psql.log
   if [ $? -ne 0 ]
     then echo -e '\nFAILED!'
          exit
   fi
-  echo done. | tee -a init_psql.log
+  echo done. | tee -a update_psql.log
 
   #echo CREATE TABLE pending_reviews...
   #echo CREATE TABLE event_types...
-  echo -n "CREATE TABLE events... " | tee -a init_psql.log
-  psql -X -q -d cuny_courses -f reviews-events.sql >> init_psql.log
+  echo -n "CREATE TABLE events... " | tee -a update_psql.log
+  psql -X -q -d cuny_courses -f reviews-events.sql >> update_psql.log
   if [ $? -ne 0 ]
     then echo -e '\nFAILED!'
          exit
   fi
-  echo done. | tee -a init_psql.log
+  echo done. | tee -a update_psql.log
 
   if [[ $no_events -ne 1 ]]
   then
-    echo -n "RESTORE previous events from $EVENTS_TABLE ... " | tee -a init_psql.log
-    psql -X -q -d cuny_courses -f $EVENTS_TABLE >> init_psql.log
+    echo -n "RESTORE previous events from $EVENTS_TABLE ... " | tee -a update_psql.log
+    psql -X -q -d cuny_courses -f $EVENTS_TABLE >> update_psql.log
     if [ $? -ne 0 ]
       then echo -e '\nFAILED!'
            exit
     fi
-    echo done. | tee -a init_psql.log
+    echo done. | tee -a update_psql.log
     echo ARCHIVE the events table.
     mv $EVENTS_TABLE ./event_dumps/
 
-    echo -n "UPDATE review statuses... " | tee -a init.log
-    python3 update_review_statuses.py >> init.log
+    echo -n "UPDATE review statuses... " | tee -a update.log
+    python3 update_review_statuses.py >> update.log
     if [ $? -ne 0 ]
       then echo -e '\nFAILED!'
            exit
     fi
-    echo done. | tee -a init.log
+    echo done. | tee -a update.log
   fi
 
-  echo -n "(Re-)Grant select access to view_only ROLE ..." | tee -a init_psql.log
-  psql -X -q -d cuny_courses -f view_only_role.sql >> init_psql.log
-  echo done. | tee -a init_psql.log
+  echo -n "(Re-)Grant select access to view_only ROLE ..." | tee -a update_psql.log
+  psql -X -q -d cuny_courses -f view_only_role.sql >> update_psql.log
+  echo done. | tee -a update_psql.log
 
   # Exit update_db mode
-  echo "END update_db mode" | tee -a init.log
+  echo "END update_db mode" | tee -a update.log
   psql  access_control -c \
         "update access_control set start_time = NULL where event_type = 'update_db'"
 
-  echo UPDATE COMPLETED in `gdate -d @"$SECONDS" +'%-Mm %-Ss'` | tee -a init.log
+  echo UPDATE COMPLETED in `gdate -d @"$SECONDS" +'%-Mm %-Ss'` | tee -a update.log
 
 if [[ ! ( $no_programs == 1 || $no_programs == true ) ]]
 then
