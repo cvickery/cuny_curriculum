@@ -108,8 +108,9 @@
   SECONDS=0
 
   # Try downloading new queries
-  if [[ $skip_download != 1 ]]
-  then
+  if [[ $skip_download == 1 ]]
+  then echo "SKIPPING DOWNLOADS." | tee -a update.log
+  else
     echo -n "DOWNLOAD new query files... " | tee update.log
     /Users/vickery/bin/get_cuny
     if [[ $? -eq 1 ]]
@@ -121,21 +122,18 @@
   # Python scripts process query results, so check that they are all present.
   # Report any mismatched dates, truncated or abnormally-sized queries and abort if not all a-ok
 
-  if [[ $skip_download == 1 ]]
-  then echo "SKIPPING DOWNLOADS AND ALL QUERY FILE CHECKS." | tee -a update.log
-  else
-    echo -n "CHECK & ARCHIVE QUERY FILES... " | tee -a update.log
-    args=''
-    [[ $no_size_check == 1 ]] && args="$args -s"
-    [[ $no_date_check == 1 ]] && args="$args -d"
-    [[ $no_archive == 1 ]] && args="$args -a"
-    ./check_queries.py $args | tee -a update.log
-    if [ $? -ne 0 ]
-      then echo "ERROR: query checks failed." | tee -a update.log
-           exit 1
-      else echo "done." | tee -a update.log
-    fi
+  echo -n "CHECK & ARCHIVE QUERY FILES... " | tee -a update.log
+  args=''
+  [[ $no_size_check == 1 ]] && args="$args -s"
+  [[ $no_date_check == 1 ]] && args="$args -d"
+  [[ $no_archive == 1 ]] && args="$args -a"
+  ./check_queries.py $args | tee -a update.log
+  if [ $? -ne 0 ]
+    then echo "ERROR: query checks failed." | tee -a update.log
+         exit 1
+    else echo "done." | tee -a update.log
   fi
+
   # Enter update_db mode and give time for running queries to complete
   echo "START update_db mode" | tee -a update.log
   psql access_control -c \
