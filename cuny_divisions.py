@@ -79,9 +79,11 @@ with open('./divisions_report.log', 'w') as report:
         courses[(course_id, offer_nbr)] = Course(discipline, catalog_number)
 
         # If active-only, skip rows for inactive courses
-        status = row.crse_catalog_status
+        course_status = row.crse_catalog_status
         can_schedule = row.schedule_course
-        if args.active_only and (status != 'A') or can_schedule != 'Y':
+        discipline_status = row.subject_eff_status
+        if args.active_only and \
+           (course_status != 'A' or can_schedule != 'Y' or discipline_status != 'A'):
           continue
 
         # Report and ignore rows with unknown institution
