@@ -378,6 +378,11 @@
     echo done. | tee -a update.log
   fi
 
+  # User roles and access
+  echo -n "Re-build the roles and person_roles tables ..." | tee -a update_psql.log
+  psql -X -q -d cuny_courses -f roles.sql >> update_psql.log
+  echo done. | tee -a update_psql.log
+
   echo -n "(Re-)Grant select access to view_only ROLE ..." | tee -a update_psql.log
   psql -X -q -d cuny_courses -f view_only_role.sql >> update_psql.log
   echo done. | tee -a update_psql.log
