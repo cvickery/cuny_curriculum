@@ -123,7 +123,7 @@
   # Report any mismatched dates, truncated or abnormally-sized queries and abort if not all a-ok
 
   echo -n "CHECK & ARCHIVE QUERY FILES... " | tee -a update.log
-  args=''
+  args='-v'
   [[ $no_size_check == 1 ]] && args="$args -s"
   [[ $no_date_check == 1 ]] && args="$args -d"
   [[ $no_archive == 1 ]] && args="$args -a"
