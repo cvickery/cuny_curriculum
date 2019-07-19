@@ -2,7 +2,34 @@
 
 # Run the sequence of sql and python scripts to re-create and update the cuny_courses database.
 
-# Summary of recommendations from:
+# LOGGING AND ERROR REPORTING
+#   Progress messages are discplayed on stderr and in two log files: update.log for most steps, and
+#   update_psql.log for basic database manipulation steps. If any step fails to complete normally,
+#   an email containing the two log files is sent to the "webmaster" and the process is aborted.
+
+export WEBMASTER='<Christopher Vickery> christopher.vickery@qc.cuny.edu'
+
+function update_failure () {
+
+  rm -f ./failure_report
+  for file in update*.log
+  do
+    echo -e "\n--- $file ---" >> ./failure_report
+    cat $file >> failure_report
+  done
+
+  # sendemail must be in the PATH as a (hard) link to sendemail.py in transfer-app.
+  sendemail -s "$1" -t ./failure_report "$WEBMASTER"
+
+  rm -f failure_report
+  exit 1
+}
+
+###################################################################################################
+#  TODO: modify the rest of this script to use the update_failure function for error management.  #
+###################################################################################################
+
+# Summary of recommendations for running psql from a script, taken from:
 #    http://petereisentraut.blogspot.com/2010/03/running-sql-scripts-with-psql.html
 #
 # PGOPTIONS='--client-min-messages=warning' psql -X -q -a -1 -v ON_ERROR_STOP=1 --pset pager=off \
@@ -37,20 +64,20 @@
   # Download queries from Tumbleweed.
   #   The dozen or so CUNYfirst queries that are used to build the database are saved as .CSV files
   #   and transferred to Tumbleweed by the CUNYfirst query scheduling system. The update process
-  #   transfers these query files to the local system, deletest them from Tumbleweed, passes them
+  #   transfers these query files to the local system, deletes them from Tumbleweed, passes them
   #   through iconv to clean up text encoding issues, and saves them in the queries directory.
   #
   #   The SKIP_DOWNLOAD environment variable, the -sd, or the --skip-download command line option
-  #   can be to skip the download from Tumbleweed, iconv, and move into queries steps.
+  #   can be used to skip the download from Tumbleweed, iconv, and move into queries steps.
   #
   # Check the integrity of the query files.
-  #   Once the query files are in the queries folder, they are checked to be sure they are all,
-  #   that they were all created on the same date, that they all have non-zero sizes, and that their
-  #   sizes are within 10% of the sizes of the previous versions of the files. If all goes well,
-  #   the file names are normalized (by dropping the CUNYfirst process id part of the file name),
-  #   copied into the query_archives folder with their creation dates replacing their CUNYfirst
-  #   process id in their file names, and moved into the latest_queries folder with their process
-  #   ids removed for subsequent access by the update process steps to follow.
+  #   Once the query files are in the queries folder, they are checked to be sure they are all
+  #   there, that they were all created on the same date, that they all have non-zero sizes, and
+  #   that their sizes are within 10% of the sizes of the previous versions of the files. If all
+  #   goes well, the file names are normalized (by dropping the CUNYfirst process id part of the
+  #   file name), copied into the query_archives folder with their creation dates replacing their
+  #   CUNYfirst process id in their file names, and moved into the latest_queries folder with their
+  #   process ids removed for subsequent access by the update process steps to follow.
   #
   #   NO_SIZE_CHECK -ns --no-size-check
   #   NO_DATE_CHECK -nd --no-date-check
@@ -64,7 +91,7 @@
   #   NO_PROGRAMS -np --no-programs
   #   Suppress the registered_programs table update.
 
-  # Environment variables
+  # Environment variables, which can be overridden by command line options
   for env_var in NO_EVENTS SKIP_DOWNLOAD NO_SIZE_CHECK NO_DATE_CHECK NO_ARCHIVE NO_PROGRAMS
   do
     if [[ `printenv` =~ $env_var ]]
@@ -72,7 +99,7 @@
     fi
   done
 
-  # Command line arguments
+  # Command line option processing
   while [ $# -gt 0 ]
   do
     if [[ ( "$1" == "--no-events" ) || ( "$1" == "-ne" ) ]]
