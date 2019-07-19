@@ -9,9 +9,10 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-v', '--verbose', action='store_true')
-parser.add_argument('-d', '--skip_date_check', action='store_true')
-parser.add_argument('-s', '--skip_size_check', action='store_true')
-parser.add_argument('-a', '--skip_archive', action='store_true')
+parser.add_argument('-d', '--debug', action='store_true')
+parser.add_argument('-sd', '--skip_date_check', action='store_true')
+parser.add_argument('-ss', '--skip_size_check', action='store_true')
+parser.add_argument('-sa', '--skip_archive', action='store_true')
 args = parser.parse_args()
 
 new_queries = Path('/Users/vickery/CUNY_Courses/queries')
@@ -27,6 +28,8 @@ for previous_query in previous_queries.glob('*.csv'):
     exit(f'No new query for {previous_query.name}')
   assert len(new_query) == 1, f'{len(new_query)} matches for {previous_query.name}'
   new_query = new_query[0]
+  if args.debug:
+    print(f'found new query: {new_query}')
 
   # Date check
   if not args.skip_date_check:
