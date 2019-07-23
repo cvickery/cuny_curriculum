@@ -22,7 +22,7 @@ parser.add_argument('--progress', '-p', action='store_true')
 args = parser.parse_args()
 
 if args.progress:
-  print('', file=sys.stderr)
+  print('')
 db = psycopg2.connect('dbname=cuny_courses')
 cursor = db.cursor(cursor_factory=NamedTupleCursor)
 lookup_cursor = db.cursor(cursor_factory=NamedTupleCursor)
@@ -96,7 +96,7 @@ with open('latest_queries/SR742A___CRSE_ATTRIBUTE_VALUE.csv') as csvfile:
                                                                             row.crsatr_val,
                                                                             row.formal_description))
 if args.progress:
-  print(f'Inserted {len(attribute_keys)} rows into table course_attributes.', file=sys.stderr)
+  print(f'Inserted {len(attribute_keys)} rows into table course_attributes.')
 
 # Each (name, value) pair must appear must appear no more than once per (course_id, offer_nbr).
 # The attribute_pairs dict keys are (course_id, offer_nbr); the values are arrays of (name, value)
@@ -160,8 +160,7 @@ with open(cat_file, newline='') as csvfile:
                                                                           num_courses,
                                                                           remaining_minutes,
                                                                           remaining_seconds),
-            end='',
-            file=sys.stderr)
+            end='')
 
     if cols is None:
       row[0] = row[0].replace('\ufeff', '')
@@ -317,7 +316,7 @@ logs.write('Inserted {:,} courses in {} minute{} and {:0.1f} seconds.\n'.format(
 cursor.execute("update institutions set date_updated='{}'".format(cat_date))
 
 if args.progress:
-  print('', file=sys.stderr)
+  print('')
 
 db.commit()
 db.close()
