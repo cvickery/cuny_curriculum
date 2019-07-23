@@ -3,6 +3,8 @@
     emptyness and compares sizes with the corresponding files in latest_queries for size differences
     of 10% or more.
 """
+
+import sys
 from pathlib import Path
 from datetime import date
 import argparse
@@ -15,13 +17,27 @@ parser.add_argument('-ss', '--skip_size_check', action='store_true')
 parser.add_argument('-sa', '--skip_archive', action='store_true')
 args = parser.parse_args()
 
+if args.debug:
+  print(args, file=sys.stderr)
+
 new_queries = Path('/Users/vickery/CUNY_Courses/queries')
 previous_queries = Path('/Users/vickery/CUNY_Courses/latest_queries/')
 archive_dir = Path('/Users/vickery/CUNY_Courses/query_archive')
 
-# All new_queries must have the same modification date
+# All new_queries must have the same modification date (unless suppressed)
 new_mod_date = None
+if not args.skip_date_check:
+  for new_query in new_queries.glob('*'):
+    new_date = date.fromtimestamp(new_query.stat().st_mtime).strftime('%Y-%m-%d')
+    if new_mod_date is None:
+      new_mod_date = new_date
+    if new_date != new_mod_date:
+      exit(f'File date problem for {new_query.name}. Expected {new_mod_date}, but got {new_date}.')
+    if args.verbose:
+      print(new_query.name, 'date ok', file=sys.stderr)
 
+# There has to be one new query for each previous query, and the sizes must not differ by more than
+# 10%
 for previous_query in previous_queries.glob('*.csv'):
   new_query = [q for q in new_queries.glob(f'{previous_query.stem}*.csv')]
   if len(new_query) == 0:
@@ -29,21 +45,9 @@ for previous_query in previous_queries.glob('*.csv'):
   assert len(new_query) == 1, f'{len(new_query)} matches for {previous_query.name}'
   new_query = new_query[0]
   if args.debug:
-    print(f'found new query: {new_query}')
+    print(f'found new query: {new_query.name}', file=sys.stderr)
 
-  # Date check
-  if not args.skip_date_check:
-    new_date = date.fromtimestamp(new_query.stat().st_mtime).strftime('%Y-%m-%d')
-    if new_mod_date is None:
-      new_mod_date = new_date
-    elif new_date != new_mod_date:
-      exit(f'File date for {new_query.name}' is not {new_mod_date})
-    elif args.verbose:
-      print(new_query.name, 'date ok')
-    else:
-      pass
-
-  # Size check
+  # Size check (unless suppressed)
   if not args.skip_size_check:
     previous_size = previous_query.stat().st_size
     new_size = new_query.stat().st_size
@@ -53,9 +57,9 @@ for previous_query in previous_queries.glob('*.csv'):
       exit('{} ({}) differs from {} ({}) by more than 10%'
            .format(new_query.name, new_size, previous_query.name, previous_size))
     if args.verbose:
-      print(f'{new_query.name} size compares favorably to {previous_query.name}')
+      print(f'{new_query.name} size compares favorably to {previous_query.name}', file=sys.stderr)
 
-# Sizes and dates did not cause a problem: do Archive
+# Sizes and dates did not cause a problem: do Archive (unless suppressed)
 if not args.skip_archive:
   # move each query in latest_queries to query_archive, with stem appended with its new_mod_date
   prev_mod_date = None
@@ -63,6 +67,9 @@ if not args.skip_archive:
     if prev_mod_date is None:
       prev_mod_date = date.fromtimestamp(previous_query.stat().st_mtime).strftime('%Y-%m-%d')
     previous_query.rename(archive_dir / f'{previous_query.stem}_{prev_mod_date}.csv')
+    if args.verbose:
+      print(f'{previous_query} moved to {archive_dir}/{previous_query.stem}_{prev_mod_date}.csv',
+            file=sys.stderr)
   # move each query in queries to latest_queries with process_id removed from its stem
   for new_query in [q for q in new_queries.glob('*')]:
     new_query.rename(previous_queries / f'{new_query.stem.strip("0123456789-")}.csv')
