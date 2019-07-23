@@ -39,8 +39,8 @@ if not ((cat_date == req_date) and (req_date == att_date)):
   logs.write('*** FILE DATES DO NOT MATCH ***\n')
   print('*** FILE DATES DO NOT MATCH ***', file=sys.stderr)
   for d, file in [[att_date, att_file], [cat_date, cat_file], [req_date, req_file]]:
-    print('  {} {}'.format(d, file), file=sys.stderr)
-    exit()
+    print(f'  {d} {file}', file=sys.stderr)
+  exit(1)
 cursor.execute("""
                update updates
                set update_date = '{}', file_name = '{}'
