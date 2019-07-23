@@ -21,8 +21,11 @@ parser.add_argument('--debug', '-d', action='store_true')
 parser.add_argument('--progress', '-p', action='store_true')
 args = parser.parse_args()
 
+terminal = open(os.ttyname(0), 'wt')
+
 if args.progress:
-  print('')
+  print('', file=terminal)
+
 db = psycopg2.connect('dbname=cuny_courses')
 cursor = db.cursor(cursor_factory=NamedTupleCursor)
 lookup_cursor = db.cursor(cursor_factory=NamedTupleCursor)
@@ -96,7 +99,7 @@ with open('latest_queries/SR742A___CRSE_ATTRIBUTE_VALUE.csv') as csvfile:
                                                                             row.crsatr_val,
                                                                             row.formal_description))
 if args.progress:
-  print(f'Inserted {len(attribute_keys)} rows into table course_attributes.')
+  print(f'Inserted {len(attribute_keys)} rows into table course_attributes.', file=terminal)
 
 # Each (name, value) pair must appear must appear no more than once per (course_id, offer_nbr).
 # The attribute_pairs dict keys are (course_id, offer_nbr); the values are arrays of (name, value)
@@ -160,7 +163,7 @@ with open(cat_file, newline='') as csvfile:
                                                                           num_courses,
                                                                           remaining_minutes,
                                                                           remaining_seconds),
-            end='')
+            end='', file=terminal)
 
     if cols is None:
       row[0] = row[0].replace('\ufeff', '')
@@ -219,7 +222,7 @@ with open(cat_file, newline='') as csvfile:
         if lookup_cursor.rowcount > 1:
           logs.write(f'{lookup_query} returned multiple rows\n')
           print(f'{lookup_query} returned multiple rows', file=sys.stderr)
-          exit()
+          exit(1)
         else:
           lookup = lookup_cursor.fetchone()
           # Make sure contact_hours, primary_component, and credits haven’t changed
@@ -231,7 +234,7 @@ with open(cat_file, newline='') as csvfile:
                        .format(course_id, offer_nbr, discipline, catalog_number))
             print('Inconsistent hours/credits/component for {}-{} {} {}'
                   .format(course_id, offer_nbr, discipline, catalog_number), file=sys.stderr)
-            exit()
+            exit(1)
           components = [Component._make(c) for c in lookup.components]
           if component not in components:
             components.append(component)
@@ -316,7 +319,7 @@ logs.write('Inserted {:,} courses in {} minute{} and {:0.1f} seconds.\n'.format(
 cursor.execute("update institutions set date_updated='{}'".format(cat_date))
 
 if args.progress:
-  print('')
+  print('', file=terminal)
 
 db.commit()
 db.close()

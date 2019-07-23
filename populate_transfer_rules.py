@@ -48,6 +48,8 @@ parser.add_argument('--progress', '-p', action='store_true')  # to stderr
 parser.add_argument('--report', '-r', action='store_true')    # to stdout
 args = parser.parse_args()
 
+terminal = open(os.ttyname(0), 'wt')
+
 app_start = perf_counter()
 
 
@@ -65,7 +67,7 @@ def mk_rule_key(rule):
 # Start Execution
 # =================================================================================================
 if args.progress:
-  print('\nInitializing.')
+  print('\nInitializing.', file=terminal)
 
 db = psycopg2.connect('dbname=cuny_courses')
 cursor = db.cursor(cursor_factory=NamedTupleCursor)
@@ -77,7 +79,7 @@ file_date = date\
 num_lines = sum(1 for line in open(cf_rules_file))
 
 if args.report:
-  print('\n  Transfer rules query file: {} {}'.format(file_date, cf_rules_file))
+  print('\n  Transfer rules query file: {} {}'.format(file_date, cf_rules_file), file=terminal)
 
 # There be some garbage institution "names" in the transfer_rules, but the app’s
 # institutions table is “definitive”.
@@ -152,7 +154,7 @@ num_missing_courses = 0
 # Step 1: Go through the CF query file; extract a dict of rules and associated courses.
 # -----------------------------------------------------------------
 if args.progress:
-  print('\nStep 1/2: Process the csv file.')
+  print('\nStep 1/2: Process the csv file.', file=terminal)
 start_time = perf_counter()
 with open(cf_rules_file) as csvfile:
   csv_reader = csv.reader(csvfile)
@@ -182,7 +184,7 @@ with open(cf_rules_file) as csvfile:
                       100 * line_num / num_lines,
                       mins_remaining,
                       secs_remaining),
-              end='')
+              end='', file=terminal)
 
       record = Record._make(line)
       if record.source_institution == 'MHC01' or record.destination_institution == 'MHC01':
@@ -328,13 +330,13 @@ with open(cf_rules_file) as csvfile:
         continue
 
 if args.progress:
-  print(f'\n  Found {len(rules_dict.keys()):,} rules')
+  print(f'\n  Found {len(rules_dict.keys()):,} rules', file=terminal)
   secs = perf_counter() - start_time
   mins = int(secs / 60)
   secs = int(secs - 60 * mins)
-  print(f'\n  That took {mins} min {secs} sec.')
+  print(f'\n  That took {mins} min {secs} sec.', file=terminal)
 
-  print('\nStep 2/2: Populate the three tables')
+  print('\nStep 2/2: Populate the three tables', file=terminal)
   start_time = perf_counter()
 
 # Step 2
@@ -353,7 +355,8 @@ keys_so_far = 0
 for rule_key in rules_dict.keys():
   keys_so_far += 1
   if args.progress and 0 == keys_so_far % 1000:
-    print(f'\r{keys_so_far:,}/{total_keys:,} keys. {100 * keys_so_far / total_keys:.1f}%', end='')
+    print(f'\r{keys_so_far:,}/{total_keys:,} keys. {100 * keys_so_far / total_keys:.1f}%',
+          end='', file=terminal)
 
   # Build the colon-delimited discipline and subject strings
   source_disciplines_str = ':' + ':'.join(sorted(rules_dict[rule_key].source_disciplines)) + ':'
@@ -419,8 +422,8 @@ if args.progress:
   secs = perf_counter() - start_time
   mins = int(secs / 60)
   secs = int(secs - 60 * mins)
-  print(f'\n  That took {mins} min {secs} sec.')
-  print(f'\nThere are {num_rules:,} rules')
+  print(f'\n  That took {mins} min {secs} sec.', file=terminal)
+  print(f'\nThere are {num_rules:,} rules', file=terminal)
 
 conflicts.close()
 db.commit()
@@ -430,4 +433,4 @@ if args.report:
   secs = perf_counter() - app_start
   mins = int(secs / 60)
   secs = int(secs - 60 * mins)
-  print(f'\n  Generated {num_rules:,} rules in {mins} min {secs} sec.')
+  print(f'\n  Generated {num_rules:,} rules in {mins} min {secs} sec.', file=terminal)

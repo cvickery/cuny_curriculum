@@ -19,10 +19,10 @@ function send_notice () {
   done
 
   # sendemail must be in the PATH as a (hard) link to sendemail.py in transfer-app.
-  sendemail -s "Update_db Notice $1" -t ./notification_report "$WEBMASTER"
+  sendemail -s "Update_db Notice: $1" -t ./notification_report "$WEBMASTER"
 
   rm -f notification_report
-  echo "$1. Notice sent to $WEBMASTER."
+  echo -e "$1.\nNotice sent to $WEBMASTER."
 }
 
 # Summary of recommendations for running psql from a script, taken from:
@@ -135,7 +135,7 @@ function send_notice () {
 truncate -s0 update*.log
   echo BEGIN UPDATE at `date +"%Y-%m-%d %T"` | tee -a ./update.log
   SECONDS=0
-  send_notice 'Started updating database cuny_courses'
+  send_notice "Started updating database cuny_courses on $HOSTNAME"
 
   # Try downloading new queries
   if [[ $skip_download == 1 ]]
@@ -288,7 +288,7 @@ truncate -s0 update*.log
   echo done. | tee -a update.log
 
   echo -n "CREATE TABLE crse_quiv_tbl... " | tee -a update.log
-  python3 mk_crse_equiv_tbl.py >> update.log 2>&1
+  python3 mk_crse_equiv_tbl.py $progress 2>> update.log
   if [ $? -ne 0 ]
     then send_notice 'ERROR: mk_crse_equiv_tbl failed'
          exit 1
@@ -306,10 +306,10 @@ truncate -s0 update*.log
     then send_notice 'ERROR: view_courses failed'
          exit 1
   fi
-  echo done. | tee -a update_psql.log
+  echo done. | tee -a update.log
 
   echo -n "POPULATE courses... " | tee -a update.log
-  python3 populate_courses.py $progress >> update.log 2>&1
+  python3 populate_courses.py $progress 2>> update.log
   if [ $? -ne 0 ]
     then send_notice 'ERROR: populate_courses failed'
          exit 1
@@ -343,7 +343,7 @@ truncate -s0 update*.log
   echo done. | tee -a update_psql.log
 
   echo -n "POPULATE transfer_rules... " | tee -a update.log
-  python3 populate_transfer_rules.py $progress $report >> update.log 2>&1
+  python3 populate_transfer_rules.py $progress $report 2>> update.log
   if [ $? -ne 0 ]
     then send_notice 'ERROR: populate_transfer_rules failed'
          exit 1
