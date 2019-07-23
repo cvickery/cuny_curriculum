@@ -142,9 +142,9 @@ truncate -s0 update*.log
   then echo "SKIPPING DOWNLOADS." | tee -a update.log
   else
     echo -n "DOWNLOAD new query files... " | tee -a update.log
-    /Users/vickery/bin/get_cuny
+    /Users/vickery/bin/get_cuny >> update.log
     if [[ $? -eq 1 ]]
-    then  echo "No new query files. Use --skip-download to update anyway." | tee -a update.log
+    then  send_notice "Update abandoned: query download failed."
           exit 1
     fi
   fi
