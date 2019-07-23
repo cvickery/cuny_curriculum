@@ -19,7 +19,7 @@ function send_notice () {
   done
 
   # sendemail must be in the PATH as a (hard) link to sendemail.py in transfer-app.
-  sendemail -s "Update_db Notice: $1" -t ./notification_report "$WEBMASTER"
+  /Users/vickery/bin/sendemail -s "Update_db Notice: $1" -t ./notification_report "$WEBMASTER"
 
   rm -f notification_report
   echo -e "$1.\nNotice sent to $WEBMASTER."
@@ -144,7 +144,7 @@ truncate -s0 update*.log
     echo -n "DOWNLOAD new query files... " | tee -a update.log
     /Users/vickery/bin/get_cuny >> update.log
     if [[ $? -eq 1 ]]
-    then  send_notice "Update abandoned: query download failed."
+    then  send_notice "Update abandoned: query download failed"
           exit 1
     fi
   fi
