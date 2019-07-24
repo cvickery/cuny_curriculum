@@ -35,9 +35,9 @@ logs = open('populate_courses.log', 'w')
 cat_file = './latest_queries/QNS_QCCV_CU_CATALOG_NP.csv'
 req_file = './latest_queries/QNS_QCCV_CU_REQUISITES_NP.csv'
 att_file = './latest_queries/QNS_QCCV_COURSE_ATTRIBUTES_NP.csv'
-cat_date = date.fromtimestamp(os.lstat(cat_file).st_birthtime).strftime('%Y-%m-%d')
-req_date = date.fromtimestamp(os.lstat(req_file).st_birthtime).strftime('%Y-%m-%d')
-att_date = date.fromtimestamp(os.lstat(att_file).st_birthtime).strftime('%Y-%m-%d')
+cat_date = date.fromtimestamp(os.lstat(cat_file).st_mtime).strftime('%Y-%m-%d')
+req_date = date.fromtimestamp(os.lstat(req_file).st_mtime).strftime('%Y-%m-%d')
+att_date = date.fromtimestamp(os.lstat(att_file).st_mtime).strftime('%Y-%m-%d')
 if not ((cat_date == req_date) and (req_date == att_date)):
   logs.write('*** FILE DATES DO NOT MATCH ***\n')
   print('*** FILE DATES DO NOT MATCH ***', file=sys.stderr)
