@@ -425,7 +425,7 @@ truncate -s0 update*.log
 
   echo UPDATE COMPLETED at `date +"%Y-%m-%d %T"` in `gdate -d @"$SECONDS" +'%-Mm %-Ss'` | \
        tee -a update.log
-       send_notice 'Finished updating database cuny_courses'
+       send_notice "Finished updating database cuny_courses on $HOSTNAME"
 
 if [[ ! ( $no_programs == 1 || $no_programs == true ) ]]
 then
