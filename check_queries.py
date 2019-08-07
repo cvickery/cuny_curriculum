@@ -1,7 +1,13 @@
 #! /usr/local/bin/python3
-""" Some queries have been coming in truncated. This utility checks the files in queries for
-    emptyness and compares sizes with the corresponding files in latest_queries for size differences
-    of 10% or more.
+""" This is a query set integrity checker, with provisions for “when things go wrong.”
+    There is a set of queries that get downloaded to the queries folder, checked for integrity, and
+    moved to latest_queries. Previous occupants of latest_queries get archived with their dates in
+    archived_queries.
+    But:
+     * Some queries have been coming in truncated. This utility checks the files in queries for
+       emptyness and compares sizes with the corresponding files in latest_queries for size
+       differences of 10% or more.
+     * Some queries don’t arrive at all.
 """
 
 import sys
@@ -23,6 +29,20 @@ if args.debug:
 new_queries = Path('/Users/vickery/CUNY_Courses/queries')
 previous_queries = Path('/Users/vickery/CUNY_Courses/latest_queries/')
 archive_dir = Path('/Users/vickery/CUNY_Courses/query_archive')
+query_names = ['QCCV_RQMNT_DESIG_TBL',
+               'QNS_QCCV_CU_CATALOG_NP',
+               'QNS_CV_CUNY_SUBJECT_TABLE',
+               'QCCV_ACADEMIC_PLAN_TBL',
+               'SR742A___CRSE_ATTRIBUTE_VALUE',
+               'QNS_CV_ACADEMIC_ORGANIZATIONS',
+               'ACAD_SUBPLN_TBL',
+               'ACAD_CAREER_TBL',
+               'QNS_CV_CUNY_SUBJECTS',
+               'SR701____INSTITUTION_TABLE',
+               'QNS_QCCV_COURSE_ATTRIBUTES_NP',
+               'QNS_CV_CRSE_EQUIV_TBL',
+               'QNS_CV_SR_TRNS_INTERNAL_RULES',
+               'QNS_QCCV_CU_REQUISITES_NP']
 
 # All new_queries must have the same modification date (unless suppressed)
 new_mod_date = None
