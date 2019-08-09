@@ -79,6 +79,8 @@ query_names = ['QCCV_RQMNT_DESIG_TBL',
 if is_copacetic().status:
   print(is_copacetic().message)
   exit(0)
+if args.verbose:
+  print(f'Precondition: {is_copacetic().message}')
 
 # All new_queries must have the same modification date (unless suppressed)
 new_mod_date = None
