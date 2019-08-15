@@ -35,4 +35,4 @@ insert into person_roles values(default, null,
 insert into person_roles values(default, 'QNS01',
                                 'Associate Provost',
                                 'college_provost',
-                                'Alicia.Alvarez@qc.cuny.edu', 'Alicia Alvarez');
+                                'Alicia.Alvero@qc.cuny.edu', 'Alicia Alvero');
