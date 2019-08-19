@@ -3,7 +3,7 @@
 # Run the sequence of sql and python scripts to re-create and update the cuny_courses database.
 
 # LOGGING AND ERROR REPORTING
-#   Progress messages are discplayed on stderr and in two log files: update.log for most steps, and
+#   Progress messages are displayed on stderr and in two log files: update.log for most steps, and
 #   update_psql.log for basic database manipulation steps. If any step fails to complete normally,
 #   an email containing the two log files is sent to the "webmaster" and the process is aborted.
 

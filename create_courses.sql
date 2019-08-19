@@ -18,6 +18,7 @@ CREATE TABLE courses (
   discipline text,
   catalog_number text,
   title text,
+  short_title text,
   components jsonb,  -- array of [component, component_contact_hours]
   contact_hours float,
   min_credits float,
@@ -30,6 +31,7 @@ CREATE TABLE courses (
   course_status text,
   discipline_status text,
   can_schedule text,
+  effective_date date,
   attributes text, -- semicolon-separated list of name:value pairs
   primary key (course_id, offer_nbr),
   foreign key (institution, career) references cuny_careers,

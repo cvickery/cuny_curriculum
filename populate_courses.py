@@ -271,6 +271,10 @@ with open(cat_file, newline='') as csvfile:
                                    .replace('\r', '')\
                                    .replace('\n', ' ')\
                                    .replace('( ', '(')
+        short_title = r.short_course_title.replace("'", "’")\
+                                          .replace('\r', '')\
+                                          .replace('\n', ' ')\
+                                          .replace('( ', '(')
 
         designation = r.designation
 
@@ -282,21 +286,22 @@ with open(cat_file, newline='') as csvfile:
         course_status = r.crse_catalog_status
         discipline_status = r.subject_eff_status
         can_schedule = r.schedule_course
+        effective_date = r.crse_catalog_effective_date
         try:
           cursor.execute("""insert into courses values
                             (%s, %s, %s, %s, %s,
-                             %s, %s, %s, %s,
+                             %s, %s, %s, %s, %s,
                              %s, %s, %s, %s,
                              %s,
                              %s, %s, %s, %s, %s,
-                             %s, %s, %s)
+                             %s, %s, %s, %s)
                          """,
                          (course_id, offer_nbr, equivalence_group, institution, cuny_subject,
-                          department, discipline, catalog_number, title,
+                          department, discipline, catalog_number, title, short_title,
                           Json(components), contact_hours, min_credits, max_credits,
                           primary_component,
                           requisite_str, designation, description, career, course_status,
-                          discipline_status, can_schedule, course_attributes))
+                          discipline_status, can_schedule, effective_date, course_attributes))
           num_courses += 1
           if args.debug:
             print(cursor.query)
