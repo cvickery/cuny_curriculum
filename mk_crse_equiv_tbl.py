@@ -23,7 +23,10 @@ parser.add_argument('--debug', '-d', action='store_true')
 parser.add_argument('--progress', '-p', action='store_true')
 args = parser.parse_args()
 
-terminal = open(os.ttyname(0), 'wt')
+try:
+  terminal = open(os.ttyname(0), 'wt')
+except OSError:
+  terminal = sys.stderr
 
 num_rows = 0
 conn = psycopg2.connect('dbname=cuny_courses')
