@@ -1,3 +1,4 @@
+#! /usr/local/bin/python3
 """
     Find the division for each course in the cuny catalog and populate the divisions table with a
     count of how many courses are offered in each division at each college. Checks for cases where
@@ -54,6 +55,22 @@ for row in cursor.fetchall():
     departments[row.institution] = []
   departments[row.institution].append(row.department)
 
+# Get names of known divisions (“academic groups”)
+groups = dict()
+cols = None
+with open('./latest_queries/ACADEMIC_GROUPS.csv') as csv_file:
+  csv_reader = csv.reader(csv_file)
+  for line in csv_reader:
+    if cols is None:
+      cols = [c.lower().replace(' ', '_') for c in line]
+      Row = namedtuple('Row', cols)
+    else:
+      row = Row._make(line)
+      groups[(row.institution, row.academic_group)] = (row.description,
+                                                       row.status,
+                                                       row.effective_date)
+print(groups)
+exit()
 Course = namedtuple('Course', 'discipline catalog_number')
 # Open the report file
 with open('./divisions_report.log', 'w') as report:

@@ -2,6 +2,7 @@ open --user CVickery --env-password sftp://st-edge.cuny.edu
 cd ERP_Queens
 mget -EO /Users/vickery/CUNY_Courses/query_downloads QNS_*.csv \
                                                       QCCV_*.csv \
+                                                      ACADEMIC_GROUPS*.csv \
                                                       ACAD_CAREER_TBL*.csv \
                                                       ACAD_SUBPLN_TBL*.csv \
                                                       SR701____INSTITUTION_TABLE*.csv \
