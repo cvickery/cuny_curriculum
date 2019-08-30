@@ -91,11 +91,12 @@ with open('./divisions_report.log', 'w') as report:
       else:
         row = Col._make(row)
         institution = row.institution
-        course_id = int(row.course_id)
-        offer_nbr = int(row.offer_nbr)
+        _course_id = int(row.course_id)
+        _offer_nbr = int(row.offer_nbr)
+        course_key = (_course_id, _offer_nbr)
         discipline = row.subject.strip()
         catalog_number = row.catalog_number.strip()
-        courses[(course_id, offer_nbr)] = Course(discipline, catalog_number)
+        courses[course_key] = Course(discipline, catalog_number)
 
         # If active-only, skip rows for inactive courses
         course_status = row.crse_catalog_status
@@ -125,62 +126,63 @@ with open('./divisions_report.log', 'w') as report:
 
         if args.debug:
           print(institution, department, division, course_id)
-        key = (institution, department)
+        divisions_key = (institution, department)
         found = False
-        if key in divisions.keys():
-          # print(key, divisions[key])
-          for i in range(len(divisions[key])):
+        if divisions_key in divisions.keys():
+          if args.debug:
+            print(divisions_key, ' has ', len(divisions[divisions_key]), ' courses')
+          for i in range(len(divisions[divisions_key])):
             # print(i)
             # print(divisions[key][i], division)
 
-            # TODO: WHAT ABOUT OFFER_NBR? YOU ARE GETTING KEYERROR IN THE REPORT.WRITE() BELOW
-            # BECAUSE YOU ASSUME OFFER_NBR IS 1 AND COURSE_ID HAS ONLY 2 FOR AN OFFER_NBR.
-
-            if divisions[key][i][0] == division:
-              course_ids = divisions[key][i][2]
-              course_ids.append(course_id)
-              divisions[key][i] = (division,
-                                   divisions[key][i][1] + 1,
-                                   course_ids)
+            if divisions[divisions_key][i][0] == division:
+              course_keys = divisions[divisions_key][i][2]
+              course_keys.append(course_key)
+              divisions[divisions_key][i] = (division,
+                                             divisions[divisions_key][i][1] + 1,
+                                             course_keys)
               found = True
               break
           if not found:
-            divisions[key].append((division, 1, [course_id]))
+            divisions[divisions_key].append((division, 1, [course_key]))
         else:
-          divisions[key] = [(division, 1, [course_id])]
+          divisions[divisions_key] = [(division, 1, [course_key])]
 
-    for key in divisions.keys():
-      value = divisions[key][0]
-      if len(divisions[key]) > 1:
+    # Now go through the divisions course-counts and clean up non-singleton pairings
+    for divisions_key in divisions.keys():
+      which_division = divisions[divisions_key][0]
+      if len(divisions[divisions_key]) > 1:
         report.write('\n')
-        for other in divisions[key]:
-          report.write('{:6} {:12} {:12} {:5}\n'.format(key[0], other[0], key[1], other[1]))
-          if other[1] > value[1]:
-            value = other
-        report.write(' Using {}.\n'.format(value[0]))
+        for other_division in divisions[divisions_key]:
+          report.write(f'{key[0]:6} {other_division[0]:12} {key[1]:12} {other_division[1]:5}\n')
+          if other_division[1] > which_division[1]:
+            which_division = other_division
+        report.write(' Using {}.\n'.format(which_division[0]))
         # For each course that needs to be fixed, show its course_id, division, department, the
         # wrong division, and the correct one.
-        for other in divisions[key]:
-          if other[0] != value[0]:
-            for course_id in other[2]:
-              report.write(' Changing division for {:06} {:>5} {:<8}({}, {:>10}) from {:<5} to {}\n'
-                           .format(course_id,
-                                   courses[(course_id, 1)].discipline,
-                                   courses[(course_id, 1)].catalog_number,
+        for other in divisions[divisions_key]:
+          if other[0] != which_division[0]:
+            for course_key in other[2]:
+              report.write('Changing division for {:06}:{} {:>5} {:<8}({}, '
+                           '{:>10}) from {:<5} to {}\n'
+                           .format(course_key[0], course_key[1],  # course_id:offer_nbr
+                                   courses[course_key].discipline,
+                                   courses[course_key].catalog_number,
                                    key[0],
                                    key[1],
                                    other[0],
                                    value[0]))
               anomalies += 1
-      print("insert into cuny_divisions values('{}', '{}', '{}', {})".format(key[0],
-                                                                             value[0],
-                                                                             key[1],
-                                                                             value[1]))
+      cursor.execute(f"""
+                     insert into cuny_departments values(
+                     '{divisions_key[0]}', '{which_division[0]}', '{divisions_key[1]}', {which_division[1]})""")
 #
   suffix = 's'
   if anomalies == 1:
     suffix = ''
-  report.write('{:,} course{} found with inconsistent group{}.\n'.format(anomalies, suffix, suffix))
+  if anomalies == 0:
+    anomalies = 'No'
+  report.write(f'{anomalies:,} course{suffix} found with inconsistent division{suffix}.\n')
 
 
 
