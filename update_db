@@ -255,18 +255,18 @@ truncate -s0 update*.log
   fi
   echo done. | tee -a update.log
 
-  echo -n "CREATE TABLE cuny_departments... " | tee -a update.log
-  python3 cuny_departments.py >> update.log 2>&1
+  echo -n "CREATE TABLE cuny_divisions... " | tee -a update.log
+  python3 cuny_divisions.py >> update.log 2>&1
   if [ $? -ne 0 ]
-    then send_notice 'ERROR: cuny_departments failed'
+    then send_notice 'ERROR: cuny_divisions failed'
          exit 1
   fi
   echo done. | tee -a update.log
 
-  echo -n "CREATE TABLE cuny_divisions... " | tee -a update.log
-  python3 cuny_divisions.py --active_only >> update.log 2>&1
+  echo -n "CREATE TABLE cuny_departments... " | tee -a update.log
+  python3 cuny_departments.py --active_only >> update.log 2>&1
   if [ $? -ne 0 ]
-    then send_notice 'ERROR: cuny_divisions failed'
+    then send_notice 'ERROR: cuny_departments failed'
          exit 1
   fi
   echo done. | tee -a update.log
