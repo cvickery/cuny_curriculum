@@ -1,15 +1,25 @@
 #! /usr/local/bin/python3
 # Clear and re-populate the cuny_departments table.
-# This table includes {institution, division, department} tuples. The problem is that there is no
-# table in CUNYfirst that pairs departments with divisions.
+# This table includes {institution, division, department} tuples.
+#
+# The problem is that there is no table in CUNYfirst that pairs departments with divisions. Rather,
+# each course in the course catalog has both acad_org (department) and acad_grp (division) fields,
+# albeit with the same department being paired with different divisions for different courses.
+#
 # To determine the division each department belongs to, count how many times the department is
-# paired with a division in the course catalog, and pick the one that has the largest number of
-# pairings. Generate a log file of anomalies found.
+# paired with a division in the course catalog, and pick the division that has the largest number of
+# pairings when there is more than one.
+#
+# The active-only command line option says to ignore inactive courses in "voting" for the division
+# that a department belongs to. All departments are recorded, along with their status.
+#
+# Generates a log file of anomalies found.
 
 import os
 import re
 import sys
 from collections import namedtuple
+from collections import Counter
 from datetime import date
 
 import psycopg2
@@ -57,8 +67,10 @@ cursor.execute("""
   foreign key (institution, division) references cuny_divisions)
   """)
 
+# Create a dict of all known departments from CUNYfirst. Initialize each entry with an empty list of
+# divisions.
 known_departments = dict()
-Department_Key = namedtuple('Department_Key', 'department institution')
+Department_Key = namedtuple('Department_Key', 'institution department')
 Department_Info = namedtuple('Department_Info',
                              """department_name
                                 status
@@ -80,30 +92,24 @@ with open('./latest_queries/QNS_CV_ACADEMIC_ORGANIZATIONS.csv') as csvfile:
       institution = row.institution
       if institution in ignore_institutions:
         continue
-      if institution not in known_departments.keys():
-        department_key = Department_Key._make([institution, row.acad_org])
+      department_key = Department_Key._make([institution, row.acad_org])
+      if department_key not in known_departments.keys():
         known_departments[department_key] = Department_Info._make([
-                                                                  row.formaldesc,
+                                                                  row.formaldesc.replace('\'', '’'),
                                                                   row.status,
                                                                   []
                                                                   ])
 
-
-# The problem is that departments are not consistently paired with their divisions in CUNYfirst,
-# and there is no separate table giving the “proper” pairings.
-# So we go through the entire catalog to see how many courses have each department-division pairing,
-# and pick the pairing with the largest number of courses as the proper division for each dept.
-# The generated a report tells all cases where the pairing is not unanimous, and which division is
-# being used (as well as any data integrity anomalies).
+# Go through the entire course catalog and record the division for each one in the department’s
+# dict entry.
+# Report data integrity anomalies.
 courses = dict()
 Course_Key = namedtuple('Course_Key', 'course_id offer_nbr')
 Course_Info = namedtuple('Course_Info', 'discipline catalog_number')
 
-# Open the file for reporting anomalies
+# Open the log file and course catalog query file
 with open('./divisions_report.log', 'w') as report:
   anomalies = 0
-
-  # Process all courses in the catalog file
   with open('./latest_queries/QNS_QCCV_CU_CATALOG_NP.csv', newline='') as csvfile:
     cat_reader = csv.reader(csvfile)
     cols = None
@@ -117,9 +123,6 @@ with open('./divisions_report.log', 'w') as report:
         row = Col._make(row)
         institution = row.institution
         discipline = row.subject.strip()
-        catalog_number = row.catalog_number.strip()
-        course_key = Course_Key._make([int(row.course_id), int(row.offer_nbr)])
-        courses[course_key] = Course_Info._make([discipline, catalog_number])
 
         # If active-only, skip rows for inactive courses
         course_status = row.crse_catalog_status
@@ -130,7 +133,6 @@ with open('./divisions_report.log', 'w') as report:
           continue
 
         # Report and ignore courses with unknown institution
-        institution = row.institution
         if institution in ignore_institutions:
           continue
         if institution not in known_institutions:
@@ -151,71 +153,62 @@ with open('./divisions_report.log', 'w') as report:
         # Report and ignore rows where the institution-division pair is not in cuny_divisions
         division = row.acad_group
         if (institution, division) not in known_divisions:
-          report.write(f'Bogus institution-division pair: ({institution}-{division})')
+          report.write(f'Bogus institution-division pair: ({institution}-{division})\n')
           continue
 
         # Record the division claimed for this course’s department
-        division_key = Division_Key._make([institution, department])
+        known_departments[department_key].divisions.append(division)
 
-        if args.debug:
-          print(institution, department, division, course_key)
-        found = False
-        if divisions_key in divisions.keys():
-          if args.debug:
-            print(division_key, ' has ', len(divisions[divisions_key]), ' courses')
-          for i in range(len(divisions[divisions_key])):
-            if divisions[division_key][i][0] == division:
-              course_keys = known_divisions[division_key][i][2]
-              course_keys.append(course_key)
-              known_divisions[division_key][i] = (division,
-                                             divisions[division_key][i][1] + 1,
-                                             course_keys)
-              found = True
-              break
-          if not found:
-            divisions[divisions_key].append((division, 1, [course_key]))
+    # Tally phase complete. Now determine the correct division for each department
+    for department_key in known_departments.keys():
+      num_divisions = len(known_departments[department_key].divisions)
+      if num_divisions == 0:
+        # Report and ignore departments with no courses
+        if args.active_only:
+          qualifier = 'active '
         else:
-          divisions[divisions_key] = [(division, 1, [course_key])]
+          qualifier = ''
+        report.write(f'Ignoring {department_key.department} at {department_key.institution} '
+                     f'because it has no {qualifier}courses\n')
+        continue
+      elif num_divisions == 1:
+        # Counter would return empty list
+        which_division = known_departments[department_key].divisions[0]
+        num_courses = 1
+      else:
+        # Get list of (division, frequency) tuples, most frequent in position 0.
+        votes = Counter(known_departments[department_key].divisions).most_common()
+        which_division = votes[0][0]
+        num_courses = votes[0][1]
+        if len(votes) > 1:
+          if votes[0][1] != 1:
+            suffix = 's'
+          else:
+            suffix = ''
+          report.write(f'{department_key.department} at {department_key.institution} '
+                       f'has {len(votes)} different divisions\n'
+                       f'  Using {which_division} for {votes[0][1]} course{suffix}\n')
+          for index in range(1, len(votes)):
+            num_courses += votes[index][1]
+            if votes[index][1] != 1:
+              suffix = 's'
+            else:
+              suffix = ''
+            report.write(f'  Using {which_division} instead of {votes[index][0]} '
+                         f'for {votes[index][1]} course{suffix}\n')
+          anomalies += 1
+      # Insert institution, division, department, department_name, status, num_courses
+      query = f"""
+                 insert into cuny_departments values(
+                 '{department_key.institution}',
+                 '{which_division}',
+                 '{department_key.department}',
+                 '{known_departments[department_key].department_name}',
+                 '{known_departments[department_key].status}',
+                 '{num_courses}')
+               """
+      cursor.execute(query)
 
-    # Now go through the divisions course-counts and clean up non-singleton pairings
-    for divisions_key in divisions.keys():
-      which_division = divisions[divisions_key][0]
-      if len(divisions[divisions_key]) > 1:
-        report.write('\n')
-        for other_division in divisions[divisions_key]:
-          report.write(f'{key[0]:6} {other_division[0]:12} {key[1]:12} {other_division[1]:5}\n')
-          if other_division[1] > which_division[1]:
-            which_division = other_division
-        report.write(' Using {}.\n'.format(which_division[0]))
-        # For each course that needs to be fixed, show its course_id, division, department, the
-        # wrong division, and the correct one.
-        for other in divisions[divisions_key]:
-          if other[0] != which_division[0]:
-            for course_key in other[2]:
-              report.write('Changing division for {:06}:{} {:>5} {:<8}({}, '
-                           '{:>10}) from {:<5} to {}\n'
-                           .format(course_key[0], course_key[1],  # course_id:offer_nbr
-                                   courses[course_key].discipline,
-                                   courses[course_key].catalog_number,
-                                   key[0],
-                                   key[1],
-                                   other[0],
-                                   value[0]))
-              anomalies += 1
-      # institution, division, department, department_name, num_courses
-      # BAR01 ZICK ACCT-BAR 187
-      print(divisions_key[0], which_division[0], divisions_key[1], which_division[1], file=sys.stderr)
-      which_department
-      cursor.execute(f"""
-                       insert into cuny_departments values(
-                       '{which_department.department}'
-                       '{known_divisions[divisions_key].division}',
-                       '{which_institution}',
-                       '{known_divisions[which_department.name]}',
-                       '{divisions_key[1]}',
-                       '{which_division[1]}')
-                     """)
-#
   suffix = 's'
   if anomalies == 1:
     suffix = ''
