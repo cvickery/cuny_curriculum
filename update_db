@@ -264,7 +264,7 @@ truncate -s0 update*.log
   echo done. | tee -a update.log
 
   echo -n "CREATE TABLE cuny_departments... " | tee -a update.log
-  python3 cuny_departments.py --active_only >> update.log 2>&1
+  python3 cuny_departments.py >> update.log 2>&1
   if [ $? -ne 0 ]
     then send_notice 'ERROR: cuny_departments failed'
          exit 1
