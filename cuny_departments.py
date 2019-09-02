@@ -18,6 +18,7 @@
 import os
 import re
 import sys
+import csv
 from collections import namedtuple
 from collections import Counter
 from datetime import date
@@ -25,7 +26,7 @@ from datetime import date
 import psycopg2
 from psycopg2.extras import NamedTupleCursor
 
-import csv
+from cuny_divisions import ignore_institutions, bogus_departments
 
 import argparse
 parser = argparse.ArgumentParser()
@@ -42,7 +43,6 @@ cursor.execute("""
                  from institutions
                """)
 known_institutions = [institution.code for institution in cursor.fetchall()]
-ignore_institutions = ['CUNY', 'UAPC1', 'MHC01']  # MHC because OUR said to for this app
 
 # Get list of known institution-division pairs
 divisions = dict()
@@ -76,7 +76,6 @@ Department_Info = namedtuple('Department_Info',
                                 status
                                 divisions
                              """)
-known_bogus_departments = ['PEES-BKL', 'SOC-YRK', 'JOUR-GRD']
 
 cols = None
 with open('./latest_queries/QNS_CV_ACADEMIC_ORGANIZATIONS.csv') as csvfile:
@@ -141,7 +140,7 @@ with open('./divisions_report.log', 'w') as report:
 
         # Ignore rows for known bogus departments
         department = row.acad_org
-        if department in known_bogus_departments:
+        if department in bogus_departments:
           continue
         # Report and ignore rows where the department is not in cuny_departments for the institution
         department_key = Department_Key._make([institution, department])
