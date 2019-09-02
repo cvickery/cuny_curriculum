@@ -1,23 +1,30 @@
+#! /usr/local/bin/python3
 # Clear and re-populate the table of internal subjects at all cuny colleges (disciplines).
 # Clear and re-populate the table of external subject areas (cuny_subjects).
 
 import os
-import sys
 import re
-import psycopg2
+import sys
 import csv
-import argparse
+
 from datetime import date
 from collections import namedtuple
+
+import psycopg2
+from psycopg2.extras import NamedTupleCursor
+
+from cuny_divisions import ignore_institutions
+
+import argparse
 
 parser = argparse.ArgumentParser('Create internal and external subject tables')
 parser.add_argument('--debug', '-d', action='store_true')
 args = parser.parse_args()
 
 db = psycopg2.connect('dbname=cuny_courses')
-cursor = db.cursor()
+cursor = db.cursor(cursor_factory=NamedTupleCursor)
 
-# Internal Subjects (disciplines)
+# Internal subject (disciplines) and external subject area (cuny_subjects) queries
 discp_file = './latest_queries/QNS_CV_CUNY_SUBJECT_TABLE.csv'
 extern_file = './latest_queries/QNS_CV_CUNY_SUBJECTS.csv'
 discp_date = date.fromtimestamp(os.lstat(discp_file).st_birthtime).strftime('%Y-%m-%d')
@@ -38,9 +45,8 @@ if args.debug:
 cursor.execute("""
                 select department
                 from cuny_departments
-                group by department
                """)
-departments = [department[0] for department in cursor.fetchall()]
+departments = [d.department for d in cursor.fetchall()]
 
 # CUNY Subjects table
 cursor.execute('drop table if exists cuny_subjects cascade')
@@ -50,6 +56,24 @@ cursor.execute("""
   description text
   )
   """)
+
+# Populate cuny_subjects
+cursor.execute("insert into cuny_subjects values('missing', 'MISSING')")
+with open(extern_file) as csvfile:
+  csv_reader = csv.reader(csvfile)
+  cols = None
+  for line in csv_reader:
+    if cols is None:
+      line[0] = line[0].replace('\ufeff', '')
+      cols = [val.lower().replace(' ', '_').replace('/', '_') for val in line]
+      Row = namedtuple('Row', cols)
+    else:
+      row = Row._make(line)
+      q = """insert into cuny_subjects values('{}', '{}')""".format(
+          row.external_subject_area,
+          row.description.replace("'", "’"))
+      cursor.execute(q)
+  db.commit()
 
 # Disciplines table
 cursor.execute('drop table if exists disciplines cascade')
@@ -65,51 +89,35 @@ cursor.execute(
       primary key (institution, discipline))
     """)
 
-# Populate cuny_subjects
-cursor.execute("insert into cuny_subjects values('missing', 'MISSING')")
-with open(extern_file) as csvfile:
-  csv_reader = csv.reader(csvfile)
-  cols = None
-  for row in csv_reader:
-    if cols is None:
-      row[0] = row[0].replace('\ufeff', '')
-      cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
-      Record = namedtuple('Record', cols)
-    else:
-      record = Record._make(row)
-      q = """insert into cuny_subjects values('{}', '{}')""".format(
-          record.external_subject_area,
-          record.description.replace("'", "’"))
-      cursor.execute(q)
-  db.commit()
-
 # Populate disciplines
+Discipline_Key = namedtuple('Discipline_Key', 'institution discipline')
+discipline_keys = set()
 with open(discp_file) as csvfile:
   csv_reader = csv.reader(csvfile)
   cols = None
-  for row in csv_reader:
+  for line in csv_reader:
     if cols is None:
-      row[0] = row[0].replace('\ufeff', '')
-      if row[0] == 'Institution':
-        cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
-        Record = namedtuple('Record', cols)
+      line[0] = line[0].replace('\ufeff', '')
+      if line[0] == 'Institution':
+        cols = [val.lower().replace(' ', '_').replace('/', '_') for val in line]
+        Row = namedtuple('Row', cols)
     else:
-      record = Record._make(row)
-      if record.acad_org in departments:
-        if record.institution != 'UAPC1':
-          external_subject_area = record.external_subject_area
+      row = Row._make(line)
+      if row.acad_org in departments:
+        if row.institution not in ignore_institutions:
+          external_subject_area = row.external_subject_area
           if external_subject_area == '':
             external_subject_area = 'missing'
+          discipline_key = Discipline_Key._make([row.institution, row.subject])
+          if discipline_key in discipline_keys:
+            continue
+          discipline_keys.add(discipline_key)
           cursor.execute("""insert into disciplines values (%s, %s, %s, %s, %s, %s)
-                    on conflict do nothing
-              """, (record.institution,
-                    record.acad_org,
-                    record.subject,
-                    record.formal_description.replace('\'', '’'),
-                    record.status,
-                    external_subject_area))
-          if args.debug:
-            print(cursor.query)
-  db.commit()
-
+                         """, (row.institution,
+                               row.acad_org,
+                               row.subject,
+                               row.formal_description.replace('\'', '’'),
+                               row.status,
+                               external_subject_area))
+db.commit()
 db.close()

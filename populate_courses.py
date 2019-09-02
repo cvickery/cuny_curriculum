@@ -15,6 +15,9 @@ import re
 from math import isclose
 from collections import namedtuple
 
+from cuny_divisions import ignore_institutions
+from cuny_departments import ignore_departments
+
 start_time = perf_counter()
 parser = argparse.ArgumentParser()
 parser.add_argument('--debug', '-d', action='store_true')
@@ -178,18 +181,14 @@ with open(cat_file, newline='') as csvfile:
       # if row[cols.index('approved')] == 'A' and \
       #    row[cols.index('schedule_course')] == 'Y':
 
-      # There be departments that are bogus and/or in which we're not interested
-      # And Journalism
-      # And Macaulay
       department = r.acad_org
       discipline = r.subject
       institution = r.institution
-      if department == 'PEES-BKL' or \
-         department == 'SOC-YRK' or \
-         department == 'JOUR-GRD' or \
-         discipline == 'JOUR' or \
-         institution == 'MHC01':
+      if institution in ignore_institutions or \
+         department in ignore_departments:
         continue
+      if discipline == 'JOUR':
+        exit('You have to ignore the JOUR discipline, too ... maybe')
       course_id = int(r.course_id)
       offer_nbr = int(r.offer_nbr)
       key = (course_id, offer_nbr)
@@ -307,8 +306,8 @@ with open(cat_file, newline='') as csvfile:
             print(cursor.query)
         except psycopg2.Error as e:
           logs.write(e.pgerror)
-          print(e.pgerror, file=sys.stderr)
           exit(e.pgerror)
+
 run_time = perf_counter() - start_time
 minutes = int(run_time / 60.)
 min_suffix = 's'

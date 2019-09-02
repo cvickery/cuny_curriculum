@@ -14,6 +14,8 @@ from psycopg2.extras import NamedTupleCursor
 db = psycopg2.connect('dbname=cuny_courses')
 cursor = db.cursor(cursor_factory=NamedTupleCursor)
 
+ignore_institutions = ['CUNY', 'UAPC1', 'MHC01']  # MHC because OUR said to for this app
+
 # Get list of known departments
 # departments = dict()
 # cursor.execute("""
@@ -47,7 +49,7 @@ with open('./latest_queries/ACADEMIC_GROUPS.csv') as csv_file:
       Row = namedtuple('Row', cols)
     else:
       row = Row._make(line)
-      if row.institution in ['MHC01', 'UAPC1']:
+      if row.institution in ignore_institutions:
         continue
       cursor.execute(f"""insert into cuny_divisions values(
                            '{row.institution}',

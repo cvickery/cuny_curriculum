@@ -26,7 +26,7 @@ from datetime import date
 import psycopg2
 from psycopg2.extras import NamedTupleCursor
 
-from cuny_divisions import ignore_institutions, bogus_departments
+from cuny_divisions import ignore_institutions
 
 import argparse
 parser = argparse.ArgumentParser()
@@ -36,6 +36,8 @@ args = parser.parse_args()
 
 db = psycopg2.connect('dbname=cuny_courses')
 cursor = db.cursor(cursor_factory=NamedTupleCursor)
+
+ignore_departments = ['PEES-BKL', 'SOC-YRK', 'JOUR-GRD']
 
 # Get list of known institutions
 cursor.execute("""
@@ -140,7 +142,7 @@ with open('./divisions_report.log', 'w') as report:
 
         # Ignore rows for known bogus departments
         department = row.acad_org
-        if department in bogus_departments:
+        if department in ignore_departments:
           continue
         # Report and ignore rows where the department is not in cuny_departments for the institution
         department_key = Department_Key._make([institution, department])
