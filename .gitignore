@@ -47,3 +47,5 @@ Icon*
 /divisions_reports/
 
 /event_dumps/
+
+/__pycache__/
