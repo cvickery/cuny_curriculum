@@ -35,7 +35,7 @@ cursor.execute('drop table if exists cuny_divisions cascade')
 cursor.execute("""create table cuny_divisions (
                     institution text references institutions,
                     division text not null,
-                    name text not null,
+                    division_name text not null,
                     status text not null,
                     effective_date date default('1901-01-01'),
                     primary key (institution, division)

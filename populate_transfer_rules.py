@@ -94,7 +94,7 @@ known_institutions = [record.code for record in cursor.fetchall()]
 # Use the disciplines table for reporting cases where the component_subject_area isn't
 # there.
 cursor.execute("""select institution, discipline
-                  from disciplines""")
+                  from cuny_disciplines""")
 valid_disciplines = [(record.institution, record.discipline)
                      for record in cursor.fetchall()]
 

@@ -1,5 +1,5 @@
 #! /usr/local/bin/python3
-# Clear and re-populate the table of internal subjects at all cuny colleges (disciplines).
+# Clear and re-populate the table of internal subjects at all cuny colleges (cuny_disciplines).
 # Clear and re-populate the table of external subject areas (cuny_subjects).
 
 import os
@@ -40,7 +40,7 @@ cursor.execute("""
                where table_name = 'subjects'""".format(extern_date, extern_file))
 
 if args.debug:
-  print('cuny_subjects.py:\n  disciplines: {}\n  cuny_subjects: {}'.format(discp_file, extern_file))
+  print(f'cuny_subjects.py:\n  cuny_disciplines: {discp_file}\n  cuny_subjects: {extern_file}')
 
 # Get list of known departments
 cursor.execute("""
@@ -54,7 +54,7 @@ cursor.execute('drop table if exists cuny_subjects cascade')
 cursor.execute("""
   create table cuny_subjects (
   subject text primary key,
-  description text
+  subject_name text
   )
   """)
 
@@ -77,14 +77,14 @@ with open(extern_file) as csvfile:
   db.commit()
 
 # Disciplines table
-cursor.execute('drop table if exists disciplines cascade')
+cursor.execute('drop table if exists cuny_disciplines cascade')
 cursor.execute(
     """
-    create table disciplines (
+    create table cuny_disciplines (
       institution text references institutions,
       department text references cuny_departments,
       discipline text,
-      description text,
+      discipline_name text,
       status text,
       cuny_subject text default 'missing' references cuny_subjects,
       primary key (institution, discipline))
@@ -103,7 +103,7 @@ missing_disciplines = [Discipline._make(x) for x in [
     ('QCC01', 'QCC01', 'ELEC', 'Temporary Discipline', 'A', 'ELEC')]]
 for discp in missing_disciplines:
   cursor.execute(f"""
-                  insert into disciplines values (
+                  insert into cuny_disciplines values (
                   '{discp.institution}',
                   '{discp.department}',
                   '{discp.discipline}',
@@ -134,7 +134,7 @@ with open(discp_file) as csvfile:
           if discipline_key in discipline_keys:
             continue
           discipline_keys.add(discipline_key)
-          cursor.execute("""insert into disciplines values (%s, %s, %s, %s, %s, %s)
+          cursor.execute("""insert into cuny_disciplines values (%s, %s, %s, %s, %s, %s)
                          """, (row.institution,
                                row.acad_org,
                                row.subject,

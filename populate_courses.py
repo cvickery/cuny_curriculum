@@ -61,7 +61,7 @@ cursor.execute('select * from institutions')
 all_colleges = [inst.code for inst in cursor.fetchall()]
 
 # Cache primary keys from the disciplines table
-cursor.execute('select institution, discipline from disciplines')
+cursor.execute('select institution, discipline from cuny_disciplines')
 discipline_keys = [(r.institution, r.discipline) for r in cursor.fetchall()]
 
 # Cache a dictionary of course requisites; key is (institution, discipline, catalog_nbr)
@@ -289,7 +289,7 @@ with open(cat_file, newline='') as csvfile:
         can_schedule = r.schedule_course
         effective_date = r.crse_catalog_effective_date
         # Report and ignore cases where the institution-discipline pair doesn’t exist in the
-        # disciplines table.
+        # cuny_disciplines table.
         if (institution, discipline) not in discipline_keys:
           logs.write(f'{discipline} is not a known discipline at {institution}\n'
                      f'  Ignoring {discipline} {catalog_number}.\n')

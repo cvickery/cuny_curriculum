@@ -35,5 +35,5 @@ CREATE TABLE courses (
   attributes text, -- semicolon-separated list of name:value pairs
   primary key (course_id, offer_nbr),
   foreign key (institution, career) references cuny_careers,
-  foreign key (institution, discipline) references disciplines
+  foreign key (institution, discipline) references cuny_disciplines
 )
