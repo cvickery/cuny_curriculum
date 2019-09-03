@@ -191,7 +191,7 @@ truncate -s0 update*.log
   # Kill any existing connections to the db
   echo -n "RESTART postgres ... " | tee -a update_psql.log
   brew services restart postgresql >> update_psql.log
-  echo -n "wait for postgres restart to complete ..." | tee -a update_psql.log
+  echo -n "wait for postgres restart to complete... " | tee -a update_psql.log
   sleep 10
   echo done. | tee -a update_psql.log
   # Do the drop
