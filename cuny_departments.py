@@ -169,8 +169,8 @@ with open('./divisions_report.log', 'w') as report:
           qualifier = 'active '
         else:
           qualifier = ''
-        report.write(f'Ignoring {department_key.department} at {department_key.institution} '
-                     f'because it has no {qualifier}courses\n')
+        report.write(f'{department_key.department} at {department_key.institution} '
+                     f'ignored because it has no {qualifier}courses\n')
         continue
       elif num_divisions == 1:
         # Counter would return empty list

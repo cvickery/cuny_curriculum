@@ -168,7 +168,9 @@ truncate -s0 update*.log
   echo "START update_db mode" | tee -a update.log
   psql access_control -c \
         "update access_control set start_time = now() where event_type = 'update_db'"
+  echo -n "WAIT for any running queries to complete ... "
   sleep 10
+  echo "done"
 
   # Save events table unless suppressed by command line
   if [[ $no_events == 1 ]]
@@ -187,7 +189,7 @@ truncate -s0 update*.log
   fi
 
   # Kill any existing connections to the db
-  echo -n "RESTART postgres ..." | tee -a update_psql.log
+  echo -n "RESTART postgres ... " | tee -a update_psql.log
   brew services restart postgresql >> update_psql.log
   echo -n "wait for postgres restart to complete ..." | tee -a update_psql.log
   sleep 10

@@ -14,7 +14,8 @@ from psycopg2.extras import NamedTupleCursor
 db = psycopg2.connect('dbname=cuny_courses')
 cursor = db.cursor(cursor_factory=NamedTupleCursor)
 
-ignore_institutions = ['CUNY', 'UAPC1', 'MHC01']  # MHC because OUR said to for this app
+# Institutions that don’t fit our model of undergraduate colleges for within-CUNY transfers.
+ignore_institutions = ['CUNY', 'UAPC1', 'MHC01']
 
 # Get list of known departments
 # departments = dict()

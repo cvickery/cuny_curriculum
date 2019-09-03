@@ -60,6 +60,10 @@ if args.debug:
 cursor.execute('select * from institutions')
 all_colleges = [inst.code for inst in cursor.fetchall()]
 
+# Cache primary keys from the disciplines table
+cursor.execute('select institution, discipline from disciplines')
+discipline_keys = [(r.institution, r.discipline) for r in cursor.fetchall()]
+
 # Cache a dictionary of course requisites; key is (institution, discipline, catalog_nbr)
 with open(req_file, newline='') as csvfile:
   req_reader = csv.reader(csvfile)
@@ -187,8 +191,6 @@ with open(cat_file, newline='') as csvfile:
       if institution in ignore_institutions or \
          department in ignore_departments:
         continue
-      if discipline == 'JOUR':
-        exit('You have to ignore the JOUR discipline, too ... maybe')
       course_id = int(r.course_id)
       offer_nbr = int(r.offer_nbr)
       key = (course_id, offer_nbr)
@@ -286,6 +288,12 @@ with open(cat_file, newline='') as csvfile:
         discipline_status = r.subject_eff_status
         can_schedule = r.schedule_course
         effective_date = r.crse_catalog_effective_date
+        # Report and ignore cases where the institution-discipline pair doesn’t exist in the
+        # disciplines table.
+        if (institution, discipline) not in discipline_keys:
+          logs.write(f'{discipline} is not a known discipline at {institution}\n'
+                     f'  Ignoring {discipline} {catalog_number}.\n')
+          continue
         try:
           cursor.execute("""insert into courses values
                             (%s, %s, %s, %s, %s,
@@ -306,7 +314,7 @@ with open(cat_file, newline='') as csvfile:
             print(cursor.query)
         except psycopg2.Error as e:
           logs.write(e.pgerror)
-          exit(e.pgerror)
+          sys.exit(e.pgerror)
 
 run_time = perf_counter() - start_time
 minutes = int(run_time / 60.)

@@ -1,3 +1,4 @@
+#! /usr/local/bin/python3
 #   Clear and re-populate the transfer_rules, source_courses, and destination_courses tables using
 #   the result of the CUNYfirst query, QNS_CV_SR_TRNS_INTERNAL_RULES.
 #
@@ -41,6 +42,8 @@ from time import perf_counter
 
 import psycopg2
 from psycopg2.extras import NamedTupleCursor
+
+from cuny_divisions import ignore_institutions
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--debug', '-d', action='store_true')
@@ -187,8 +190,11 @@ with open(cf_rules_file) as csvfile:
               end='', file=terminal)
 
       record = Record._make(line)
-      if record.source_institution == 'MHC01' or record.destination_institution == 'MHC01':
-        pass
+      if record.source_institution in ignore_institutions or \
+         record.destination_institution in ignore_institutions:
+         conflicts.write(f'Ignoring rule from {record.source_institution} to '
+                         f'{record.destination_institution}\n')
+         continue
       try:
         rule_key = Rule_Key(record.source_institution,
                             record.destination_institution,
