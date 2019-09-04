@@ -10,9 +10,6 @@
 # paired with a division in the course catalog, and pick the division that has the largest number of
 # pairings when there is more than one.
 #
-# The active-only command line option says to ignore inactive courses in "voting" for the division
-# that a department belongs to. All departments are recorded, along with their status.
-#
 # Generates a log file of anomalies found.
 
 import os
@@ -30,7 +27,6 @@ from cuny_divisions import ignore_institutions
 
 import argparse
 parser = argparse.ArgumentParser()
-parser.add_argument('--active_only', '-a', action='store_true')
 parser.add_argument('--debug', '-d', action='store_true')
 args = parser.parse_args()
 
@@ -126,12 +122,14 @@ with open('./divisions_report.log', 'w') as report:
         discipline = row.subject.strip()
 
         # If active-only, skip rows for inactive courses
-        course_status = row.crse_catalog_status
-        can_schedule = row.schedule_course
-        discipline_status = row.subject_eff_status
-        if args.active_only and \
-           (course_status != 'A' or can_schedule != 'Y' or discipline_status != 'A'):
-          continue
+        #   Option removed: it breaks cuny_subjects.py
+        #   Key (department)=(BAR01) is not present in table "cuny_departments".
+        # course_status = row.crse_catalog_status
+        # can_schedule = row.schedule_course
+        # discipline_status = row.subject_eff_status
+        # if args.active_only and \
+        #    (course_status != 'A' or can_schedule != 'Y' or discipline_status != 'A'):
+        #   continue
 
         # Report and ignore courses with unknown institution
         if institution in ignore_institutions:
