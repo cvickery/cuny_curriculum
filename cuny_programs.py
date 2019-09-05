@@ -10,8 +10,8 @@ db = psycopg2.connect('dbname=cuny_courses')
 cursor = db.cursor(cursor_factory=NamedTupleCursor)
 
 cursor.execute("""
-               drop table if exists cuny_plans;
-               create table cuny_plans (
+               drop table if exists cuny_programs;
+               create table cuny_programs (
                id serial primary key,
                nys_program_code integer,
                institution text references institutions,
@@ -37,7 +37,7 @@ with open('latest_queries/QCCV_PROG_PLAN_ORG.csv') as csvfile:
       row = Row._make(line)
       if row.nys_program_code != '' and row.nys_program_code != '0':
         cursor.execute("""
-                       insert into cuny_plans values (default, %s, %s, %s, %s, %s, %s, %s)
+                       insert into cuny_programs values (default, %s, %s, %s, %s, %s, %s, %s)
                        """, (row.nys_program_code,
                              row.institution,
                              row.academic_organization,
