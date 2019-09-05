@@ -121,7 +121,7 @@ with open('./divisions_report.log', 'w') as report:
         institution = row.institution
         discipline = row.subject.strip()
 
-        # If active-only, skip rows for inactive courses
+        # If active_only, skip rows for inactive courses
         #   Option removed: it breaks cuny_subjects.py
         #   Key (department)=(BAR01) is not present in table "cuny_departments".
         # course_status = row.crse_catalog_status
@@ -163,10 +163,9 @@ with open('./divisions_report.log', 'w') as report:
       num_divisions = len(known_departments[department_key].divisions)
       if num_divisions == 0:
         # Report and ignore departments with no courses
-        if args.active_only:
-          qualifier = 'active '
-        else:
-          qualifier = ''
+        qualifier = ''
+        # if args.active_only:
+        #   qualifier = 'active '
         report.write(f'{department_key.department} at {department_key.institution} '
                      f'ignored because it has no {qualifier}courses\n')
         continue

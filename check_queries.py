@@ -64,7 +64,7 @@ archive_dir = Path('/Users/vickery/CUNY_Courses/query_archive')
 query_names = ['QCCV_RQMNT_DESIG_TBL',
                'QNS_QCCV_CU_CATALOG_NP',
                'QNS_CV_CUNY_SUBJECT_TABLE',
-               'QCCV_ACADEMIC_PLAN_TBL',
+               'QCCV_PROG_PLAN_ORG',
                'SR742A___CRSE_ATTRIBUTE_VALUE',
                'QNS_CV_ACADEMIC_ORGANIZATIONS',
                'ACAD_SUBPLN_TBL',

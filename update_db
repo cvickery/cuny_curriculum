@@ -240,9 +240,9 @@ truncate -s0 update*.log
   echo done. | tee -a update_psql.log
 
   echo -n "CREATE academic_programs... " | tee -a update_psql.log
-  python3 populate_programs.py >> update.log 2>&1
+  python3 cuny_programs.py >> update.log 2>&1
   if [[ $? -ne 0 ]]
-    then send_notice 'ERROR: populate_programs failed'
+    then send_notice 'ERROR: cuny_programs failed'
          exit 1
   fi
   echo done. | tee -a update_psql.log
