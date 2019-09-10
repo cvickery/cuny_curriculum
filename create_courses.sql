@@ -20,9 +20,9 @@ CREATE TABLE courses (
   title text,
   short_title text,
   components jsonb,  -- array of [component, component_contact_hours]
-  contact_hours float,
-  min_credits float,
-  max_credits float,
+  contact_hours real,
+  min_credits real,
+  max_credits real,
   primary_component text,
   requisites text,
   designation text references designations,
