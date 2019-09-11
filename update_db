@@ -419,6 +419,7 @@ truncate -s0 update*.log
   echo -n "(Re-)Grant select access to view_only ROLE ..." | tee -a update_psql.log
   psql -X -q -d cuny_courses -f view_only_role.sql >> update_psql.log 2>&1
   psql -X -q -d cuny_programs -f view_only_role.sql >> update_psql.log 2>&1
+  psql -X -q -d access_control -f view_only_role.sql >> update_psql.log 2>&1
   echo done. | tee -a update_psql.log
 
   # Exit update_db mode
