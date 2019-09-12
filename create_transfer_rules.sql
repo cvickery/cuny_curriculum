@@ -13,6 +13,16 @@ create table transfer_rules (
   foreign key (source_institution) references institutions,
   foreign key (destination_institution) references institutions);
 
+drop table if exists credit_sources cascade;
+create table credit_sources (
+  value text primary key,
+  short_name text,
+  long_name text
+  );
+insert into credit_sources values ('C', 'Catalog', 'Use Catalog Units');
+insert into credit_sources values ('E', 'External', 'Specify Maximum Units');
+insert into credit_sources values ('R', 'Rule', 'Specify Fixed Units');
+
 drop table if exists source_courses cascade;
 create table source_courses (
   id serial primary key,
@@ -26,6 +36,7 @@ create table source_courses (
   cuny_subject text,
   min_credits real,
   max_credits real,
+  credits_source text references credit_sources,
   min_gpa real,
   max_gpa real);
 
@@ -41,3 +52,4 @@ create table destination_courses (
   cat_num real,         -- for display ordering
   cuny_subject text,
   transfer_credits real);
+

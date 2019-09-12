@@ -10,6 +10,11 @@
 #
 #   Note rules where the actual source course min/max credits are not in the range specified in the
 #   rule. To avoid extra course lookups later, the source_courses get the actual course min/max.
+#     Update: the query includes a “Subject Credit source” field which can have one of the following
+#     values and descriptions:
+#       C   Use Catalog Units (Catalog)
+#       E   Specify Maximum Units (External)
+#       R   Specify Fixed Units (Rule)
 #
 #   CF uses a pair of values (a string and an integer) to identify sets of related rule
 #   components. They call the string part the Component Subject Area, but it turns out to be
@@ -132,6 +137,7 @@ Source_Course = namedtuple('Source_Course', """
                            cuny_subject
                            min_credits
                            max_credits
+                           credits_source
                            min_gpa
                            max_gpa""")
 Destination_Course = namedtuple('Destination_Course', """
@@ -279,6 +285,7 @@ with open(cf_rules_file) as csvfile:
                                     course.cuny_subject,
                                     course.min_credits,
                                     course.max_credits,
+                                    record.subject_credit_source,
                                     record.min_grade_pts,
                                     record.max_grade_pts)
       rules_dict[rule_key].source_courses.add(source_course)
@@ -398,10 +405,11 @@ for rule_key in rules_dict.keys():
                                     cuny_subject,
                                     min_credits,
                                     max_credits,
+                                    credits_source,
                                     min_gpa,
                                     max_gpa
                                   )
-                                  values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                  values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                    """, (rule_id, ) + course)
 
   # Sort and insert the destination_courses
