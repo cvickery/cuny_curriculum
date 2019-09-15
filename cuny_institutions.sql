@@ -20,7 +20,7 @@ insert into institutions values ('CTY01', 'City',           'City College',     
 insert into institutions values ('GRD01', 'Graduate Center','The Graduate Center',              false, false);
 insert into institutions values ('HOS01', 'Hostos',         'Hostos Community College',         true,  false);
 insert into institutions values ('HTR01', 'Hunter',         'Hunter College',                   false, true);
-insert into institutions values ('JJC01', 'John Jay',       'John Jay College',                 true,  true);
+insert into institutions values ('JJC01', 'John Jay',       'John Jay College',                 false, true);
 insert into institutions values ('KCC01', 'Kingsborough',   'Kingsborough Community College',   true,  false);
 insert into institutions values ('LAG01', 'LaGuardia',      'LaGuardia Community College',      true,  false);
 insert into institutions values ('LAW01', 'Law School',     'CUNY School of Law',               false, false);
