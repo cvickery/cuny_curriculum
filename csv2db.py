@@ -32,11 +32,14 @@ from psycopg2.extras import NamedTupleCursor
 # Command line processing
 parser = argparse.ArgumentParser()
 parser.add_argument('--file_name', '-f', default=None)  # csv file
+parser.add_argument('--date_is_date', '-date', action='store_false')
 parser.add_argument('--db_name', '-db', default=getuser())
 parser.add_argument('--debug', '-d', action='store_true')
 parser.add_argument('--columns', '-c', action='store_true')
-parser.add_argument('--id_is_int', '-i', action='store_false')
+parser.add_argument('--id_is_int', '-id', action='store_false')
 parser.add_argument('--modulus', '-m', type=int, default=0)   # for progress reporting
+parser.add_argument('--nbr_is_int', '-nbr', action='store_false')
+parser.add_argument('--num_is_int', '-num', action='store_false')
 parser.add_argument('--primary_key', '-p', nargs='+')
 parser.add_argument('--table_name', '-t', default=None)
 args = parser.parse_args()
@@ -78,10 +81,10 @@ for line in csv_reader:
     table_def = ''
     fields = (len(cols) * '%s, ').strip(', ')
     for col in cols:
-      if col.endswith('_date'):
+      if args.date_is_date and col.endswith('_date'):
         col_type = 'date'
-      elif (col.endswith('_num')
-            or col.endswith('_nbr')
+      elif ((args.num_is_int and col.endswith('_num'))
+            or (args.nbr_is_int and col.endswith('_nbr'))
             or (args.id_is_int and col.endswith('_id'))):
         col_type = 'integer'
       else:
