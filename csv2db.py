@@ -8,8 +8,7 @@
     repeated.
 
     There are type checks for column names that end with '_date' or '_num', which will be typed as
-    date and integer respectively. All-numeric column names are also typed as numeric, although
-    that seems like a pretty weird thing to do.
+    date and integer respectively.
 
     The default database name is the user's name.
 
@@ -35,7 +34,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--file_name', '-f', default=None)  # csv file
 parser.add_argument('--db_name', '-db', default=getuser())
 parser.add_argument('--debug', '-d', action='store_true')
+parser.add_argument('--columns', '-c', action='store_true')
+parser.add_argument('--id_is_int', '-i', action='store_false')
 parser.add_argument('--modulus', '-m', type=int, default=0)   # for progress reporting
+parser.add_argument('--primary_key', '-p', nargs='+')
 parser.add_argument('--table_name', '-t', default=None)
 args = parser.parse_args()
 
@@ -69,6 +71,7 @@ for line in csv_reader:
   if args.modulus > 0 and (0 == line_num % args.modulus):
     print(f'{line_num:,}{num_lines}\r', end='')
   if cols is None:
+    # Determine the table structure from the header row.
     line[0] = line[0].replace('\ufeff', '')
     cols = [val.lower().replace(' ', '_').replace('/', '_') for val in line]
     Row = namedtuple('Row', cols)
@@ -77,17 +80,25 @@ for line in csv_reader:
     for col in cols:
       if col.endswith('_date'):
         col_type = 'date'
-      elif col.endswith('_num') or col.isnumeric():
+      elif (col.endswith('_num')
+            or col.endswith('_nbr')
+            or (args.id_is_int and col.endswith('_id'))):
         col_type = 'integer'
       else:
         col_type = 'text'
       table_def += f'{col} {col_type}, '
+    if args.primary_key:
+      table_def += f'primary key ({", ".join(args.primary_key)})'
     table_def = table_def.strip(', ')
+    if args.columns:
+      print(table_def.replace(', ', ',\n'))
+      exit()
     cursor.execute(f"""
                       drop table if exists {table_name};
                       create table {table_name} ({table_def});
                     """)
   else:
+    # Insert rows into the table
     cursor.execute(f'insert into {table_name} values ({fields})', line)
 
 # Clear the progress line
