@@ -49,3 +49,5 @@ Icon*
 /event_dumps/
 
 /__pycache__/
+
+/credit_check.sql

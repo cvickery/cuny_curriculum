@@ -24,7 +24,10 @@ parser.add_argument('--debug', '-d', action='store_true')
 parser.add_argument('--progress', '-p', action='store_true')
 args = parser.parse_args()
 
-terminal = open(os.ttyname(0), 'wt')
+try:
+  terminal = open(os.ttyname(0), 'wt')
+except OSError as e:
+  terminal = sys.stdout
 
 if args.progress:
   print('', file=terminal)
