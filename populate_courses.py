@@ -27,7 +27,8 @@ args = parser.parse_args()
 try:
   terminal = open(os.ttyname(0), 'wt')
 except OSError as e:
-  terminal = sys.stdout
+  # No progress reporting unless run from command line
+  terminal = open('/dev/null', 'wt')
 
 if args.progress:
   print('', file=terminal)

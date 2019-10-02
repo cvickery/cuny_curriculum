@@ -20,7 +20,11 @@ parser.add_argument('--debug', '-d', action='store_true')
 parser.add_argument('--progress', '-p', action='store_true')  # to stderr
 args = parser.parse_args()
 
-terminal = open(os.ttyname(0), 'wt')
+try:
+  terminal = open(os.ttyname(0), 'wt')
+except OSError as e:
+  # No progress reporting unless run from command line
+  terminal = open('/dev/null', 'wt')
 
 app_start = perf_counter()
 

@@ -56,9 +56,13 @@ parser.add_argument('--progress', '-p', action='store_true')  # to stderr
 parser.add_argument('--report', '-r', action='store_true')    # to stdout
 args = parser.parse_args()
 
-terminal = open(os.ttyname(0), 'wt')
-
 app_start = perf_counter()
+
+try:
+  terminal = open(os.ttyname(0), 'wt')
+except OSError as e:
+  # No progress reporting unless run from command line
+  terminal = open('/dev/null', 'wt')
 
 
 # mk_rule_key()
@@ -87,7 +91,7 @@ file_date = date\
 num_lines = sum(1 for line in open(cf_rules_file))
 
 if args.report:
-  print('\n  Transfer rules query file: {} {}'.format(file_date, cf_rules_file), file=terminal)
+  print('\n  Transfer rules query file: {} {}'.format(file_date, cf_rules_file))
 
 # There be some garbage institution "names" in the transfer_rules, but the app’s
 # institutions table is “definitive”.
@@ -348,7 +352,6 @@ if args.progress:
   mins = int(secs / 60)
   secs = int(secs - 60 * mins)
   print(f'\n  That took {mins} min {secs} sec.', file=terminal)
-
   print('\nStep 2/2: Populate the three tables', file=terminal)
   start_time = perf_counter()
 
@@ -447,4 +450,4 @@ if args.report:
   secs = perf_counter() - app_start
   mins = int(secs / 60)
   secs = int(secs - 60 * mins)
-  print(f'\n  Generated {num_rules:,} rules in {mins} min {secs} sec.', file=terminal)
+  print(f'\n  Generated {num_rules:,} rules in {mins} min {secs} sec.')

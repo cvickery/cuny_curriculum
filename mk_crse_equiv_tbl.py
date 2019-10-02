@@ -25,8 +25,9 @@ args = parser.parse_args()
 
 try:
   terminal = open(os.ttyname(0), 'wt')
-except OSError:
-  terminal = sys.stderr
+except OSError as e:
+  # No progress reporting unless run from command line
+  terminal = open('/dev/null', 'wt')
 
 num_rows = 0
 conn = psycopg2.connect('dbname=cuny_courses')
