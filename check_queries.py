@@ -61,21 +61,21 @@ Copacetic = namedtuple('Copacetic', 'status message')
 new_queries = Path('/Users/vickery/CUNY_Courses/queries')
 latest_queries = Path('/Users/vickery/CUNY_Courses/latest_queries/')
 archive_dir = Path('/Users/vickery/CUNY_Courses/query_archive')
-query_names = ['QCCV_RQMNT_DESIG_TBL',
-               'QNS_QCCV_CU_CATALOG_NP',
-               'QNS_CV_CUNY_SUBJECT_TABLE',
-               'QCCV_PROG_PLAN_ORG',
-               'SR742A___CRSE_ATTRIBUTE_VALUE',
-               'QNS_CV_ACADEMIC_ORGANIZATIONS',
+query_names = ['ACAD_CAREER_TBL',
                'ACAD_SUBPLN_TBL',
-               'ACAD_CAREER_TBL',
                'ACADEMIC_GROUPS',
-               'QNS_CV_CUNY_SUBJECTS',
-               'SR701____INSTITUTION_TABLE',
-               'QNS_QCCV_COURSE_ATTRIBUTES_NP',
+               'QCCV_PROG_PLAN_ORG',
+               'QCCV_RQMNT_DESIG_TBL',
+               'QNS_CV_ACADEMIC_ORGANIZATIONS',
                'QNS_CV_CRSE_EQUIV_TBL',
+               'QNS_CV_CUNY_SUBJECT_TABLE',
+               'QNS_CV_CUNY_SUBJECTS',
                'QNS_CV_SR_TRNS_INTERNAL_RULES',
-               'QNS_QCCV_CU_REQUISITES_NP']
+               'QNS_QCCV_COURSE_ATTRIBUTES_NP',
+               'QNS_QCCV_CU_CATALOG_NP',
+               'QNS_QCCV_CU_REQUISITES_NP',
+               'SR701____INSTITUTION_TABLE',
+               'SR742A___CRSE_ATTRIBUTE_VALUE']
 
 if is_copacetic().status:
   print(is_copacetic().message)
