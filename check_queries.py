@@ -49,6 +49,7 @@ def is_copacetic():
 parser = argparse.ArgumentParser()
 parser.add_argument('-v', '--verbose', action='store_true')
 parser.add_argument('-d', '--debug', action='store_true')
+parser.add_argument('-l', '--list', action='store_true')
 parser.add_argument('-sd', '--skip_date_check', action='store_true')
 parser.add_argument('-ss', '--skip_size_check', action='store_true')
 parser.add_argument('-sa', '--skip_archive', action='store_true')
@@ -76,6 +77,10 @@ query_names = ['ACAD_CAREER_TBL',
                'QNS_QCCV_CU_REQUISITES_NP',
                'SR701____INSTITUTION_TABLE',
                'SR742A___CRSE_ATTRIBUTE_VALUE']
+
+if args.list:
+  for query_name in query_names:
+    print(query_name)
 
 if is_copacetic().status:
   print(is_copacetic().message)
