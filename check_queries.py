@@ -81,6 +81,7 @@ query_names = ['ACAD_CAREER_TBL',
 if args.list:
   for query_name in query_names:
     print(query_name)
+  exit()
 
 if is_copacetic().status:
   print(is_copacetic().message)
