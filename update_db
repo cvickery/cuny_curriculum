@@ -360,7 +360,6 @@ truncate -s0 update*.log
   fi
   echo done. | tee -a update.log
 
-
   # The following takes too long, and doesn't really do more than
   # populate_transfer_rules.py already did. Historical Artifact.
   # echo -n "CHECK bogus rules... " | tee -a update.log
@@ -371,13 +370,14 @@ truncate -s0 update*.log
   # echo done.
 
   # Managing the rule review process
-  echo -n "CREATE TABLE sessions... " | tee -a update_psql.log
-  psql -X -q -d cuny_courses -f sessions.sql >> update_psql.log 2>&1
-  if [ $? -ne 0 ]
-    then send_notice 'ERROR: sessions failed'
-         exit 1
-  fi
-  echo done. | tee -a update_psql.log
+  #    2019-10-5: using Flask redis sessions instead of mysession
+  # echo -n "CREATE TABLE sessions... " | tee -a update_psql.log
+  # psql -X -q -d cuny_courses -f sessions.sql >> update_psql.log 2>&1
+  # if [ $? -ne 0 ]
+  #   then send_notice 'ERROR: sessions failed'
+  #        exit 1
+  # fi
+  # echo done. | tee -a update_psql.log
 
   #echo CREATE TABLE pending_reviews...
   #echo CREATE TABLE event_types...
