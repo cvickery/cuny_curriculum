@@ -7,6 +7,8 @@
      * Some queries have been coming in truncated. This utility checks the files in queries for
        emptyness and compares sizes with the corresponding files in latest_queries for size
        differences of 10% or more.
+     * Sometimes there will be multiple copies of a query. If they are the same size, this utility
+       discards all but the newest.
     The idea is that if this programs completes normally, queries will be empty; latest_queries will
     contain all the latest queries, with the same dates and assured size correctness; and all
     previous queries will have been archived. Otherwise, nothing will be changed from the way things
@@ -62,6 +64,9 @@ Copacetic = namedtuple('Copacetic', 'status message')
 new_queries = Path('/Users/vickery/CUNY_Courses/queries')
 latest_queries = Path('/Users/vickery/CUNY_Courses/latest_queries/')
 archive_dir = Path('/Users/vickery/CUNY_Courses/query_archive')
+
+# This is the definitive list of queries used by the project. The check_references.sh script
+# uses this list to be sure each one is referenced by a Python script.
 query_names = ['ACAD_CAREER_TBL',
                'ACAD_SUBPLN_TBL',
                'ACADEMIC_GROUPS',
@@ -78,6 +83,7 @@ query_names = ['ACAD_CAREER_TBL',
                'SR701____INSTITUTION_TABLE',
                'SR742A___CRSE_ATTRIBUTE_VALUE']
 
+# The list option is used by check_references.sh to get a copy of the query names.
 if args.list:
   for query_name in query_names:
     print(query_name)
@@ -101,40 +107,70 @@ if not args.skip_date_check:
     if args.verbose:
       print(new_query.name, 'date ok', file=sys.stderr)
 
-# There has to be one new query for each previous query, and the sizes must not differ by more than
-# 10%
-for previous_query in latest_queries.glob('*.csv'):
-  new_query = [q for q in new_queries.glob(f'{previous_query.stem}*.csv')]
-  if len(new_query) == 0:
-    exit(f'No new query for {previous_query.name}')
-  assert len(new_query) == 1, f'{len(new_query)} matches for {previous_query.name}'
-  new_query = new_query[0]
+# There has to be one new query for each required query, and its size must not differ by more than
+# 10% from the corresponding latest_query. Missing latest queries are ignored.
+for query_name in query_names:
+  target_query = Path(latest_queries, query_name + '.csv')
+  target_size = target_query.stat().st_size
+  new_instances = [q for q in new_queries.glob(f'{query_name}*.csv')]
+  new_query = None
+  if len(new_instances) == 0:
+    exit(f'No new query for {query_name}')
+  if len(new_instances) > 1:
+    # Multiple copies; look at sizes and dates. If size test fails, discard the instance.
+    if not args.skip_size_check:
+      for query in new_queries:
+        if query.stat().st_size == 0:
+          print(f'Deleting {query.name} because it is empty. ', file=sys.stderr)
+          query.unlink()
+          new_instances.delete(query)
+        if abs(target_size - new_size) > 0.1 * target_size:
+          print(f'Deleting {query.name} because its size ({new_size}) is not within 10% of the '
+                f'previous query’s size ({target_size})', file=sys.stderr)
+          query_unlink()
+          new_instances.delete(query)
+
+  # Remove all but newest
+  if len(new_queries) > 0:
+    new_query = new_queries.pop()
+    new_timestamp = new_query.stat().st_mtime
+    for query in new_queries:
+      if query.stat().st_mtime > new_timestamp:
+        print(f'Deleting {new_query.name} because there is a newer one.')
+        new_query.unlink()
+        new_query = query
+        new_time_stamp = new_query.stat.st_mtime
+      else:
+        print(f'Deleting {query.name} because there is a newer one.')
+        query.unlink()
+  if new_query is None:
+    exit(f'No valid query file found for {query_name}')
   if args.debug:
     print(f'found new query: {new_query.name}', file=sys.stderr)
 
   # Size check (unless suppressed)
   if not args.skip_size_check:
-    previous_size = previous_query.stat().st_size
     new_size = new_query.stat().st_size
     if new_size == 0:
       exit(f'{new_query.name} has zero bytes')
-    if abs(previous_size - new_size) > 0.1 * previous_size:
+    if abs(target_size - new_size) > 0.1 * target_size:
       exit('{} ({}) differs from {} ({}) by more than 10%'
-           .format(new_query.name, new_size, previous_query.name, previous_size))
+           .format(new_query.name, new_size, target_query.name, previous_size))
     if args.verbose:
-      print(f'{new_query.name} size compares favorably to {previous_query.name}', file=sys.stderr)
+      print(f'{new_query.name} size compares favorably to {target_query.name}', file=sys.stderr)
 
 # Sizes and dates did not cause a problem: do Archive (unless suppressed)
 if not args.skip_archive:
   # move each query in latest_queries to query_archive, with stem appended with its new_mod_date
   prev_mod_date = None
-  for previous_query in [q for q in latest_queries.glob('*.csv')]:
+  for target_query in [q for q in latest_queries.glob('*')]:
     if prev_mod_date is None:
-      prev_mod_date = date.fromtimestamp(previous_query.stat().st_mtime).strftime('%Y-%m-%d')
-    previous_query.rename(archive_dir / f'{previous_query.stem}_{prev_mod_date}.csv')
+      prev_mod_date = date.fromtimestamp(target_query.stat().st_mtime).strftime('%Y-%m-%d')
+    target_query.rename(archive_dir / f'{target_query.stem}_{prev_mod_date}.csv')
     if args.verbose:
-      print(f'{previous_query} moved to {archive_dir}/{previous_query.stem}_{prev_mod_date}.csv',
+      print(f'{target_query} moved to {archive_dir}/{target_query.stem}_{prev_mod_date}.csv',
             file=sys.stderr)
+
   # move each query in queries to latest_queries with process_id removed from its stem
   for new_query in [q for q in new_queries.glob('*')]:
     new_query.rename(latest_queries / f'{new_query.stem.strip("0123456789-")}.csv')
