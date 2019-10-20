@@ -29,9 +29,11 @@ def is_copacetic():
       * new_queries folder contains .csv files
       * not all queries are in the latest_queries folder and/or the ones there have different dates.
   """
-  # Check dates of latest_queries
+  # Check that all the dates of the latest_queries are the same
   latest_query_date = None
   for latest_query in [latest_queries / (query_name + '.csv') for query_name in query_names]:
+    if not latest_query.exists():
+      return Copacetic(False, f'No csv file for {latest_query}. (Others may be missing too.)')
     if latest_query_date is None:
       latest_query_date = date.fromtimestamp(latest_query.stat().st_mtime).strftime('%Y-%m-%d')
     this_query_date = date.fromtimestamp(latest_query.stat().st_mtime).strftime('%Y-%m-%d')
@@ -111,65 +113,93 @@ if not args.skip_date_check:
 # 10% from the corresponding latest_query. Missing latest queries are ignored.
 for query_name in query_names:
   target_query = Path(latest_queries, query_name + '.csv')
-  target_size = target_query.stat().st_size
+  if target_query.exists():
+    target_size = target_query.stat().st_size
+  else:
+    target_size = None
   new_instances = [q for q in new_queries.glob(f'{query_name}*.csv')]
-  new_query = None
+  newest_query = None
   if len(new_instances) == 0:
     exit(f'No new query for {query_name}')
   if len(new_instances) > 1:
-    # Multiple copies; look at sizes and dates. If size test fails, discard the instance.
+    # Multiple copies; look at sizes. If size test fails, discard the instance.
     if not args.skip_size_check:
-      for query in new_queries:
-        if query.stat().st_size == 0:
-          print(f'Deleting {query.name} because it is empty. ', file=sys.stderr)
+      for query in new_instances:
+        newest_size = query.stat().st_size
+        if newest_size == 0:
+          print(f'ALERT: Deleting {query.name} because it is empty. ', file=sys.stderr)
           query.unlink()
-          new_instances.delete(query)
-        if abs(target_size - new_size) > 0.1 * target_size:
-          print(f'Deleting {query.name} because its size ({new_size}) is not within 10% of the '
-                f'previous query’s size ({target_size})', file=sys.stderr)
-          query_unlink()
-          new_instances.delete(query)
+          new_instances.remove(query)
+        elif target_size is not None and abs(target_size - newest_size) > 0.1 * target_size:
+          print(f'ALERT: Deleting {query.name} because its size ({newest_size}) is not within 10% '
+                f'of the previous query’s size ({target_size:,})', file=sys.stderr)
+          query.unlink()
+          new_instances.remove(query)
 
-  # Remove all but newest
-  if len(new_queries) > 0:
-    new_query = new_queries.pop()
-    new_timestamp = new_query.stat().st_mtime
-    for query in new_queries:
-      if query.stat().st_mtime > new_timestamp:
-        print(f'Deleting {new_query.name} because there is a newer one.')
-        new_query.unlink()
-        new_query = query
-        new_time_stamp = new_query.stat.st_mtime
+  # Remove all but newest new_instance
+  if len(new_instances) > 0:
+    newest_query = new_instances.pop()
+    newest_timestamp = newest_query.stat().st_mtime
+    for query in new_instances:
+      if query.stat().st_mtime > newest_timestamp:
+        # This one is newer, so get rid of the previous "newest" one, and replace it with this
+        print(f'ALERT: Deleting {newest_query.name} because there is a newer one.', file=sys.stderr)
+        newest_query.unlink()
+        newest_query = query
+        newest_time_stamp = newest_query.stat().st_mtime
       else:
-        print(f'Deleting {query.name} because there is a newer one.')
+        # This one is older, so just get rid of it
+        print(f'ALERT: Deleting {query.name} because there is a newer one.', file=sys.stderr)
         query.unlink()
-  if new_query is None:
+  if newest_query is None:
     exit(f'No valid query file found for {query_name}')
   if args.debug:
-    print(f'found new query: {new_query.name}', file=sys.stderr)
+    print(f'found new query: {newest_query.name}', file=sys.stderr)
 
   # Size check (unless suppressed)
   if not args.skip_size_check:
-    new_size = new_query.stat().st_size
-    if new_size == 0:
-      exit(f'{new_query.name} has zero bytes')
-    if abs(target_size - new_size) > 0.1 * target_size:
-      exit('{} ({}) differs from {} ({}) by more than 10%'
-           .format(new_query.name, new_size, target_query.name, previous_size))
+    newest_size = newest_query.stat().st_size
+    if newest_size == 0:
+      exit(f'{newest_query.name} has zero bytes')
+    if target_size is not None and abs(target_size - newest_size) > 0.1 * target_size:
+      exit(f'{newest_query.name} ({newest_size}) differs from {target_query.name} ({target_size}) '
+           'by more than 10%')
     if args.verbose:
-      print(f'{new_query.name} size compares favorably to {target_query.name}', file=sys.stderr)
+      if target_size is not None:
+        print(f'{newest_query.name} size compares favorably to {target_query.name}',
+              file=sys.stderr)
+      else:
+        print(f'{newest_query.name} has {newest_size:,} bytes.')
 
 # Sizes and dates did not cause a problem: do Archive (unless suppressed)
 if not args.skip_archive:
-  # move each query in latest_queries to query_archive, with stem appended with its new_mod_date
+
+  # move each query from latest_queries to query_archive, with stem appended with its new_mod_date
   prev_mod_date = None
-  for target_query in [q for q in latest_queries.glob('*')]:
-    if prev_mod_date is None:
-      prev_mod_date = date.fromtimestamp(target_query.stat().st_mtime).strftime('%Y-%m-%d')
-    target_query.rename(archive_dir / f'{target_query.stem}_{prev_mod_date}.csv')
-    if args.verbose:
-      print(f'{target_query} moved to {archive_dir}/{target_query.stem}_{prev_mod_date}.csv',
-            file=sys.stderr)
+  for target_query in [Path('latest_queries', f'{q}.csv') for q in query_names]:
+    if target_query.exists():
+      if prev_mod_date is None:
+        prev_mod_date = date.fromtimestamp(target_query.stat().st_mtime).strftime('%Y-%m-%d')
+      target_query.rename(archive_dir / f'{target_query.stem}_{prev_mod_date}.csv')
+      if args.verbose:
+        print(f'{target_query} moved to {archive_dir}/{target_query.stem}_{prev_mod_date}.csv',
+              file=sys.stderr)
+    else:
+      print(f'ALERT: Unable to archive {target_query} because it does not exist', file=sys.stderr)
+
+  # latest_queries should now be empty
+  remnants = [q.name for q in latest_queries.glob('*')]
+  try:
+    remnants.remove('.DS_Store')
+  except ValueError as e:
+    pass
+  if len(remnants) != 0:
+    if len(remnants) == 1:
+      suffix = ''
+    else:
+      suffix = 's'
+    print(f'WARNING: Stray file{suffix} found in latest_queries: '
+          f'{", ".join(remnants)}', file=sys.stderr)
 
   # move each query in queries to latest_queries with process_id removed from its stem
   for new_query in [q for q in new_queries.glob('*')]:
