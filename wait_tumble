@@ -1,0 +1,34 @@
+#! /usr/local/bin/bash
+
+# Wait until one or more files with names matching pattern (default, CV) shows up in tumbleweed.
+#
+# Used when a query has to be rescheduled manually before re-running update_db because of an earlier
+# failure.
+#
+# Use -p to ask for a pop-up at the end.
+
+pattern=CV
+pop_up='no'
+
+while [[ $# > 0 ]]
+do
+  case $1 in
+    -p) pop_up='yes' ;;
+     *) pattern=$1 ;;
+  esac
+  shift
+done
+echo looking for $pattern
+let minutes=0
+suffix=''
+while [[ `lftp -f ~/.tumblerc |ack $pattern > /dev/null; echo $?` != '0' ]]
+do sleep 60
+   let $(( minutes += 1 ))
+   echo looking for $pattern for $minutes minute$suffix
+   suffix='s'
+done
+echo ready
+if [[ $pop_up == 'yes' ]]
+then
+  osascript -e 'display alert "Ready"' > /dev/null
+fi
