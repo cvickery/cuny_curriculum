@@ -52,9 +52,10 @@ def if_copacetic():
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-v', '--verbose', action='store_true')
-parser.add_argument('-c', '--count', action='store_true')
+parser.add_argument('-c', '--cleanup', action='store_true')
 parser.add_argument('-d', '--debug', action='store_true')
 parser.add_argument('-l', '--list', action='store_true')
+parser.add_argument('-n', '--num_queries', action='store_true')
 parser.add_argument('-sd', '--skip_date_check', action='store_true')
 parser.add_argument('-ss', '--skip_size_check', action='store_true')
 parser.add_argument('-sa', '--skip_archive', action='store_true')
@@ -90,7 +91,7 @@ query_names = ['ACAD_CAREER_TBL',
 if args.list:
   for query_name in query_names:
     print(query_name)
-  if args.count:
+  if args.num_queries:
     print(f'{len(query_names)} queries')
   exit()
 
@@ -135,6 +136,9 @@ for query_name in query_names:
         elif target_size is not None and abs(target_size - newest_size) > 0.1 * target_size:
           print(f'ALERT: Ignoring {query.name} because its size ({newest_size}) is not within 10% '
                 f'of the previous query’s size ({target_size:,})', file=sys.stderr)
+          if args.cleanup:
+            print(f'CLEANUP: deleting {query.name}')
+            query.unlink()
           new_instances.remove(query)
 
   # Remove all but newest new_instance
@@ -199,6 +203,10 @@ if not args.skip_archive:
       suffix = 's'
     print(f'WARNING: Stray file{suffix} found in latest_queries: '
           f'{", ".join(remnants)}', file=sys.stderr)
+    if args.cleanup:
+      for file in remnants:
+        print(f'CLEANUP: deleting {file}')
+        Path(file).unlink()
 
   # move each query in queries to latest_queries with process_id removed from its stem
   for new_query in [q for q in new_queries.glob('*')]:
