@@ -202,8 +202,9 @@ if not args.skip_archive:
           f'{", ".join(remnants)}', file=sys.stderr)
 
   # move each query in queries to latest_queries with process_id removed from its stem
-  for new_query in [q for q in new_queries.glob('*')]:
-    new_query.rename(latest_queries / f'{new_query.stem.strip("0123456789-")}.csv')
+  for new_query in query_names:
+    query = Path(new_query)
+    query.rename(latest_queries / f'{query.stem.strip("0123456789-")}.csv')
 
 # Confirm that everything is copacetic
 if is_copacetic().status:
