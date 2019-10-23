@@ -22,8 +22,8 @@ from collections import namedtuple
 import argparse
 
 
-def is_copacetic():
-  """ Checks that everything is copascetic. If true before running, there is nothing to do.
+def if_copacetic():
+  """ Checks if everything is copascetic. If true before running, there is nothing to do.
       If not true at any other time, it’s an error condition.
       Possible reasons for failure:
       * new_queries folder contains .csv files
@@ -52,8 +52,10 @@ def is_copacetic():
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-v', '--verbose', action='store_true')
+parser.add_argument('-c', '--cleanup', action='store_true')
 parser.add_argument('-d', '--debug', action='store_true')
 parser.add_argument('-l', '--list', action='store_true')
+parser.add_argument('-n', '--num_queries', action='store_true')
 parser.add_argument('-sd', '--skip_date_check', action='store_true')
 parser.add_argument('-ss', '--skip_size_check', action='store_true')
 parser.add_argument('-sa', '--skip_archive', action='store_true')
@@ -89,13 +91,14 @@ query_names = ['ACAD_CAREER_TBL',
 if args.list:
   for query_name in query_names:
     print(query_name)
+  if args.num_queries:
+    print(f'{len(query_names)} queries')
   exit()
 
-if is_copacetic().status:
-  print(is_copacetic().message)
+is_copacetic = if_copacetic()
+print(f'Query Check pre: {is_copacetic.message}', file=sys.stderr)
+if is_copacetic.status:
   exit(0)
-if args.verbose:
-  print(f'Precondition: {is_copacetic().message}')
 
 # All new_queries must have the same modification date (unless suppressed)
 new_mod_date = None
@@ -131,9 +134,11 @@ for query_name in query_names:
           query.unlink()
           new_instances.remove(query)
         elif target_size is not None and abs(target_size - newest_size) > 0.1 * target_size:
-          print(f'ALERT: Deleting {query.name} because its size ({newest_size}) is not within 10% '
+          print(f'ALERT: Ignoring {query.name} because its size ({newest_size}) is not within 10% '
                 f'of the previous query’s size ({target_size:,})', file=sys.stderr)
-          query.unlink()
+          if args.cleanup:
+            print(f'CLEANUP: deleting {query.name}')
+            query.unlink()
           new_instances.remove(query)
 
   # Remove all but newest new_instance
@@ -143,14 +148,12 @@ for query_name in query_names:
     for query in new_instances:
       if query.stat().st_mtime > newest_timestamp:
         # This one is newer, so get rid of the previous "newest" one, and replace it with this
-        print(f'ALERT: Deleting {newest_query.name} because there is a newer one.', file=sys.stderr)
-        newest_query.unlink()
+        print(f'ALERT: Ignoring {newest_query.name} because there is a newer one.', file=sys.stderr)
         newest_query = query
         newest_time_stamp = newest_query.stat().st_mtime
       else:
         # This one is older, so just get rid of it
-        print(f'ALERT: Deleting {query.name} because there is a newer one.', file=sys.stderr)
-        query.unlink()
+        print(f'ALERT: Ignoring {query.name} because there is a newer one.', file=sys.stderr)
   if newest_query is None:
     exit(f'No valid query file found for {query_name}')
   if args.debug:
@@ -200,6 +203,10 @@ if not args.skip_archive:
       suffix = 's'
     print(f'WARNING: Stray file{suffix} found in latest_queries: '
           f'{", ".join(remnants)}', file=sys.stderr)
+    if args.cleanup:
+      for file in remnants:
+        print(f'CLEANUP: deleting {file}')
+        Path(file).unlink()
 
   # move each query in queries to latest_queries with process_id removed from its stem
   for new_query in query_names:
@@ -207,6 +214,8 @@ if not args.skip_archive:
     query.rename(latest_queries / f'{query.stem.strip("0123456789-")}.csv')
 
 # Confirm that everything is copacetic
-if is_copacetic().status:
+is_copacetic = if_copacetic()
+print(f'Query Check post: {is_copacetic.message}', file=sys.stderr)
+if is_copacetic.status:
   exit(0)
-exit(is_copacetic().message)
+exit(1)
