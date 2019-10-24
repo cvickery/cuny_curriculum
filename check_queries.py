@@ -22,32 +22,46 @@ from collections import namedtuple
 import argparse
 
 
-def if_copacetic():
+def if_copacetic(pre=True):
   """ Checks if everything is copascetic. If true before running, there is nothing to do.
-      If not true at any other time, it’s an error condition.
+      If not true after running, it’s an error condition.
       Possible reasons for failure:
       * new_queries folder contains .csv files
       * not all queries are in the latest_queries folder and/or the ones there have different dates.
   """
+  if pre:
+    new_old = 'New query'
+  else:
+    new_old = 'UNUSED QUERY'
+
+  messages = []
   # Check that all the dates of the latest_queries are the same
   latest_query_date = None
   for latest_query in [latest_queries / (query_name + '.csv') for query_name in query_names]:
     if not latest_query.exists():
-      return Copacetic(False, f'No csv file for {latest_query}. (Others may be missing too.)')
-    if latest_query_date is None:
-      latest_query_date = date.fromtimestamp(latest_query.stat().st_mtime).strftime('%Y-%m-%d')
-    this_query_date = date.fromtimestamp(latest_query.stat().st_mtime).strftime('%Y-%m-%d')
-    if this_query_date != latest_query_date:
-      return Copacetic(False, f'Bad query date ({this_query_date}) for {latest_query}.')
+      messages.append(f'No csv file for {latest_query}.')
+    else:
+      if latest_query_date is None:
+        latest_query_date = date.fromtimestamp(latest_query.stat().st_mtime).strftime('%Y-%m-%d')
+      this_query_date = date.fromtimestamp(latest_query.stat().st_mtime).strftime('%Y-%m-%d')
+      if this_query_date != latest_query_date:
+        messages.append(f'Bad query date ({this_query_date}) for {latest_query}.')
 
   # Check that new_queries is empty (of .csv files)
-  num_new = len([f for f in new_queries.glob('*.csv')])
+  new_list = [f for f in new_queries.glob('*.csv')]
+  num_new = len(new_list)
   if num_new != 0:
     if num_new == 1:
-      return Copacetic(False, 'There is one new query.')
-    return Copacetic(False, f'There are {num_new} new queries.')
+      messages.append('There is one new query.')
+    else:
+      messages.append(f'There are {num_new} new queries.')
+    for f in new_list:
+      messages.append(f'{new_old}: {f}')
 
-  return Copacetic(True, 'All queries present and accounted for.')
+  if len(messages) == 0:
+    return Copacetic(True, 'All queries present and accounted for.')
+  else:
+    return Copacetic(False, '\n'.join(messages))
 
 
 parser = argparse.ArgumentParser()
@@ -95,7 +109,7 @@ if args.list:
     print(f'{len(query_names)} queries')
   exit()
 
-is_copacetic = if_copacetic()
+is_copacetic = if_copacetic(pre=True)
 print(f'Query Check pre: {is_copacetic.message}', file=sys.stderr)
 if is_copacetic.status:
   exit(0)
@@ -210,11 +224,11 @@ if not args.skip_archive:
 
   # move each query in queries to latest_queries with process_id removed from its stem
   for new_query in query_names:
-    query = Path(new_query)
+    query = [q for q in Path('queries').glob(f'{new_query}*')][0]
     query.rename(latest_queries / f'{query.stem.strip("0123456789-")}.csv')
 
 # Confirm that everything is copacetic
-is_copacetic = if_copacetic()
+is_copacetic = if_copacetic(pre=False)
 print(f'Query Check post: {is_copacetic.message}', file=sys.stderr)
 if is_copacetic.status:
   exit(0)
