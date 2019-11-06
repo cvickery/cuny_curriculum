@@ -24,25 +24,25 @@ import argparse
 
 # This is the definitive list of queries used by the project. The check_references.sh script
 # uses this list to be sure each one is referenced by a Python script.
-query_names = ['ACAD_CAREER_TBL',
-               'ACAD_SUBPLN_TBL',
-               'ACADEMIC_GROUPS',
-               'QCCV_PROG_PLAN_ORG',
-               'QCCV_RQMNT_DESIG_TBL',
-               'QNS_CV_ACADEMIC_ORGANIZATIONS',
-               'QNS_CV_CRSE_EQUIV_TBL',
-               'QNS_CV_CUNY_SUBJECT_TABLE',
-               'QNS_CV_CUNY_SUBJECTS',
-               'QNS_CV_SR_TRNS_INTERNAL_RULES',
-               'QNS_QCCV_COURSE_ATTRIBUTES_NP',
-               'QNS_QCCV_CU_CATALOG_NP',
-               'QNS_QCCV_CU_REQUISITES_NP',
-               'SR701____INSTITUTION_TABLE',
-               'SR742A___CRSE_ATTRIBUTE_VALUE']
+required_query_names = ['ACAD_CAREER_TBL',
+                        'ACAD_SUBPLN_TBL',
+                        'ACADEMIC_GROUPS',
+                        'QCCV_PROG_PLAN_ORG',
+                        'QCCV_RQMNT_DESIG_TBL',
+                        'QNS_CV_ACADEMIC_ORGANIZATIONS',
+                        'QNS_CV_CRSE_EQUIV_TBL',
+                        'QNS_CV_CUNY_SUBJECT_TABLE',
+                        'QNS_CV_CUNY_SUBJECTS',
+                        'QNS_CV_SR_TRNS_INTERNAL_RULES',
+                        'QNS_QCCV_COURSE_ATTRIBUTES_NP',
+                        'QNS_QCCV_CU_CATALOG_NP',
+                        'QNS_QCCV_CU_REQUISITES_NP',
+                        'SR701____INSTITUTION_TABLE',
+                        'SR742A___CRSE_ATTRIBUTE_VALUE']
 
 Copacetic = namedtuple('Copacetic', 'notices stops')
 new_queries_dir = Path('/Users/vickery/CUNY_Courses/queries')
-latest_queries_dir = Path('/Users/vickery/CUNY_Courses/latest_queries_dir/')
+latest_queries_dir = Path('/Users/vickery/CUNY_Courses/latest_queries/')
 archive_dir = Path('/Users/vickery/CUNY_Courses/query_archive')
 
 
@@ -70,12 +70,17 @@ def if_copacetic():
   stops = []
 
   # Check the latest queries folder
-  latest_queries = [f for f in latest_queries_dir.glob('*')]
+  latest_queries = [f for f in latest_queries_dir.glob('*') if f.name != '.DS_Store']
   # Check that all the dates of the latest_queries_dir are the same
   latest_query_date = None
-  for latest_query in [latest_queries_dir / (query_name + '.csv') for query_name in query_names]:
+  for latest_query in [latest_queries_dir / (query_name + '.csv')
+                       for query_name
+                       in required_query_names]:
     try:
-      latest_queries.remove(latest_query.name)
+      # If this file is a required query, remove it from the list of files found in latest_queries.
+      # At the end of this loop, any files remaining in the list are stray files, not required
+      # queries
+      latest_queries.remove(latest_query)
     except ValueError as ve:
       pass
     if not latest_query.exists():
@@ -90,26 +95,29 @@ def if_copacetic():
     notices.append(f'NOTICE: stray file in latest_queries: {file}')
 
   # Check the new queries folder
-  new_queries = [f for f in new_queries_dir.glob('*')]
+  new_queries = [Path(f) for f in new_queries_dir.glob('*') if f.name != '.DS_Store']
   num_new = len(new_queries)
-  if num_new != 0:
-    if num_new == 1:
-      notices.append('There is one new query file.')
-    else:
-      notices.append(f'There are {num_new} new query files.')
+  if num_new == 0:
+    notices.append('The queries folder is empty')
+  elif num_new == 1:
+    notices.append('There is one file in the queries folder.')
+  else:
+    notices.append(f'There are {num_new} files in the queries folder.')
 
-    #  Stop if new file is a required query file and is newer than corresponding latest query file
-    #  Note if new file is a not required query file
-    for f in new_queries:
-      query_name = f.strip('.csv').strip('0123456789')
-      if query_name in query_names:
-        # check this date against corresponding entry in latest_queries
-        new_date = f.stat().st_mtime
-        latest_query = latest_queries_dir / (query_name + '.csv')
-        if latest_query.stat().st_mtime < new_date:
-          stops.append(f'queries/{latest_query.name} is newer than latest_queries')
-      else:
-        notices.append(f'NOTICE: stray file in queries {f}')
+  #  Stop if a new file is a required query file and is newer than corresponding latest query file
+  #  Note if a new file is not a required query file
+  for f in new_queries:
+    query_name = f.stem.strip('-0123456789')
+    if query_name == '.DS_Store':
+      continue
+    if query_name in required_query_names:
+      # check this date against corresponding entry in latest_queries
+      new_date = f.stat().st_mtime
+      latest_query = latest_queries_dir / (query_name + '.csv')
+      if latest_query.exists() and latest_query.stat().st_mtime < new_date:
+        stops.append(f'queries/{latest_query.name} is newer than latest_queries')
+    else:
+      notices.append(f'NOTICE: stray file in queries {f}')
 
   return Copacetic(notices, stops)
 
@@ -131,10 +139,10 @@ if args.debug:
 
 # The list option is used by check_references.sh to get a copy of the query names.
 if args.list:
-  for query_name in query_names:
+  for query_name in required_query_names:
     print(query_name)
   if args.num_queries:
-    print(f'{len(query_names)} queries')
+    print(f'{len(required_query_names)} queries')
   exit()
 
 # Precheck: is there anything to check
@@ -142,8 +150,8 @@ is_copacetic = if_copacetic()
 if len(is_copacetic.stops) == 0:
   for notice in is_copacetic.notices:
     print(f'{notice}', file=sys.stderr)
-    print('Copacetic Precheck OK', file=sys.stderr)
-    exit(0)
+  print('Copacetic Precheck OK', file=sys.stderr)
+  exit(0)
 
 # All new_queries_dir csv files must have the same modification date (unless suppressed)
 new_mod_date = None
@@ -153,13 +161,19 @@ if not args.skip_date_check:
     if new_mod_date is None:
       new_mod_date = new_date
     if new_date != new_mod_date:
-      exit(f'File date problem for {new_query.name}. Expected {new_mod_date}, but got {new_date}.')
-    if args.verbose:
-      print(new_query.name, 'date ok', file=sys.stderr)
+      # This is a stop if the file is required, but just a notice if it is not
+      if new_query.stem.strip('-123456789') in required_query_names:
+        exit(f'File date problem for {new_query.name}. '
+             f'Expected {new_mod_date}, but got {new_date}.')
+      else:
+        print(f'ALERT stray new csv file with mis-matched date: {new_query.name}')
+    else:
+      if args.verbose:
+        print(new_query.name, 'date ok', file=sys.stderr)
 
 # There has to be one new query for each required query, and its size must not differ by more than
 # 10% from the corresponding latest_query. Missing latest queries are ignored.
-for query_name in query_names:
+for query_name in required_query_names:
   target_query = Path(latest_queries_dir, query_name + '.csv')
   if target_query.exists():
     target_size = target_query.stat().st_size
@@ -193,7 +207,8 @@ for query_name in query_names:
     for query in new_instances:
       if query.stat().st_mtime > newest_timestamp:
         # This one is newer, so get rid of the previous "newest" one, and replace it with this
-        print(f'NOTICE: Ignoring {newest_query.name} because there is a newer one.', file=sys.stderr)
+        print(f'NOTICE: Ignoring {newest_query.name} because there is a newer one.',
+              file=sys.stderr)
         newest_query = query
         newest_time_stamp = newest_query.stat().st_mtime
       else:
@@ -221,11 +236,10 @@ for query_name in query_names:
 
 # Sizes and dates did not cause a problem: do Archive (unless suppressed)
 if not args.skip_archive:
-
-  # move each query from latest_queries_dir to query_archive, with stem appended with its
+  # move each query from latest_queries to query_archive, with stem appended with its
   # new_mod_date
   prev_mod_date = None
-  for target_query in [Path('latest_queries_dir', f'{q}.csv') for q in query_names]:
+  for target_query in [Path(latest_queries_dir, f'{q}.csv') for q in required_query_names]:
     if target_query.exists():
       if prev_mod_date is None:
         prev_mod_date = date.fromtimestamp(target_query.stat().st_mtime).strftime('%Y-%m-%d')
@@ -255,16 +269,16 @@ if not args.skip_archive:
         Path(file).unlink()
 
   # move each query in queries to latest_queries_dir with process_id removed from its stem
-  for new_query in query_names:
+  for new_query in required_query_names:
     query = [q for q in Path('queries').glob(f'{new_query}*')][0]
     query.rename(latest_queries_dir / f'{query.stem.strip("0123456789-")}.csv')
 
 # Confirm that everything is copacetic
 is_copacetic = if_copacetic()
-for notice in is_copacetic.warnings:
-  print(notice, file='stderr')
+for notice in is_copacetic.notices:
+  print(notice, file=sys.stderr)
 for stop in is_copacetic.stops:
-  print(stop, file='stderr')
+  print(stop, file=sys.stderr)
 if len(is_copacetic.stops) == 0:
   print('Copacetic Postcheck OK', file=sys.stderr)
   exit(0)
