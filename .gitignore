@@ -51,3 +51,4 @@ Icon*
 /__pycache__/
 
 /credit_check.sql
+/failures/

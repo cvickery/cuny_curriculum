@@ -6,14 +6,17 @@
 # failure.
 #
 # Use -p to ask for a pop-up at the end.
+# Use -m to ask for email at the end.
 
 pattern=CV
 pop_up='no'
+email='no'
 
 while [[ $# > 0 ]]
 do
   case $1 in
     -p) pop_up='yes' ;;
+    -m) email='yes' ;;
      *) pattern=$1 ;;
   esac
   shift
@@ -30,5 +33,10 @@ done
 echo ready
 if [[ $pop_up == 'yes' ]]
 then
-  osascript -e 'display alert "Ready"' > /dev/null
+  osascript -e 'display alert "$pattern has arrived"' > /dev/null
+fi
+if [[ $email == 'yes' ]]
+then sendemail -s "$pattern has arrived" cvickery@qc.cuny.edu <<EOD
+Rejoice.
+EOD
 fi
