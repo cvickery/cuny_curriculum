@@ -33,7 +33,7 @@ done
 echo ready
 if [[ $pop_up == 'yes' ]]
 then
-  osascript -e 'display alert "$pattern has arrived"' > /dev/null
+  osascript -e "display alert \"$pattern has arrived\"" > /dev/null
 fi
 if [[ $email == 'yes' ]]
 then sendemail -s "$pattern has arrived" cvickery@qc.cuny.edu <<EOD
