@@ -166,8 +166,7 @@ truncate -s0 update*.log
 
   # Enter update_db mode and give time for running queries to complete
   echo "START update_db mode" | tee -a update.log
-  psql access_control -c \
-        "update access_control set start_time = now() where event_type = 'update_db'"
+  redis-cli -h localhost set update_db_started `date +%s`
   echo -n "WAIT for any running queries to complete ... "
   sleep 10
   echo "done"
@@ -425,8 +424,7 @@ truncate -s0 update*.log
 
   # Exit update_db mode
   echo "END update_db mode" | tee -a update.log
-  psql  access_control -c \
-        "update access_control set start_time = NULL where event_type = 'update_db'"
+  redis-cli -h localhost set update_db_started 0
 
   echo UPDATE COMPLETED at `date +"%Y-%m-%d %T"` in `gdate -d @"$SECONDS" +'%-Mm %-Ss'` | \
        tee -a update.log
@@ -434,11 +432,15 @@ truncate -s0 update*.log
 
 if [[ ! ( $no_programs == 1 || $no_programs == true ) ]]
 then
-  echo And now for the registered programs ...
+  echo -n "And now for the registered programs ... " | tee -a update.log
   (
     cd /Users/vickery/registered_programs
     ./update_registered_programs.sh > registered_programs.log
+    (
+      cd dgw_info
+      ./cuny_requirement_blocks.py >> ../registered_programs.log
+    )
   )
+  echo done. | tee -a update.log
 fi
-
 )
