@@ -19,6 +19,8 @@ cursor.execute("""
                percent_owned float,
                academic_plan text,
                description text,
+               cip_code text,
+               hegis_code text,
                program_status text)
                """)
 
@@ -37,13 +39,16 @@ with open('latest_queries/QCCV_PROG_PLAN_ORG.csv') as csvfile:
       row = Row._make(line)
       if row.nys_program_code != '' and row.nys_program_code != '0':
         cursor.execute("""
-                       insert into cuny_programs values (default, %s, %s, %s, %s, %s, %s, %s)
+                       insert into cuny_programs values (
+                                                 default, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                        """, (row.nys_program_code,
                              row.institution,
                              row.academic_organization,
                              row.percent_owned,
                              row.academic_plan,
                              row.transcript_description,
+                             row.cip_code,
+                             row.hegis_code,
                              row.status))
 
 with open('latest_queries/ACAD_SUBPLN_TBL.csv') as csvfile:
@@ -70,7 +75,6 @@ with open('latest_queries/ACAD_SUBPLN_TBL.csv') as csvfile:
       cursor.execute(f"""
                       insert into cuny_subplans values ({values})
                      """)
-
 
 db.commit()
 db.close()
