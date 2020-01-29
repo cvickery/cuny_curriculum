@@ -93,12 +93,11 @@ cursor.execute(
 # Populate disciplines
 
 #
-# TEMPORARY: Add missing disciplines for courses currently don't have one
+# TEMPORARY: Add missing disciplines for courses that currently don't have one
 #
 Discipline = namedtuple('Discipline',
                         'institution department discipline discipline_name status cuny_subject')
 missing_disciplines = [Discipline._make(x) for x in [
-    ('BAR01', 'BAR01', 'LTS', 'Temporary Discipline', 'A', 'ELEC'),
     ('SPS01', 'SPS01', 'HESA', 'Temporary Discipline', 'A', 'ELEC'),
     ('QCC01', 'QCC01', 'ELEC', 'Temporary Discipline', 'A', 'ELEC')]]
 for discp in missing_disciplines:

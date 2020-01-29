@@ -59,14 +59,14 @@ with open('latest_queries/ACAD_SUBPLN_TBL.csv') as csvfile:
       if 'Institution' == line[0]:
         cols = [val.lower().replace(' ', '_')
                            .replace('/', '_')
-                           .replace('-', '_') for val in line]
+                           .replace('-', '') for val in line]
         schema = ', '.join([f'{col} text' for col in cols])
         schema = schema.replace('institution text', 'institution text references institutions')
         cursor.execute(f"""
                         drop table if exists cuny_subplans;
                         create table cuny_subplans (
                         {schema},
-                        primary key (institution, acad_plan, sub_plan))
+                        primary key (institution, plan, subplan))
                         """)
         Row = namedtuple('Row', cols)
     else:
