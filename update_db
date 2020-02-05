@@ -417,14 +417,9 @@ truncate -s0 update*.log
 
   echo -n "(Re-)Grant select access to view_only ROLE ..." | tee -a update_psql.log
   psql -X -q -d cuny_courses -f view_only_role.sql >> update_psql.log 2>&1
-  psql -X -q -d cuny_programs -f view_only_role.sql >> update_psql.log 2>&1
-  psql -X -q -d access_control -f view_only_role.sql >> update_psql.log 2>&1
   psql -X -q -d curric -f view_only_role.sql >> update_psql.log 2>&1
   echo done. | tee -a update_psql.log
 
-  echo UPDATE COMPLETED at `date +"%Y-%m-%d %T"` in `gdate -d @"$SECONDS" +'%-Mm %-Ss'` | \
-       tee -a update.log
-       send_notice "Finished updating database cuny_courses on $HOSTNAME"
 
 if [[ ! ( $no_programs == 1 || $no_programs == true ) ]]
 then
@@ -434,6 +429,9 @@ then
     ./update_registered_programs.sh > registered_programs.log
   )
 
+  echo UPDATE COMPLETED at `date +"%Y-%m-%d %T"` in `gdate -d @"$SECONDS" +'%-Mm %-Ss'` | \
+       tee -a update.log
+       send_notice "Finished updating database cuny_courses on $HOSTNAME"
   # Exit update_db mode
   echo -n "END update_db mode: " | tee -a update.log
   redis-cli -h localhost set update_db_started 0
