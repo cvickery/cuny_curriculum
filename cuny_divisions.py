@@ -11,7 +11,7 @@ from datetime import date, datetime
 import psycopg2
 from psycopg2.extras import NamedTupleCursor
 
-db = psycopg2.connect('dbname=cuny_curriulum')
+db = psycopg2.connect('dbname=cuny_curriculum')
 cursor = db.cursor(cursor_factory=NamedTupleCursor)
 
 # Institutions that don’t fit our model of undergraduate colleges for within-CUNY transfers.
