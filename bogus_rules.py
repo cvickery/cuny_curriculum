@@ -127,7 +127,7 @@ with open(logfile_name, 'w') as logfile:
         source_course_id = int(record.source_course_id)
         cursor.execute("""
                        select discipline, catalog_number
-                       from courses
+                       from cuny_courses
                        where course_id = %s
                        """, (source_course_id, ))
         cross_listed_source_count = cursor.rowcount
@@ -154,7 +154,7 @@ with open(logfile_name, 'w') as logfile:
         destination_course_id = int(record.destination_course_id)
         cursor.execute("""
                        select discipline, catalog_number
-                       from courses
+                       from cuny_courses
                        where course_id = %s
                        """, (destination_course_id, ))
         cross_listed_destination_count = cursor.rowcount
