@@ -29,7 +29,7 @@ cursor = db.cursor(cursor_factory=NamedTupleCursor)
 
 # There be some garbage institution "names" in the transfer_rules
 cursor.execute("""select code as institution
-                  from institutions
+                  from cuny_institutions
                   group by institution
                   order by institution""")
 known_institutions = [inst[0] for inst in cursor.fetchall()]
@@ -51,8 +51,8 @@ cursor.execute("""
 
                  id serial primary key,
 
-                 source_institution text references institutions,
-                 destination_institution text references institutions,
+                 source_institution text references cuny_institutions,
+                 destination_institution text references cuny_institutions,
                  subject_area text,
                  group_number integer,
 

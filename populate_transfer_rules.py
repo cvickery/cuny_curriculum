@@ -94,9 +94,9 @@ if args.report:
   print('\n  Transfer rules query file: {} {}'.format(file_date, cf_rules_file))
 
 # There be some garbage institution "names" in the transfer_rules, but the app’s
-# institutions table is “definitive”.
+# cuny_institutions table is “definitive”.
 cursor.execute("""select code
-                  from institutions
+                  from cuny_institutions
                   order by code""")
 known_institutions = [record.code for record in cursor.fetchall()]
 

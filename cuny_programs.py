@@ -14,7 +14,7 @@ cursor.execute("""
                create table cuny_programs (
                id serial primary key,
                nys_program_code integer,
-               institution text references institutions,
+               institution text references cuny_institutions,
                department text,
                percent_owned float,
                academic_plan text,
@@ -61,7 +61,7 @@ with open('latest_queries/ACAD_SUBPLN_TBL.csv') as csvfile:
                            .replace('/', '_')
                            .replace('-', '') for val in line]
         schema = ', '.join([f'{col} text' for col in cols])
-        schema = schema.replace('institution text', 'institution text references institutions')
+        schema = schema.replace('institution text', 'institution text references cuny_institutions')
         cursor.execute(f"""
                         drop table if exists cuny_subplans;
                         create table cuny_subplans (

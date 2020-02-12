@@ -230,10 +230,10 @@ truncate -s0 update*.log
   #
   # The sequence of initializations, however, does not quite follow this
   # structure:
-  #   Careers references institutions, so create institutions first
-  #   Divisions references departments, so create departments first
+  #   Careers references cuny_institutions, so create cuny_institutions first
+  #   cuny_divisions references cuny_departments, so create cuny_departments first
   #
-  echo -n "CREATE TABLE institutions... " | tee -a update_psql.log
+  echo -n "CREATE TABLE cuny_institutions... " | tee -a update_psql.log
   psql -X -q -d cuny_curriculum -f cuny_institutions.sql >> update_psql.log 2>&1
   echo done. | tee -a update_psql.log
 

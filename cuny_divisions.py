@@ -33,7 +33,7 @@ ignore_institutions = ['CUNY', 'UAPC1', 'MHC01']
 cols = None
 cursor.execute('drop table if exists cuny_divisions cascade')
 cursor.execute("""create table cuny_divisions (
-                    institution text references institutions,
+                    institution text references cuny_institutions,
                     division text not null,
                     division_name text not null,
                     status text not null,

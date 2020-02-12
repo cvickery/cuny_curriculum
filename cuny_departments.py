@@ -38,7 +38,7 @@ ignore_departments = ['PEES-BKL', 'SOC-YRK', 'JOUR-GRD']
 # Get list of known institutions
 cursor.execute("""
                  select code
-                 from institutions
+                 from cuny_institutions
                """)
 known_institutions = [institution.code for institution in cursor.fetchall()]
 
@@ -56,7 +56,7 @@ known_divisions = [(r.institution, r.division) for r in cursor.fetchall()]
 cursor.execute('drop table if exists cuny_departments cascade')
 cursor.execute("""
   create table cuny_departments (
-  institution text references institutions,
+  institution text references cuny_institutions,
   division text not null,
   department text primary key,
   department_name text not null,

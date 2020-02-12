@@ -81,7 +81,7 @@ cursor.execute('drop table if exists cuny_disciplines cascade')
 cursor.execute(
     """
     create table cuny_disciplines (
-      institution text references institutions,
+      institution text references cuny_institutions,
       department text references cuny_departments,
       discipline text,
       discipline_name text,

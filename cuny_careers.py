@@ -10,7 +10,7 @@ cur.execute('drop table if exists cuny_careers cascade')
 cur.execute(
     """
     create table cuny_careers (
-    institution text references institutions,
+    institution text references cuny_institutions,
     career text,
     description text,
     is_graduate boolean,
