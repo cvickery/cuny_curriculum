@@ -296,9 +296,9 @@ truncate -s0 update*.log
   echo done. | tee -a update.log
 
   echo -n "CREATE TABLE courses... " | tee -a update.log
-  psql -X -q -d cuny_curriculum -f create_courses.sql >> update_psql.log 2>&1
+  psql -X -q -d cuny_curriculum -f create_cuny_courses.sql >> update_psql.log 2>&1
   if [ $? -ne 0 ]
-    then send_notice 'ERROR: create_courses failed'
+    then send_notice 'ERROR: create_cuny_courses failed'
          exit 1
   fi
   psql -X -q -d cuny_curriculum -f view_courses.sql >> update_psql.log 2>&1
@@ -309,9 +309,9 @@ truncate -s0 update*.log
   echo done. | tee -a update.log
 
   echo -n "POPULATE courses... " | tee -a update.log
-  python3 populate_courses.py $progress 2>> update.log
+  python3 populate_cuny_courses.py $progress 2>> update.log
   if [ $? -ne 0 ]
-    then send_notice 'ERROR: populate_courses failed'
+    then send_notice 'ERROR: populate_cuny_courses failed'
          exit 1
   fi
   echo done. | tee -a update.log

@@ -17,7 +17,7 @@ cursor.execute("""select  course_id,
                           components,
                           designation,
                           attributes
-                    from  courses
+                    from  cuny_courses
                  order by course_status, institution, discipline, catalog_number""")
 for row in cursor.fetchall():
   components = [Component._make(c) for c in row.components]

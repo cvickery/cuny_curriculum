@@ -332,7 +332,8 @@ logs.write('Inserted {:,} courses in {} minute{} and {:0.1f} seconds.\n'.format(
                                                                                 seconds))
 
 # The date the catalog information for institutions was updated
-cursor.execute("update updates set update_date='{cat_date}' where table_name='cuny_institutions'")
+cursor.execute(f"""update updates set update_date='{datetime.now().strftime('%Y-%m-%d')}'
+                    where table_name='cuny_institutions'""")
 
 if args.progress:
   print('', file=terminal)
