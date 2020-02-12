@@ -15,5 +15,5 @@ create view view_courses as
          course_status as status,
          designation,
          attributes
-    from courses
+    from cuny_courses
 order by institution, discipline, cat_num);

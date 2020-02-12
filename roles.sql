@@ -27,7 +27,7 @@ insert into roles values('webmaster', 'Webmaster');
 insert into person_roles values(default, null,
                                 'Executive University Registrar',
                                 'cuny_registrar',
-                                'OUR@cuny.edu', 'University Registrar');
+                                'nobody@cuny.edu', 'University Registrar');
 insert into person_roles values(default, null,
                                 'Professor of Computer Science',
                                 'webmaster',
@@ -35,4 +35,4 @@ insert into person_roles values(default, null,
 insert into person_roles values(default, 'QNS01',
                                 'Associate Provost',
                                 'college_provost',
-                                'Alicia.Alvero@qc.cuny.edu', 'Alicia Alvero');
+                                'nobody@qc.cuny.edu', 'Alicia Alvero');

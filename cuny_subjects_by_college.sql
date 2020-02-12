@@ -3,7 +3,7 @@ copy (
 select cuny_subject,
        subject_name,
        string_agg(distinct institution, ', ') as colleges
-from courses, cuny_subjects
+from cuny_courses, cuny_subjects
 where subject = cuny_subject
   and course_status = 'A'
   and can_schedule = 'Y'

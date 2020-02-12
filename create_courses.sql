@@ -1,4 +1,4 @@
-DROP TABLE IF EXISTS courses cascade;
+DROP TABLE IF EXISTS cuny_courses cascade;
 DROP TABLE IF EXISTS course_attributes cascade;
 
 CREATE TABLE course_attributes (
@@ -8,7 +8,8 @@ CREATE TABLE course_attributes (
   primary key (name, value)
 );
 
-CREATE TABLE courses (
+--  No course history, just the most recent version.
+CREATE TABLE cuny_courses (
   course_id integer,
   offer_nbr integer,
   equivalence_group integer references crse_equiv_tbl,
