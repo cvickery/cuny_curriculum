@@ -33,7 +33,7 @@ except OSError as e:
 if args.progress:
   print('', file=terminal)
 
-db = psycopg2.connect('dbname=cuny_courses')
+db = psycopg2.connect('dbname=cuny_curriculum')
 cursor = db.cursor(cursor_factory=NamedTupleCursor)
 lookup_cursor = db.cursor(cursor_factory=NamedTupleCursor)
 

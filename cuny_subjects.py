@@ -21,7 +21,7 @@ parser = argparse.ArgumentParser('Create internal and external subject tables')
 parser.add_argument('--debug', '-d', action='store_true')
 args = parser.parse_args()
 
-db = psycopg2.connect('dbname=cuny_courses')
+db = psycopg2.connect('dbname=cuny_curriculum')
 cursor = db.cursor(cursor_factory=NamedTupleCursor)
 
 # Internal subject (disciplines) and external subject area (cuny_subjects) queries

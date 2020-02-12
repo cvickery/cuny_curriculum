@@ -21,7 +21,7 @@ parser.add_argument('--report', '-r', action='store_true')    # to stdout
 args = parser.parse_args()
 
 
-db = psycopg2.connect('dbname=cuny_courses')
+db = psycopg2.connect('dbname=cuny_curriculum')
 cursor = db.cursor(cursor_factory=NamedTupleCursor)
 
 # Get most recent transfer_rules query file

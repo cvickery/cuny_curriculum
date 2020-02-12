@@ -5,7 +5,7 @@ import psycopg2
 from collections import namedtuple
 from psycopg2.extras import NamedTupleCursor
 
-db = psycopg2.connect('dbname=cuny_courses')
+db = psycopg2.connect('dbname=cuny_curriculum')
 cursor = db.cursor(cursor_factory=NamedTupleCursor)
 
 # Clear all existing status bits: only status changes from the events table

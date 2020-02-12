@@ -5,7 +5,7 @@ from psycopg2.extras import NamedTupleCursor
 from collections import namedtuple
 
 Component = namedtuple('Component', 'component hours')
-db = psycopg2.connect('dbname=cuny_courses')
+db = psycopg2.connect('dbname=cuny_curriculum')
 cursor = db.cursor(cursor_factory=NamedTupleCursor)
 
 cursor.execute("""select  course_id,

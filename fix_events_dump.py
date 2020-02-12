@@ -24,7 +24,7 @@ from psycopg2.extras import NamedTupleCursor
 import re
 import sys
 
-conn = psycopg2.connect('dbname=cuny_courses')
+conn = psycopg2.connect('dbname=cuny_curriculum')
 cursor = conn.cursor(cursor_factory=NamedTupleCursor)
 
 for line in sys.stdin:

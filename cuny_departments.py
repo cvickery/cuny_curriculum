@@ -30,7 +30,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--debug', '-d', action='store_true')
 args = parser.parse_args()
 
-db = psycopg2.connect('dbname=cuny_courses')
+db = psycopg2.connect('dbname=cuny_curriculum')
 cursor = db.cursor(cursor_factory=NamedTupleCursor)
 
 ignore_departments = ['PEES-BKL', 'SOC-YRK', 'JOUR-GRD']

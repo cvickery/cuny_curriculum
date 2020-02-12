@@ -81,7 +81,7 @@ def mk_rule_key(rule):
 if args.progress:
   print('\nInitializing.', file=terminal)
 
-db = psycopg2.connect('dbname=cuny_courses')
+db = psycopg2.connect('dbname=cuny_curriculum')
 cursor = db.cursor(cursor_factory=NamedTupleCursor)
 
 # Get most recent transfer_rules query file

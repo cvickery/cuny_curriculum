@@ -4,7 +4,7 @@
 import psycopg2
 import csv
 
-db = psycopg2.connect('dbname=cuny_courses')
+db = psycopg2.connect('dbname=cuny_curriculum')
 cur = db.cursor()
 cur.execute('drop table if exists cuny_careers cascade')
 cur.execute(

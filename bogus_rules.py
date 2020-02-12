@@ -24,7 +24,7 @@ start_time = perf_counter()
 if args.progress:
   print('', file=sys.stderr)
 
-db = psycopg2.connect('dbname=cuny_courses')
+db = psycopg2.connect('dbname=cuny_curriculum')
 cursor = db.cursor(cursor_factory=NamedTupleCursor)
 
 # There be some garbage institution "names" in the transfer_rules

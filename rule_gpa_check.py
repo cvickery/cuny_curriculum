@@ -56,7 +56,7 @@ def analyze(institution, course_id, ranges):
     laps[(institution, frozenset(ranges))] += 1
 
 
-conn = psycopg2.connect('dbname=cuny_courses')
+conn = psycopg2.connect('dbname=cuny_curriculum')
 cursor = conn.cursor(cursor_factory=NamedTupleCursor)
 
 laps = defaultdict(int)

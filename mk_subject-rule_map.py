@@ -28,7 +28,7 @@ except OSError as e:
 
 app_start = perf_counter()
 
-db = psycopg2.connect('dbname=cuny_courses')
+db = psycopg2.connect('dbname=cuny_curriculum')
 cursor = db.cursor(cursor_factory=NamedTupleCursor)
 
 # Using the subject_rule_map table (instead of putting source subjects in a colon-delimited string

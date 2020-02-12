@@ -30,7 +30,7 @@ except OSError as e:
   terminal = open('/dev/null', 'wt')
 
 num_rows = 0
-conn = psycopg2.connect('dbname=cuny_courses')
+conn = psycopg2.connect('dbname=cuny_curriculum')
 cursor = conn.cursor(cursor_factory=NamedTupleCursor)
 
 cursor.execute("""
