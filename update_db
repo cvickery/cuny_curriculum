@@ -1,6 +1,6 @@
 #! /usr/local/bin/bash
 
-# Run the sequence of sql and python scripts to re-create and update the cuny_courses database.
+# Run the sequence of sql and python scripts to re-create and update the cuny_curriculum database.
 
 # LOGGING AND ERROR REPORTING
 #   Progress messages are displayed on stderr and in two log files: update.log for most steps, and
@@ -12,6 +12,7 @@ export WEBMASTER='<Christopher Vickery> christopher.vickery@qc.cuny.edu'
 function send_notice () {
 
   rm -f ./notification_report
+  echo Notice from `hostname` > ./notification_report
   for file in update*.log
   do
     echo -e "\n--- $file ---" >> ./notification_report
@@ -48,11 +49,11 @@ function send_notice () {
   # transferring the resulting .CSV files to Tumbleweed.
   #
   # Dump and restore events table.
-  #   The update process deletes all tables in the cuny_courses database and then rebuilds everything
-  #   based on the information in the queries that ran on CUNYfirst. But the events table comes from
-  #   user input in reviewing transfer rules, not CUNYfirst, so it can't be rebuilt from CUNYfirst
-  #   data. Before dropping the db, the events table is dumped to a file, and then that file is
-  #   restored near the end of the update process.
+  #   The update process deletes all tables in the cuny_curriculum database and then rebuilds
+  #   everything based on the information in the queries that ran on CUNYfirst. But the events table
+  #   comes from user input in reviewing transfer rules, not CUNYfirst, so it can't be rebuilt from
+  #   CUNYfirst data. Before dropping the db, the events table is dumped to a file, and then that
+  #   file is restored near the end of the update process.
   #
   #   The NO_EVENTS environment variable, the -ne, or the --no-events command line option can be
   #   used to suppress the dump restore of the dumps table.
@@ -81,7 +82,7 @@ function send_notice () {
   #   These three can be used to suppress their respective steps.
   #
   # Update registered programs.
-  #   After the cuny_courses database update is finished, the table of academic programs registered
+  #   After the cuny_curriculum database update is finished, the table of academic programs registered
   #   with the NYS Department of Education (registered_programs) takes place.
   #
   #   NO_PROGRAMS -np --no-programs
@@ -135,7 +136,7 @@ function send_notice () {
 truncate -s0 update*.log
   echo BEGIN UPDATE at `date +"%Y-%m-%d %T"` | tee -a ./update.log
   SECONDS=0
-  send_notice "Started updating database cuny_courses on $HOSTNAME"
+  send_notice "Started updating database cuny_curriculum on $HOSTNAME"
 
   # Try downloading new queries
   if [[ $skip_download == 1 ]]
@@ -177,10 +178,9 @@ truncate -s0 update*.log
     echo "SKIPPING events table SAVE/RESTORE." | tee -a update.log
   else
     echo -n SAVE events table to $EVENTS_TABLE ... | tee -a update_psql.log
-    pg_dump --data-only --table=events -f $EVENTS_TABLE cuny_courses >> update_psql.log
+    pg_dump --data-only --table=events -f $EVENTS_TABLE cuny_curriculum >> update_psql.log
     if [[ $? -ne 0 ]]
-      then  psql access_control -c \
-            "update access_control set start_time = NULL where event_type = 'update_db'"
+      then  redis-cli -h localhost set update_db_started 0
             send_notice "ERROR: unable to save events_table"
             exit 1
     fi
@@ -194,30 +194,30 @@ truncate -s0 update*.log
   sleep 10
   echo done. | tee -a update_psql.log
   # Do the drop
-  echo -n "DROP cuny_courses... " | tee -a update_psql.log
-  dropdb cuny_courses >> update_psql.log
+  echo -n "DROP cuny_curriculum... " | tee -a update_psql.log
+  dropdb cuny_curriculum >> update_psql.log
   if [[ $? -ne 0 ]]
     then  psql access_control -c \
           "update access_control set start_time = NULL where event_type = 'update_db'"
-          send_notice 'ERROR: failed to drop cuny_courses db'
+          send_notice 'ERROR: failed to drop cuny_curriculum db'
           exit 1
 
   fi
 
-  echo -n "CREATE cuny_courses... " | tee -a update_psql.log
-  createdb cuny_courses >> update_psql.log
+  echo -n "CREATE cuny_curriculum... " | tee -a update_psql.log
+  createdb cuny_curriculum >> update_psql.log
   if [[ $? -ne 0 ]]
-    then send_notice 'ERROR: failed to create cuny_courses db'
+    then send_notice 'ERROR: failed to create cuny_curriculum db'
          exit 1
   fi
   echo done. | tee -a update_psql.log
 
   echo -n "CREATE FUNCTION numeric_part... " | tee -a update_psql.log
-  psql -X -q -d cuny_courses -f numeric_part.sql >> update_psql.log
+  psql -X -q -d cuny_curriculum -f numeric_part.sql >> update_psql.log
   echo done. | tee -a update_psql.log
 
   echo -n "CREATE TABLE updates... " | tee -a update_psql.log
-  psql -X -q -d cuny_courses -f updates.sql >> update_psql.log
+  psql -X -q -d cuny_curriculum -f updates.sql >> update_psql.log
   echo done. | tee -a update_psql.log
 
   # The following is the organizational structure of the University:
@@ -235,7 +235,7 @@ truncate -s0 update*.log
   #   Divisions references departments, so create departments first
   #
   echo -n "CREATE TABLE institutions... " | tee -a update_psql.log
-  psql -X -q -d cuny_courses -f cuny_institutions.sql >> update_psql.log 2>&1
+  psql -X -q -d cuny_curriculum -f cuny_institutions.sql >> update_psql.log 2>&1
   echo done. | tee -a update_psql.log
 
   echo -n "CREATE academic_programs... " | tee -a update_psql.log
@@ -297,12 +297,12 @@ truncate -s0 update*.log
   echo done. | tee -a update.log
 
   echo -n "CREATE TABLE courses... " | tee -a update.log
-  psql -X -q -d cuny_courses -f create_courses.sql >> update_psql.log 2>&1
+  psql -X -q -d cuny_curriculum -f create_courses.sql >> update_psql.log 2>&1
   if [ $? -ne 0 ]
     then send_notice 'ERROR: create_courses failed'
          exit 1
   fi
-  psql -X -q -d cuny_courses -f view_courses.sql >> update_psql.log 2>&1
+  psql -X -q -d cuny_curriculum -f view_courses.sql >> update_psql.log 2>&1
   if [ $? -ne 0 ]
     then send_notice 'ERROR: view_courses failed'
          exit 1
@@ -327,7 +327,7 @@ truncate -s0 update*.log
 
   # Transfer rules
   echo -n "CREATE TABLE review_status_bits... " | tee -a update_psql.log
-  psql -X -q -d cuny_courses -f review_status_bits.sql >> update_psql.log 2>&1
+  psql -X -q -d cuny_curriculum -f review_status_bits.sql >> update_psql.log 2>&1
   if [ $? -ne 0 ]
     then send_notice 'ERROR: review_status_bits failed'
          exit 1
@@ -335,8 +335,8 @@ truncate -s0 update*.log
   echo done. | tee -a update_psql.log
 
   echo -n "CREATE transfer_rules, source_courses, destination_courses... " | tee -a update_psql.log
-  psql -X -q -d cuny_courses -f create_transfer_rules.sql >> update_psql.log 2>&1
-  psql -X -q -d cuny_courses -f view_transfer_rules.sql >> update_psql.log 2>&1
+  psql -X -q -d cuny_curriculum -f create_transfer_rules.sql >> update_psql.log 2>&1
+  psql -X -q -d cuny_curriculum -f view_transfer_rules.sql >> update_psql.log 2>&1
   if [ $? -ne 0 ]
     then send_notice 'ERROR: create/view transfer_rules failed'
          exit 1
@@ -371,7 +371,7 @@ truncate -s0 update*.log
   # Managing the rule review process
   #    2019-10-5: using Flask redis sessions instead of mysession
   # echo -n "CREATE TABLE sessions... " | tee -a update_psql.log
-  # psql -X -q -d cuny_courses -f sessions.sql >> update_psql.log 2>&1
+  # psql -X -q -d cuny_curriculum -f sessions.sql >> update_psql.log 2>&1
   # if [ $? -ne 0 ]
   #   then send_notice 'ERROR: sessions failed'
   #        exit 1
@@ -381,7 +381,7 @@ truncate -s0 update*.log
   #echo CREATE TABLE pending_reviews...
   #echo CREATE TABLE event_types...
   echo -n "CREATE TABLE events... " | tee -a update_psql.log
-  psql -X -q -d cuny_courses -f reviews-events.sql >> update_psql.log 2>&1
+  psql -X -q -d cuny_curriculum -f reviews-events.sql >> update_psql.log 2>&1
   if [ $? -ne 0 ]
     then send_notice 'ERROR: reviews-events failed'
          exit 1
@@ -391,7 +391,7 @@ truncate -s0 update*.log
   if [[ $no_events -ne 1 ]]
   then
     echo -n "RESTORE previous events from $EVENTS_TABLE ... " | tee -a update_psql.log
-    psql -X -q -d cuny_courses -f $EVENTS_TABLE >> update_psql.log 2>&1
+    psql -X -q -d cuny_curriculum -f $EVENTS_TABLE >> update_psql.log 2>&1
     if [ $? -ne 0 ]
       then send_notice 'ERROR: restore events_table failed'
            exit 1
@@ -412,11 +412,11 @@ truncate -s0 update*.log
 
   # User roles and access
   echo -n "Re-build the roles and person_roles tables ..." | tee -a update_psql.log
-  psql -X -q -d cuny_courses -f roles.sql >> update_psql.log 2>&1
+  psql -X -q -d cuny_curriculum -f roles.sql >> update_psql.log 2>&1
   echo done. | tee -a update_psql.log
 
   echo -n "(Re-)Grant select access to view_only ROLE ..." | tee -a update_psql.log
-  psql -X -q -d cuny_courses -f view_only_role.sql >> update_psql.log 2>&1
+  psql -X -q -d cuny_curriculum -f view_only_role.sql >> update_psql.log 2>&1
   psql -X -q -d curric -f view_only_role.sql >> update_psql.log 2>&1
   echo done. | tee -a update_psql.log
 
@@ -431,7 +431,7 @@ then
 
   echo UPDATE COMPLETED at `date +"%Y-%m-%d %T"` in `gdate -d @"$SECONDS" +'%-Mm %-Ss'` | \
        tee -a update.log
-       send_notice "Finished updating database cuny_courses on $HOSTNAME"
+       send_notice "Finished updating database cuny_curriculum on $HOSTNAME"
   # Exit update_db mode
   echo -n "END update_db mode: " | tee -a update.log
   redis-cli -h localhost set update_db_started 0
