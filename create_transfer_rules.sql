@@ -10,8 +10,8 @@ create table transfer_rules (
   source_subjects text not null, -- colon-separated list of all source course cuny_subjects
   review_status integer default 0,
   effective_date date, -- latest effective date of any table/view in CF query
-  foreign key (source_institution) references institutions,
-  foreign key (destination_institution) references institutions);
+  foreign key (source_institution) references cuny_institutions,
+  foreign key (destination_institution) references cuny_institutions);
 
 drop table if exists credit_sources cascade;
 create table credit_sources (

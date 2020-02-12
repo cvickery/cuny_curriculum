@@ -107,7 +107,7 @@ cursor.execute("""select institution, discipline
 valid_disciplines = [(record.institution, record.discipline)
                      for record in cursor.fetchall()]
 
-# Cache the information that might be used for all courses in the courses table.
+# Cache the information that might be used for all courses in the cuny_courses table.
 # Index by course_id; list info for each offer_nbr.
 cursor.execute("""
                select course_id,
@@ -119,7 +119,7 @@ cursor.execute("""
                       cuny_subject,
                       min_credits,
                       max_credits,
-                      course_status from courses""")
+                      course_status from cuny_courses""")
 all_courses = cursor.fetchall()
 course_cache = dict([(course.course_id, []) for course in all_courses])
 for course in all_courses:

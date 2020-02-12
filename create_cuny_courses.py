@@ -13,7 +13,7 @@ CREATE TABLE cuny_courses (
   course_id integer,
   offer_nbr integer,
   equivalence_group integer references crse_equiv_tbl,
-  institution text references institutions,
+  institution text references cuny_institutions,
   cuny_subject text references cuny_subjects,
   department text references cuny_departments,
   discipline text,

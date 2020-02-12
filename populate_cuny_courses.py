@@ -37,7 +37,7 @@ db = psycopg2.connect('dbname=cuny_curriculum')
 cursor = db.cursor(cursor_factory=NamedTupleCursor)
 lookup_cursor = db.cursor(cursor_factory=NamedTupleCursor)
 
-logs = open('populate_courses.log', 'w')
+logs = open('populate_cuny_courses.log', 'w')
 # Get the three query files needed, and be sure they are in sync
 cat_file = './latest_queries/QNS_QCCV_CU_CATALOG_NP.csv'
 req_file = './latest_queries/QNS_QCCV_CU_REQUISITES_NP.csv'
@@ -54,14 +54,14 @@ if not ((cat_date == req_date) and (req_date == att_date)):
 cursor.execute("""
                update updates
                set update_date = '{}', file_name = '{}'
-               where table_name = 'courses'""".format(cat_date, cat_file))
+               where table_name = 'cuny_courses'""".format(cat_date, cat_file))
 
 if args.debug:
   print("""Catalog file\t{} ({})\nRequisites file\t{} ({})\nAttributes file\t{} ({})
         """.format(cat_file, cat_date, req_file, req_date, att_file, att_date))
 
-# Cache institutions
-cursor.execute('select * from institutions')
+# Cache cuny_institutions
+cursor.execute('select * from cuny_institutions')
 all_colleges = [inst.code for inst in cursor.fetchall()]
 
 # Cache primary keys from the disciplines table
@@ -217,7 +217,7 @@ with open(cat_file, newline='') as csvfile:
       max_credits = float(r.max_units)
       lookup_query = """
           select contact_hours, primary_component, min_credits, max_credits, components
-            from courses
+            from cuny_courses
            where course_id = %s
              and offer_nbr = %s
              and discipline = %s
@@ -249,7 +249,7 @@ with open(cat_file, newline='') as csvfile:
             # if 'LEC' in components and components[0] != 'LEC':
             #   components.remove('LEC')
             #   components = ['LEC'] + components
-            update_query = """update courses set components = %s
+            update_query = """update cuny_courses set components = %s
                             where course_id = %s
                               and offer_nbr = %s
                               and discipline = %s
@@ -299,7 +299,7 @@ with open(cat_file, newline='') as csvfile:
                      f'  Ignoring {discipline} {catalog_number}.\n')
           continue
         try:
-          cursor.execute("""insert into courses values
+          cursor.execute("""insert into cuny_courses values
                             (%s, %s, %s, %s, %s,
                              %s, %s, %s, %s, %s,
                              %s, %s, %s, %s,
@@ -332,7 +332,7 @@ logs.write('Inserted {:,} courses in {} minute{} and {:0.1f} seconds.\n'.format(
                                                                                 seconds))
 
 # The date the catalog information for institutions was updated
-cursor.execute("update institutions set date_updated='{}'".format(cat_date))
+cursor.execute("update updates set update_date='{cat_date}' where table_name='cuny_institutions'")
 
 if args.progress:
   print('', file=terminal)
