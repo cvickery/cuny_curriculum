@@ -10,7 +10,7 @@ create table roles (
 
 create table person_roles (
   id serial primary key,
-  institution text references institutions default null,
+  institution text references cuny_institutions default null,
   job_title text,
   role text references roles,
   email text not null,
