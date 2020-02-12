@@ -197,8 +197,7 @@ truncate -s0 update*.log
   echo -n "DROP cuny_curriculum... " | tee -a update_psql.log
   dropdb cuny_curriculum >> update_psql.log
   if [[ $? -ne 0 ]]
-    then  psql access_control -c \
-          "update access_control set start_time = NULL where event_type = 'update_db'"
+    then  redis-cli -h localhost set update_db_started 0
           send_notice 'ERROR: failed to drop cuny_curriculum db'
           exit 1
 
