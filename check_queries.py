@@ -41,9 +41,9 @@ required_query_names = ['ACAD_CAREER_TBL',
                         'SR742A___CRSE_ATTRIBUTE_VALUE']
 
 Copacetic = namedtuple('Copacetic', 'notices stops')
-new_queries_dir = Path('/Users/vickery/CUNY_Courses/queries')
-latest_queries_dir = Path('/Users/vickery/CUNY_Courses/latest_queries/')
-archive_dir = Path('/Users/vickery/CUNY_Courses/query_archive')
+new_queries_dir = Path('/Users/vickery/CUNY_Curriculum/queries')
+latest_queries_dir = Path('/Users/vickery/CUNY_Curriculum/latest_queries/')
+archive_dir = Path('/Users/vickery/CUNY_Curriculum/query_archive')
 
 
 def if_copacetic():
