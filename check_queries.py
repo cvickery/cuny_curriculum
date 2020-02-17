@@ -24,21 +24,39 @@ import argparse
 
 # This is the definitive list of queries used by the project. The check_references.sh script
 # uses this list to be sure each one is referenced by a Python script.
-required_query_names = ['ACAD_CAREER_TBL',
-                        'ACAD_SUBPLN_TBL',
-                        'ACADEMIC_GROUPS',
-                        'QCCV_PROG_PLAN_ORG',
-                        'QCCV_RQMNT_DESIG_TBL',
-                        'QNS_CV_ACADEMIC_ORGANIZATIONS',
-                        'QNS_CV_CRSE_EQUIV_TBL',
-                        'QNS_CV_CUNY_SUBJECT_TABLE',
-                        'QNS_CV_CUNY_SUBJECTS',
-                        'QNS_CV_SR_TRNS_INTERNAL_RULES',
-                        'QNS_QCCV_COURSE_ATTRIBUTES_NP',
-                        'QNS_QCCV_CU_CATALOG_NP',
-                        'QNS_QCCV_CU_REQUISITES_NP',
-                        'SR701____INSTITUTION_TABLE',
-                        'SR742A___CRSE_ATTRIBUTE_VALUE']
+# required_query_names = ['ACAD_CAREER_TBL',
+#                         'ACAD_SUBPLN_TBL',
+#                         'ACADEMIC_GROUPS',
+#                         'QCCV_PROG_PLAN_ORG',
+#                         'QCCV_RQMNT_DESIG_TBL',
+#                         'QNS_CV_ACADEMIC_ORGANIZATIONS',
+#                         'QNS_CV_CRSE_EQUIV_TBL',
+#                         'QNS_CV_CUNY_SUBJECT_TABLE',
+#                         'QNS_CV_CUNY_SUBJECTS',
+#                         'QNS_CV_SR_TRNS_INTERNAL_RULES',
+#                         'QNS_QCCV_COURSE_ATTRIBUTES_NP',
+#                         'QNS_QCCV_CU_CATALOG_NP',
+#                         'QNS_QCCV_CU_REQUISITES_NP',
+#                         'SR701____INSTITUTION_TABLE',
+#                         'SR742A___CRSE_ATTRIBUTE_VALUE']
+run_control_ids = {
+    'ACAD_CAREER_TBL': 'acad_career',
+    'ACAD_SUBPLN_TBL': 'subplans',
+    'ACADEMIC_GROUPS': 'groups',
+    'QCCV_PROG_PLAN_ORG': 'qccv_prog_plan_org',
+    'QCCV_RQMNT_DESIG_TBL': 'qccv_rqmnt_desig_tbl',
+    'QNS_CV_ACADEMIC_ORGANIZATIONS': 'cuny_departments',
+    'QNS_CV_CRSE_EQUIV_TBL': 'crse_equiv',
+    'QNS_CV_CUNY_SUBJECT_TABLE': 'cuny_subjects',
+    'QNS_CV_CUNY_SUBJECTS': 'subjects',
+    'QNS_CV_SR_TRNS_INTERNAL_RULES': 'transfer_rules_complete',
+    'QNS_QCCV_COURSE_ATTRIBUTES_NP': 'cuny_attrs',
+    'QNS_QCCV_CU_CATALOG_NP': 'cuny_catalog',
+    'QNS_QCCV_CU_REQUISITES_NP': 'cuny_reqs',
+    'SR701____INSTITUTION_TABLE': 'institutions',
+    'SR742A___CRSE_ATTRIBUTE_VALUE': 'attribute_values'}
+
+required_query_names = [key for key in run_control_ids.keys()]
 
 Copacetic = namedtuple('Copacetic', 'notices stops')
 new_queries_dir = Path('/Users/vickery/CUNY_Courses/queries')
@@ -128,6 +146,7 @@ parser.add_argument('-c', '--cleanup', action='store_true')
 parser.add_argument('-d', '--debug', action='store_true')
 parser.add_argument('-l', '--list', action='store_true')
 parser.add_argument('-n', '--num_queries', action='store_true')
+parser.add_argument('-r', '--run_control_ids', action='store_true')
 parser.add_argument('-sd', '--skip_date_check', action='store_true')
 parser.add_argument('-ss', '--skip_size_check', action='store_true')
 parser.add_argument('-sa', '--skip_archive', action='store_true')
@@ -141,6 +160,14 @@ if args.debug:
 if args.list:
   for query_name in required_query_names:
     print(query_name)
+  if args.num_queries:
+    print(f'{len(required_query_names)} queries')
+  exit()
+
+# Expanded version of -l option, for human reference.
+if args.run_control_ids:
+  for query_name, run_control_id in run_control_ids.items():
+    print(f'{query_name:32} {run_control_id}')
   if args.num_queries:
     print(f'{len(required_query_names)} queries')
   exit()
