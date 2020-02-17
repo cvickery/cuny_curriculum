@@ -24,7 +24,7 @@ cursor.execute("""
                program_status text)
                """)
 
-with open('latest_queries/QCCV_PROG_PLAN_ORG.csv') as csvfile:
+with open('./latest_queries/QCCV_PROG_PLAN_ORG.csv') as csvfile:
   reader = csv.reader(csvfile)
   cols = None
   for line in reader:
@@ -51,7 +51,7 @@ with open('latest_queries/QCCV_PROG_PLAN_ORG.csv') as csvfile:
                              row.hegis_code,
                              row.status))
 
-with open('latest_queries/ACAD_SUBPLN_TBL.csv') as csvfile:
+with open('./latest_queries/ACAD_SUBPLN_TBL.csv') as csvfile:
   reader = csv.reader(csvfile)
   cols = None
   for line in reader:
