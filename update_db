@@ -426,9 +426,16 @@ if [[ ! ( $no_programs == 1 || $no_programs == true ) ]]
 then
   echo -n "And now for the registered programs ... " | tee -a update.log
   (
-    cd /Users/vickery/registered_programs
+    cd /Users/vickery/CUNY_Programs
     ./update_registered_programs.sh > registered_programs.log
   )
+  if [ $? -ne 0 ]
+  then send_notice 'ERROR: update_registered_programs.sh failed'
+       exit 1
+  else
+  echo done. | tee -a update.log
+  fi
+fi
 
   echo UPDATE COMPLETED at `date +"%Y-%m-%d %T"` in `gdate -d @"$SECONDS" +'%-Mm %-Ss'` | \
        tee -a update.log
@@ -437,5 +444,4 @@ then
   echo -n "END update_db mode: " | tee -a update.log
   redis-cli -h localhost set update_db_started 0
   echo done. | tee -a update.log
-fi
 )
