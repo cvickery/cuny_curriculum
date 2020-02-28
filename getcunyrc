@@ -7,5 +7,3 @@ mget -EO /Users/vickery/CUNY_Curriculum/query_downloads QNS_CV*.csv \
                                                      ACAD_SUBPLN_TBL*.csv \
                                                      SR701____INSTITUTION_TABLE*.csv \
                                                      SR742A___CRSE_ATTRIBUTE_VALUE*.csv
-cd ../ODI-Queens
-mget -EO /Users/vickery/registered_programs/dgw_info/downloads *dap_req_block*
