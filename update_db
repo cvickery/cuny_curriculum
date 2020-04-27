@@ -58,6 +58,10 @@ function send_notice () {
   #   The NO_EVENTS environment variable, the -ne, or the --no-events command line option can be
   #   used to suppress the dump restore of the dumps table.
   #
+  # Archive tables that don't come from CUNYfirst.
+  #   These have to be preserved in case they get corrupted during the actions that happen in
+  #   CUNY_Programs.
+  #
   # Download queries from Tumbleweed.
   #   The dozen or so CUNYfirst queries that are used to build the database are saved as .CSV files
   #   and transferred to Tumbleweed by the CUNYfirst query scheduling system. The update process
@@ -137,6 +141,13 @@ truncate -s0 update*.log
   echo BEGIN UPDATE at `date +"%Y-%m-%d %T"` | tee -a ./update.log
   SECONDS=0
   send_notice "Started updating database cuny_curriculum on $HOSTNAME"
+
+  # Archive non-CUNYfirst tables
+  echo "Archive registered program and requirements tables" | tee -a ./update.log
+  (
+   cd /Users/vickery/CUNY_Programs
+   ./archive_tables.sh
+  ) | tee -a ./update.log
 
   # Try downloading new queries
   if [[ $skip_download == 1 ]]
@@ -424,11 +435,11 @@ truncate -s0 update*.log
 
 if [[ ! ( $no_programs == 1 || $no_programs == true ) ]]
 then
-  echo -n "And now for the registered programs ... " | tee -a update.log
+  echo "And now for CUNY_Programs ... " | tee -a update.log
   (
     cd /Users/vickery/CUNY_Programs
-    ./update_registered_programs.sh > registered_programs.log
-  )
+    ./update_registered_programs.sh
+  ) | tee -a update.log
   if [ $? -ne 0 ]
   then send_notice 'ERROR: update_registered_programs.sh failed'
        exit 1
