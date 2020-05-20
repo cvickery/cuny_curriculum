@@ -245,8 +245,9 @@ truncate -s0 update*.log
   #
   echo -n "CREATE TABLE cuny_institutions... " | tee -a update_psql.log
   psql -X -q -d cuny_curriculum -f cuny_institutions.sql >> update_psql.log 2>&1
-  psql -X -q -d cuny_curriculum -c "update updates set update_date='`date -I -r cuny_institutions.sql`',\
-                                                       file_name = 'cuny_institutions.sql' \
+  psql -X -q -d cuny_curriculum -c "update updates \
+                                    set update_date='`gdate -I -r cuny_institutions.sql`',\
+                                        file_name = 'cuny_institutions.sql' \
                                     where table_name = 'cuny_institutions'"
   echo done. | tee -a update_psql.log
 
