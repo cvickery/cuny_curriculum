@@ -142,6 +142,10 @@ truncate -s0 update*.log
   SECONDS=0
   send_notice "Started updating database cuny_curriculum on $HOSTNAME"
 
+  # Archive transfer rules
+  echo "Archive transfer rules" | tee -a ./update.log
+  ./archive_rules.sh
+
   # Archive non-CUNYfirst tables
   echo "Archive registered program and requirements tables" | tee -a ./update.log
   (

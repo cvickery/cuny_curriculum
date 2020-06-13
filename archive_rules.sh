@@ -2,17 +2,17 @@
 
 SECONDS=0
 
-echo -n "transfer_rules ... "
-psql -Xqd cuny_curriculum -c "copy (select  id, \
-                              source_institution, \
-                              destination_institution, \
-                              subject_area, group_number \
-                      from transfer_rules) to \
-                      '`pwd`/rules_archive/`date -I`_transfer_rules.csv' csv"
-echo done
+# echo -n "transfer_rules ... "
+# psql -Xqd cuny_curriculum -c "copy (select  id, \
+#                               source_institution, \
+#                               destination_institution, \
+#                               subject_area, group_number \
+#                       from transfer_rules) to \
+#                       '`pwd`/rules_archive/`date -I`_transfer_rules.csv' csv"
+# echo done
 
 echo -n "source_courses ... "
-psql -Xqd cuny_curriculum -c "copy (select  rule_id, \
+psql -Xqd cuny_curriculum -c "copy (select  rule_key(rule_id) as rule_key, \
                               course_id, \
                               offer_nbr, \
                               min_credits, \
@@ -25,7 +25,7 @@ psql -Xqd cuny_curriculum -c "copy (select  rule_id, \
 echo done
 
 echo -n "destination_courses ... "
-psql -Xqd cuny_curriculum -c "copy (select  rule_id, \
+psql -Xqd cuny_curriculum -c "copy (select  rule_key(rule_id) as rule_key, \
                               course_id, \
                               offer_nbr, \
                               transfer_credits \
