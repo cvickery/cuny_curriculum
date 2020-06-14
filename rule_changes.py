@@ -45,14 +45,16 @@ if args.debug:
 
 # The CSV files have a separate row for each course that is part of a rule.
 # Here, we build four dictionaries, keyed by the rule_keys, containing lists of course_ids
-first_rules_source = defaultdict(list)
-first_rules_destination = defaultdict(list)
+first_rules_source = dict()
+first_rules_destination = dict()
 
 print(f'{first_date} source ........ ', file=sys.stderr, end='')
 with bz2.open(first_set.source_courses, mode='rt') as csv_file:
   reader = csv.reader(csv_file)
   for line in reader:
     row = SourceCourses._make(line)
+    if row.rule_key not in first_rules_source:
+      first_rules_source[row.rule_key] = []
     first_rules_source[row.rule_key].append(row.course_id)
 print(f'{len(first_rules_source):,} rows', file=sys.stderr)
 
@@ -61,17 +63,21 @@ with bz2.open(first_set.destination_courses, mode='rt') as csv_file:
   reader = csv.reader(csv_file)
   for line in reader:
     row = DestinationCourses._make(line)
+    if row.rule_key not in first_rules_destination:
+      first_rules_destination[row.rule_key] = []
     first_rules_destination[row.rule_key].append(row.course_id)
 print(f'{len(first_rules_destination):,} rows', file=sys.stderr)
 
-second_rules_source = defaultdict(list)
-second_rules_destination = defaultdict(list)
+second_rules_source = dict()
+second_rules_destination = dict()
 
 print(f'{second_date} source ........ ', file=sys.stderr, end='')
 with bz2.open(second_set.source_courses, mode='rt') as csv_file:
   reader = csv.reader(csv_file)
   for line in reader:
     row = SourceCourses._make(line)
+    if row.rule_key not in second_rules_source:
+      second_rules_source[row.rule_key] = []
     second_rules_source[row.rule_key].append(row.course_id)
 print(f'{len(second_rules_source):,} rows', file=sys.stderr)
 
@@ -80,6 +86,8 @@ with bz2.open(second_set.destination_courses, mode='rt') as csv_file:
   reader = csv.reader(csv_file)
   for line in reader:
     row = DestinationCourses._make(line)
+    if row.rule_key not in second_rules_destination:
+      second_rules_destination[row.rule_key] = []
     second_rules_destination[row.rule_key].append(row.course_id)
 print(f'{len(second_rules_destination):,} rows', file=sys.stderr)
 
@@ -96,17 +104,20 @@ print(f'{len(first_keys):,} {first_date} rules and {len(second_keys):,} {second_
 
 for key in all_keys:
   try:
-    print(key, first_rules_source[key], second_rules_source[key],
-          first_rules_destination[key], second_rules_destination[key], file=sys.stderr)
-    if (first_rules_source[key].sort() == second_rules_source[key].sort()
-       and first_rules_destination[key].sort() == second_rules_destination[key].sort()):
+    # if key == 'BAR01-LEH01-AAM-1':
+    #   print(key, first_rules_source[key], second_rules_source[key],
+    #         first_rules_destination[key], second_rules_destination[key], file=sys.stderr)
+    first_rules_source[key].sort()
+    second_rules_source[key].sort()
+    first_rules_destination[key].sort()
+    second_rules_destination[key].sort()
+    if (first_rules_source[key] == second_rules_source[key]
+       and first_rules_destination[key] == second_rules_destination[key]):
       print(f'{key:<20}\t OK')
     else:
-      print(f'{key:<20}\t CHANGED')
-      print(f'  {first_date} Source: {first_rules_source[key]}\n'
-            f'  {second_date} Source: {second_rules_source[key]}\n'
-            f'  {first_date} Destination: {first_rules_destination[key]}\n'
-            f'  {second_date} Destination: {second_rules_destination[key]}\n')
+      print(f'{key:<20}\t Changed', end='')
+      print(f' from {first_rules_source[key]} => {first_rules_destination[key]}'
+            f' to {second_rules_source[key]} => {second_rules_destination[key]}\n')
   except KeyError as e:
     if key not in first_keys:
       print(f'{key:<20}\t Rule Added')
