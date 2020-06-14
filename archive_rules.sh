@@ -1,6 +1,9 @@
 #! /usr/local/bin/bash
 
 SECONDS=0
+update_date=`psql -Xqtd cuny_curriculum \
+                  -c "select update_date from updates where table_name='transfer_rules'"`
+echo Archiving $update_date
 
 echo -n "source_courses ... "
 psql -Xqd cuny_curriculum -c "copy (select  rule_key(rule_id) as rule_key, \
@@ -12,7 +15,7 @@ psql -Xqd cuny_curriculum -c "copy (select  rule_key(rule_id) as rule_key, \
                               min_gpa, \
                               max_gpa \
                       from source_courses) to \
-                      '`pwd`/rules_archive/`date +"%Y-%m-%d"`_source_courses.csv' csv"
+                      '`pwd`/rules_archive/${update_date}_source_courses.csv' csv"
 echo done
 
 echo -n "destination_courses ... "
@@ -21,7 +24,10 @@ psql -Xqd cuny_curriculum -c "copy (select  rule_key(rule_id) as rule_key, \
                               offer_nbr, \
                               transfer_credits \
                       from destination_courses) to \
-                      '`pwd`/rules_archive/`date +"%Y-%m-%d"`_destination_courses.csv' csv"
+                      '`pwd`/rules_archive/${update_date}_destination_courses.csv' csv"
 echo done
+
+echo Compressing
+bzip2 `pwd`/rules_archive/*.csv
 
 echo $SECONDS seconds
