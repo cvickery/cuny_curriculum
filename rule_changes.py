@@ -3,6 +3,7 @@
     The default is to compare the two latest archive sets.
 """
 
+import bz2
 import csv
 import sys
 from argparse import ArgumentParser
@@ -26,7 +27,7 @@ if len(args.dates) > 0:
   sys.exit('Archive date selection not implemented yet')
 
 # Find the two most recent archive sets.
-archive_files = Path('./rules_archive').glob('*')
+archive_files = Path('./rules_archive').glob('*.bz2')
 all_archives = defaultdict(list)
 for archive_file in archive_files:
   date = archive_file.name[0:10]
@@ -47,54 +48,69 @@ if args.debug:
 first_rules_source = defaultdict(list)
 first_rules_destination = defaultdict(list)
 
-print('first set source ... ', end='')
-with open(first_set.source_courses) as csv_file:
+print(f'{first_date} source ........ ', file=sys.stderr, end='')
+with bz2.open(first_set.source_courses, mode='rt') as csv_file:
   reader = csv.reader(csv_file)
   for line in reader:
     row = SourceCourses._make(line)
     first_rules_source[row.rule_key].append(row.course_id)
-print(f'{len(first_rules_source):,} rows')
+print(f'{len(first_rules_source):,} rows', file=sys.stderr)
 
-print('first set destination ... ', end='')
-with open(first_set.destination_courses) as csv_file:
+print(f'{first_date} destination ... ', file=sys.stderr, end='')
+with bz2.open(first_set.destination_courses, mode='rt') as csv_file:
   reader = csv.reader(csv_file)
   for line in reader:
     row = DestinationCourses._make(line)
     first_rules_destination[row.rule_key].append(row.course_id)
-print(f'{len(first_rules_destination):,} rows')
+print(f'{len(first_rules_destination):,} rows', file=sys.stderr)
 
 second_rules_source = defaultdict(list)
 second_rules_destination = defaultdict(list)
 
-print('second set source ... ', end='')
-with open(second_set.source_courses) as csv_file:
+print(f'{second_date} source ........ ', file=sys.stderr, end='')
+with bz2.open(second_set.source_courses, mode='rt') as csv_file:
   reader = csv.reader(csv_file)
   for line in reader:
     row = SourceCourses._make(line)
     second_rules_source[row.rule_key].append(row.course_id)
-print(f'{len(second_rules_source):,} rows')
+print(f'{len(second_rules_source):,} rows', file=sys.stderr)
 
-print('second set destination ... ', end='')
-with open(second_set.destination_courses) as csv_file:
+print(f'{second_date} destination ... ', file=sys.stderr, end='')
+with bz2.open(second_set.destination_courses, mode='rt') as csv_file:
   reader = csv.reader(csv_file)
   for line in reader:
     row = DestinationCourses._make(line)
     second_rules_destination[row.rule_key].append(row.course_id)
-print(f'{len(second_rules_destination):,} rows')
+print(f'{len(second_rules_destination):,} rows', file=sys.stderr)
 
-# Be sure the source and destination keys match within the two sets
-assert set(first_rules_source.keys()) == set(first_rules_destination.keys())
-assert set(second_rules_source.keys()) == set(second_rules_destination.keys())
+# The source and destination keys must match within the two sets
+first_keys = set(first_rules_source.keys())
+second_keys = set(second_rules_source.keys())
+assert first_keys == set(first_rules_destination.keys())
+assert second_keys == set(second_rules_destination.keys())
 
 # Work with the union of the two sets of rules
-all_keys = set(first_rules_source.keys()) | set(second_rules_destination.keys())
-print(f'{len(all_keys):,} rules to check')
+all_keys = first_keys | second_keys
+print(f'{len(first_keys):,} {first_date} rules and {len(second_keys):,} {second_date} rules '
+      f'=>  {len(all_keys):,} rules to check', file=sys.stderr)
+
 for key in all_keys:
   try:
+    print(key, first_rules_source[key], second_rules_source[key],
+          first_rules_destination[key], second_rules_destination[key], file=sys.stderr)
     if (first_rules_source[key].sort() == second_rules_source[key].sort()
        and first_rules_destination[key].sort() == second_rules_destination[key].sort()):
-      continue
+      print(f'{key:<20}\t OK')
     else:
-      print(f'{key}')
+      print(f'{key:<20}\t CHANGED')
+      print(f'  {first_date} Source: {first_rules_source[key]}\n'
+            f'  {second_date} Source: {second_rules_source[key]}\n'
+            f'  {first_date} Destination: {first_rules_destination[key]}\n'
+            f'  {second_date} Destination: {second_rules_destination[key]}\n')
   except KeyError as e:
-    print(f'{key}')
+    if key not in first_keys:
+      print(f'{key:<20}\t Rule Added')
+    elif key not in second_keys:
+      print(f'{key:<20}\t Rule Deleted')
+    else:
+      print(f'{key:<20}\t Unexpected KeyError')
