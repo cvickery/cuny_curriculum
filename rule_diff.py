@@ -35,7 +35,7 @@ def diff_rules(first, second, archive_dir=_archive_dir, debug=False):
     first = 'latest'
   if second is None:
     second = 'latest'
-
+  first, second = (min(first, second), max(first, second))
   # Get available archive sets.
   archive_files = Path(archive_dir).glob('*.bz2')
   all_archives = defaultdict(list)
@@ -45,8 +45,10 @@ def diff_rules(first, second, archive_dir=_archive_dir, debug=False):
   if len(all_archives) < 2:
     raise ValueError(f'Not enough archive sets available. {len(all_archives)} found.')
 
+  # Select matching sets
   all_keys = list(all_archives.keys())
   all_keys.sort()
+
   if first == 'latest':
     first_date = all_keys[-2]
   else:
@@ -56,6 +58,7 @@ def diff_rules(first, second, archive_dir=_archive_dir, debug=False):
       if first_date < first:
         break
     all_keys.reverse()
+
   if second == 'latest':
     second_date = all_keys[-1]
   else:
@@ -68,16 +71,15 @@ def diff_rules(first, second, archive_dir=_archive_dir, debug=False):
   second_set = ArchiveSet._make(sorted(all_archives[second_date]))
 
   if debug:
-    print(first_set.destination_courses.name, first_set.source_courses.name)
-    print(second_set.destination_courses.name, second_set.source_courses.name)
-    exit()
+    print(f'Asked for {first}, {second}. Using {first_date}, {second_date}.', file=sys.stderr)
 
   # The CSV files have a separate row for each course that is part of a rule.
   # Here, we build four dictionaries, keyed by the rule_keys, containing lists of course_ids
   first_rules_source = dict()
   first_rules_destination = dict()
 
-  print(f'{first_date} source ........ ', file=sys.stderr, end='')
+  if debug:
+    print(f'{first_date} source ........ ', file=sys.stderr, end='')
   with bz2.open(first_set.source_courses, mode='rt') as csv_file:
     reader = csv.reader(csv_file)
     for line in reader:
@@ -85,9 +87,11 @@ def diff_rules(first, second, archive_dir=_archive_dir, debug=False):
       if row.rule_key not in first_rules_source:
         first_rules_source[row.rule_key] = []
       first_rules_source[row.rule_key].append(row.course_id)
-  print(f'{len(first_rules_source):,} rows', file=sys.stderr)
+  if debug:
+    print(f'{len(first_rules_source):,} rows', file=sys.stderr)
 
-  print(f'{first_date} destination ... ', file=sys.stderr, end='')
+  if debug:
+    print(f'{first_date} destination ... ', file=sys.stderr, end='')
   with bz2.open(first_set.destination_courses, mode='rt') as csv_file:
     reader = csv.reader(csv_file)
     for line in reader:
@@ -95,12 +99,14 @@ def diff_rules(first, second, archive_dir=_archive_dir, debug=False):
       if row.rule_key not in first_rules_destination:
         first_rules_destination[row.rule_key] = []
       first_rules_destination[row.rule_key].append(row.course_id)
-  print(f'{len(first_rules_destination):,} rows', file=sys.stderr)
+  if debug:
+    print(f'{len(first_rules_destination):,} rows', file=sys.stderr)
 
   second_rules_source = dict()
   second_rules_destination = dict()
 
-  print(f'{second_date} source ........ ', file=sys.stderr, end='')
+  if debug:
+    print(f'{second_date} source ........ ', file=sys.stderr, end='')
   with bz2.open(second_set.source_courses, mode='rt') as csv_file:
     reader = csv.reader(csv_file)
     for line in reader:
@@ -108,9 +114,11 @@ def diff_rules(first, second, archive_dir=_archive_dir, debug=False):
       if row.rule_key not in second_rules_source:
         second_rules_source[row.rule_key] = []
       second_rules_source[row.rule_key].append(row.course_id)
-  print(f'{len(second_rules_source):,} rows', file=sys.stderr)
+  if debug:
+    print(f'{len(second_rules_source):,} rows', file=sys.stderr)
 
-  print(f'{second_date} destination ... ', file=sys.stderr, end='')
+  if debug:
+    print(f'{second_date} destination ... ', file=sys.stderr, end='')
   with bz2.open(second_set.destination_courses, mode='rt') as csv_file:
     reader = csv.reader(csv_file)
     for line in reader:
@@ -118,7 +126,8 @@ def diff_rules(first, second, archive_dir=_archive_dir, debug=False):
       if row.rule_key not in second_rules_destination:
         second_rules_destination[row.rule_key] = []
       second_rules_destination[row.rule_key].append(row.course_id)
-  print(f'{len(second_rules_destination):,} rows', file=sys.stderr)
+  if debug:
+    print(f'{len(second_rules_destination):,} rows', file=sys.stderr)
 
   # The source and destination keys must match within the two sets
   first_keys = set(first_rules_source.keys())
@@ -128,9 +137,11 @@ def diff_rules(first, second, archive_dir=_archive_dir, debug=False):
 
   # Work with the union of the two sets of rules
   all_keys = first_keys | second_keys
-  print(f'{len(first_keys):,} {first_date} rules and {len(second_keys):,} {second_date} rules '
-        f'=>  {len(all_keys):,} rules to check', file=sys.stderr)
+  if debug:
+    print(f'{len(first_keys):,} {first_date} rules and {len(second_keys):,} {second_date} rules '
+          f'=>  {len(all_keys):,} rules to check', file=sys.stderr)
 
+  result = dict()
   for key in all_keys:
     try:
       # if key == 'BAR01-LEH01-AAM-1':
@@ -142,18 +153,25 @@ def diff_rules(first, second, archive_dir=_archive_dir, debug=False):
       second_rules_destination[key].sort()
       if (first_rules_source[key] == second_rules_source[key]
          and first_rules_destination[key] == second_rules_destination[key]):
-        print(f'{key:<20}\t No Change')
+        # print(f'{key:<20}\t No Change')
+        pass
       else:
-        print(f'{key:<20}\t Changed', end='')
-        print(f' from {first_rules_source[key]} => {first_rules_destination[key]}'
-              f' to {second_rules_source[key]} => {second_rules_destination[key]}\n')
+        # print(f'{key:<20}\t Changed', end='')
+        # print(f' from {first_rules_source[key]} => {first_rules_destination[key]}'
+        #       f' to {second_rules_source[key]} => {second_rules_destination[key]}\n')
+        result[key] = {'From': f'{first_rules_source[key]} => {first_rules_destination[key]}',
+                       'To': f'{second_rules_source[key]} => {second_rules_destination[key]}'}
     except KeyError as e:
       if key not in first_keys:
-        print(f'{key:<20}\t Added')
+        # print(f'{key:<20}\t Added')
+        result[key] = {'Add': f'{second_rules_source[key]} => {second_rules_destination[key]}'}
       elif key not in second_keys:
-        print(f'{key:<20}\t Deleted')
+        # print(f'{key:<20}\t Deleted')
+        result[key] = {'Delete': f'{first_rules_source[key]} => {first_rules_destination[key]}'}
       else:
-        print(f'{key:<20}\t Unexpected KeyError')
+        raise KeyError(f'{key:<20}\t Unexpected KeyError')
+  return result
+
 
 """ Module Test
 """
@@ -168,4 +186,5 @@ if __name__ == '__main__':
   while len(dates) < 2:
     dates += [None]
   result = diff_rules(dates[0], dates[1], debug=args.debug)
-  print(result)
+  for key, value in result.items():
+    print(key, value)
