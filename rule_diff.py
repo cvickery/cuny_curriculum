@@ -29,6 +29,9 @@ if _archive_dir is None:
 def diff_rules(first, second, archive_dir=_archive_dir, debug=False):
   """ Diff rules from the archive. Default is the most recent two. Otherwise, use the last
       available archive before first and the most recent one since second.
+
+      Return a dict keyed by rule with tuple of from-to course_id lists for the two archive dates
+      used. Tuple is None for added/deleted rules.
   """
 
   if first is None:
@@ -36,6 +39,7 @@ def diff_rules(first, second, archive_dir=_archive_dir, debug=False):
   if second is None:
     second = 'latest'
   first, second = (min(first, second), max(first, second))
+
   # Get available archive sets.
   archive_files = Path(archive_dir).glob('*.bz2')
   all_archives = defaultdict(list)
@@ -159,15 +163,17 @@ def diff_rules(first, second, archive_dir=_archive_dir, debug=False):
         # print(f'{key:<20}\t Changed', end='')
         # print(f' from {first_rules_source[key]} => {first_rules_destination[key]}'
         #       f' to {second_rules_source[key]} => {second_rules_destination[key]}\n')
-        result[key] = {'From': f'{first_rules_source[key]} => {first_rules_destination[key]}',
-                       'To': f'{second_rules_source[key]} => {second_rules_destination[key]}'}
+        result[key] = {first_date: (first_rules_source[key], first_rules_destination[key]),
+                       second_date: (second_rules_source[key], second_rules_destination[key])}
     except KeyError as e:
       if key not in first_keys:
         # print(f'{key:<20}\t Added')
-        result[key] = {'Add': f'{second_rules_source[key]} => {second_rules_destination[key]}'}
+        result[key] = {first_date: None,
+                       second_date: (second_rules_source[key], second_rules_destination[key])}
       elif key not in second_keys:
         # print(f'{key:<20}\t Deleted')
-        result[key] = {'Delete': f'{first_rules_source[key]} => {first_rules_destination[key]}'}
+        result[key] = {first_date: (first_rules_source[key], first_rules_destination[key]),
+                       second_date: None}
       else:
         raise KeyError(f'{key:<20}\t Unexpected KeyError')
   return result
