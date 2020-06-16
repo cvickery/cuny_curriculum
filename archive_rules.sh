@@ -3,6 +3,7 @@
 SECONDS=0
 update_date=`psql -Xqtd cuny_curriculum \
                   -c "select update_date from updates where table_name='transfer_rules'"`
+update_date=${update_date// /}
 echo Archiving $update_date
 
 echo -n "source_courses ... "
