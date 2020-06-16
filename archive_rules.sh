@@ -27,6 +27,13 @@ psql -Xqd cuny_curriculum -c "copy (select  rule_key(rule_id) as rule_key, \
                       '`pwd`/rules_archive/${update_date}_destination_courses.csv' csv"
 echo done
 
+echo -n "effective_dates ... "
+psql -Xqd cuny_curriculum -c "copy (select  rule_key(id) as rule_key, \
+                              effective_date \
+                      from transfer_rules) to \
+                      '`pwd`/rules_archive/${update_date}_effective_dates.csv' csv"
+echo done
+
 echo Compressing
 bzip2 `pwd`/rules_archive/*.csv
 
