@@ -36,6 +36,6 @@ psql -Xqd cuny_curriculum -c "copy (select  rule_key(id) as rule_key, \
 echo done
 
 echo Compressing
-bzip2 `pwd`/rules_archive/*.csv
+bzip2 -f `pwd`/rules_archive/*.csv
 
 echo $SECONDS seconds
