@@ -253,7 +253,7 @@ for query_name in required_query_names:
       exit(f'{newest_query.name} has zero bytes')
     if target_size is not None and abs(target_size - newest_size) > 0.1 * target_size:
       exit(f'STOP: {newest_query.name} ({newest_size}) differs from {target_query.name} '
-           '({target_size}) by more than 10%')
+           f'({target_size}) by more than 10%')
     if args.verbose:
       if target_size is not None:
         print(f'{newest_query.name} size compares favorably to {target_query.name}',
