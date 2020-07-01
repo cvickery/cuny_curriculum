@@ -145,8 +145,7 @@ with open('./divisions_report.log', 'w') as report:
         # Report and ignore rows where the department is not in cuny_departments for the institution
         department_key = Department_Key._make([institution, department])
         if department_key not in known_departments.keys():
-          report.write(f'Bogus department for course {course_key.course_id:06}:'
-                       f'{course_key.offer_nbr} {department} at {institution}.\n')
+          report.write(f'Bogus department for {department} at {institution}.\n')
           continue
 
         # Report and ignore rows where the institution-division pair is not in cuny_divisions
