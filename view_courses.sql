@@ -5,6 +5,7 @@ drop view if exists view_courses cascade;
 create view view_courses as (
     select institution,
            lpad(course_id::text, 6, '0') as course_id,
+           offer_nbr,
            discipline,
            catalog_number,
            contact_hours,
