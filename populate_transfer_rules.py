@@ -199,7 +199,11 @@ with open(cf_rules_file) as csvfile:
                       secs_remaining),
               end='', file=terminal)
 
-      record = Record._make(line)
+      try:
+        record = Record._make(line)
+      except TypeError as te:
+        print(f'{te}\nline {line_num}:, {line}', file=sys.stderr)
+        continue
       if record.source_institution in ignore_institutions or \
          record.destination_institution in ignore_institutions:
          conflicts.write(f'Ignoring rule from {record.source_institution} to '
