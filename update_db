@@ -445,6 +445,8 @@ then
   (
     cd /Users/vickery/CUNY_Programs
     ./update_registered_programs.sh
+    cd dgw_info
+    ./update_requirement_blocks
   ) | tee -a update.log
   if [ $? -ne 0 ]
   then send_notice 'ERROR: update_registered_programs.sh failed'
