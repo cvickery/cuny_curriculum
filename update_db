@@ -444,16 +444,19 @@ then
   echo "And now for CUNY_Programs ... " | tee -a update.log
   (
     cd /Users/vickery/CUNY_Programs
-    ./update_registered_programs.sh
+    ./update_registered_programs.sh | tee -a update.log
+    if [ $? -ne 0 ]
+    then send_notice 'ERROR: update_registered_programs.sh failed'
+         exit 1
+    fi
     cd dgw_info
-    ./update_requirement_blocks
-  ) | tee -a update.log
-  if [ $? -ne 0 ]
-  then send_notice 'ERROR: update_registered_programs.sh failed'
-       exit 1
-  else
+    ./update_requirement_blocks | tee -a update.log
+    if [ $? -ne 0 ]
+    then send_notice 'ERROR: update_requirement_blocks failed'
+         exit 1
+    fi
+  )
   echo done. | tee -a update.log
-  fi
 fi
 
   echo UPDATE COMPLETED at `date +"%Y-%m-%d %T"` in `gdate -d @"$SECONDS" +'%-Mm %-Ss'` | \
