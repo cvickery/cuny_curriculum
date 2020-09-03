@@ -47,12 +47,11 @@ import sys
 import argparse
 import csv
 
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 from datetime import date
 from time import perf_counter
 
-import psycopg2
-from psycopg2.extras import NamedTupleCursor
+from pgconnection import PgConnection
 
 from cuny_divisions import ignore_institutions
 
@@ -87,8 +86,8 @@ def mk_rule_key(rule):
 if args.progress:
   print('\nInitializing.', file=terminal)
 
-db = psycopg2.connect('dbname=cuny_curriculum')
-cursor = db.cursor(cursor_factory=NamedTupleCursor)
+conn = PgConnection()
+cursor = conn.cursor()
 
 # Get most recent transfer_rules query file
 cf_rules_file = './latest_queries/QNS_CV_SR_TRNS_INTERNAL_RULES.csv'
@@ -126,9 +125,8 @@ cursor.execute("""
                       min_credits,
                       max_credits,
                       course_status from cuny_courses""")
-all_courses = cursor.fetchall()
-course_cache = dict([(course.course_id, []) for course in all_courses])
-for course in all_courses:
+course_cache = defaultdict(list)
+for course in cursor.fetchall():
   course_cache[course.course_id].append(course)
 
 # Logging file
@@ -137,6 +135,7 @@ conflicts = open('transfer_rule_conflicts.log', 'w')
 # Templates for building the three tables
 Rule_Key = namedtuple('Rule_Key',
                       'source_institution destination_institution subject_area group_number')
+
 Source_Course = namedtuple('Source_Course', """
                            course_id
                            offer_nbr
@@ -167,6 +166,18 @@ Rule_Tuple = namedtuple('Rule_Tuple', """
                         source_subjects
                         destination_courses
                         effective_date""")
+
+
+def rule_key_to_str(self):
+  """ Augment Rule_Key namedtuple with str dunder method.
+      Makes error-log file easier to read.
+  """
+  return (f'{self.source_institution}-{self.destination_institution}'
+          f'-{self.subject_area}-{self.group_number}')
+
+
+setattr(Rule_Key, '__str__', rule_key_to_str)
+
 rules_dict = dict()
 num_missing_courses = 0
 
@@ -252,12 +263,12 @@ with open(cf_rules_file) as csvfile:
       if record.source_institution not in known_institutions:
         conflicts.write('Unknown institution: {} for rule {}. Rule ignored.\n'
                         .format(record.source_institution, rule_key))
-        rules_dict.pop(rule_key)
+        del(rules_dict[rule_key])
         continue
       if record.destination_institution not in known_institutions:
         conflicts.write('Unknown institution: {} for rule {}. Rule ignored.\n'
                         .format(record.destination_institution, rule_key))
-        rules_dict.pop(rule_key)
+        del(rules_dict[rule_key])
         continue
 
       if (record.source_institution, record.component_subject_area) \
@@ -274,13 +285,21 @@ with open(cf_rules_file) as csvfile:
       if course_id not in course_cache.keys():
         conflicts.write('Source course {:06}.{} not in course catalog for rule {}. '
                         'Rule ignored.\n'.format(course_id, offer_nbr, rule_key))
-        rules_dict.pop(rule_key)
+        del(rules_dict[rule_key])
         num_missing_courses += 1
         continue
       # Only one course gets added to the rule, but all (cross-listed) disciplines and
       # subjects
       courses = course_cache[course_id]
       course = courses[0]
+
+      # Eliminate rules with zero-credit source courses.
+      if float(course.max_credits) < 0.1:
+        conflicts.write(f'Source_course {course_id} in rule {rule_key} is a zero-credit course. '
+                        f'Rule ignored.\n')
+        del(rules_dict[rule_key])
+        continue
+
       if float(course.min_credits) < float(record.src_min_units):
         conflicts.write('Source course {:06} has {} min credits, '
                         'but rule {} speifies {} min units\n'
@@ -458,8 +477,8 @@ if args.progress:
   print(f'\nThere are {num_rules:,} rules', file=terminal)
 
 conflicts.close()
-db.commit()
-db.close()
+conn.commit()
+conn.close()
 
 if args.report:
   secs = perf_counter() - app_start
