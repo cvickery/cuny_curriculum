@@ -1,40 +1,46 @@
 #! /usr/local/bin/python3
-#   Clear and re-populate the transfer_rules, source_courses, and destination_courses tables using
-#   the result of the CUNYfirst query, QNS_CV_SR_TRNS_INTERNAL_RULES.
-#
-#   Note and ignore query records that have invalid course_id fields (lookup fails).
-#
-#   Note, but keep, query records where the textual description of the course does not match the
-#   catalog description. (Mismatched institution and/or discipline.) Use the course_id and catalog
-#   info.
-#
-#   Note rules where the actual source course min/max credits are not in the range specified in the
-#   rule. To avoid extra course lookups later, the source_courses get the actual course min/max.
-#     Update: the query includes a “Subject Credit source” field which can have one of the following
-#     values and descriptions:
-#       C   Use Catalog Units (Catalog)
-#       E   Specify Maximum Units (External)
-#       R   Specify Fixed Units (Rule)
-#
-#   CF uses a pair of values (a string and an integer) to identify sets of related rule
-#   components. They call the string part the Component Subject Area, but it turns out to be
-#   an arbitrary string, which is sometimes an external subject area, maybe is a discipline, or
-#   maybe is just a string that somebody thought was a good idea, perhaps because it identifies
-#   a program ... or something. Anyway, we call it subject_area . They call the number the
-#   Src Equivalency Component, and we call it the group_number.
-#
-#   Deal with cross-listed courses by allowing a source or destination course_id to represent all
-#   offer_nbr values for “the course“.
-#
-#   Design:
-#     1. Extract information from the CF query: data structures for transfer rule keys and lists of
-#     source and destination course_ids.
-#       Note and reject records that reference non-existent institutions
-#     2. Lookup course_ids
-#           Note and eliminate rules that specifiy non-existent courses
-#           Note rules that specify inactive destination courses
-#           Build lists of source disciplines for all rules
-#     3. Insert rules and course lists into database tables
+"""
+  Clear and re-populate the transfer_rules, source_courses, and destination_courses tables using
+  the result of the CUNYfirst query, QNS_CV_SR_TRNS_INTERNAL_RULES.
+
+  Note and ignore query records that have invalid course_id fields (lookup fails).
+
+  Note, but keep, query records where the textual description of the course does not match the
+  catalog description. (Mismatched institution and/or discipline.) Use the course_id and catalog
+  info.
+
+  Note rules where the actual source course min/max credits are not in the range specified in the
+  rule. To avoid extra course lookups later, the source_courses get the actual course min/max.
+
+  The query includes a “Subject Credit source” field which can have one of the following
+  values and descriptions:
+    C   Use Catalog Units (Catalog)
+    E   Specify Maximum Units (External)
+    R   Specify Fixed Units (Rule)
+  This field is included in the source_courses table.
+
+  CF uses a pair of values (a string and an integer) to identify sets of related rule
+  components. They call the string part the Component Subject Area, but it turns out to be
+  an arbitrary string, which is sometimes an external subject area, maybe is a discipline, or
+  maybe is just a string that somebody thought was a good idea, perhaps because it identifies
+  a program ... or something. Anyway, we call it subject_area . They call the number the
+  Src Equivalency Component, and we call it the group_number.
+
+  There is a flag called Transfer Rule in the query. If this flag is false, the rule is ignored.
+
+  Deal with cross-listed courses by allowing a source or destination course_id to represent all
+  offer_nbr values for “the course“.
+
+  Design:
+    1. Extract information from the CF query: data structures for transfer rule keys and lists of
+    source and destination course_ids.
+      Note and reject records that reference non-existent institutions
+    2. Lookup course_ids
+          Note and eliminate rules that specifiy non-existent courses
+          Note rules that specify inactive destination courses
+          Build lists of source disciplines for all rules
+    3. Insert rules and course lists into database tables
+"""
 
 import os
 import sys
@@ -204,6 +210,11 @@ with open(cf_rules_file) as csvfile:
       except TypeError as te:
         print(f'{te}\nline {line_num}:, {line}', file=sys.stderr)
         continue
+
+      # 2020-0902: Check "Transfer Course" flag
+      if record.transfer_course != 'Y':
+        continue
+
       if record.source_institution in ignore_institutions or \
          record.destination_institution in ignore_institutions:
          conflicts.write(f'Ignoring rule from {record.source_institution} to '
