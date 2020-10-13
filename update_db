@@ -8,6 +8,7 @@
 #   an email containing the two log files is sent to the "webmaster" and the process is aborted.
 
 export WEBMASTER='<Christopher Vickery> christopher.vickery@qc.cuny.edu'
+export PYTHONPATH='/Users/vickery/dgw_processor:/Users/vickery/Transfer_App/'
 
 function send_notice () {
 
