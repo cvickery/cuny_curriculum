@@ -159,12 +159,13 @@ Destination_Course = namedtuple('Destination_Course', """
                                 cuny_subject
                                 transfer_credits""")
 # Rules dict is keyed by Rule_Key. Values are sets of courses and sets of disciplines
-# and subjects.
+# and subjects. 2021-01-10: add rule priority to handle tied gpa requirements in source courses.
 Rule_Tuple = namedtuple('Rule_Tuple', """
                         source_courses
                         source_disciplines
                         source_subjects
                         destination_courses
+                        priority
                         effective_date""")
 
 
@@ -252,12 +253,17 @@ with open(cf_rules_file) as csvfile:
       effective_date = max([date(month=v[0], day=v[1], year=v[2]) for v in date_vals])
       if rule_key not in rules_dict.keys():
         # source_courses, source_disciplines, source_subjects, destination_courses,
-        # Effective Date
-        rules_dict[rule_key] = Rule_Tuple(set(), set(), set(), set(), effective_date)
+        # Rule Priority, Effective Date
+        rules_dict[rule_key] = Rule_Tuple(set(), set(), set(), set(),
+                                          record.transfer_priority, effective_date)
       elif effective_date > rules_dict[rule_key].effective_date:
         rules_dict[rule_key].effective_date.replace(year=effective_date.year,
                                                     month=effective_date.month,
                                                     day=effective_date.day)
+        if rules_dict[rule_key].priority != record.transfer_priority:
+          conflicts.write(f'\nConflicting priorities for {rule_key}: '
+                          f'{rules_dict[rule_key].priority} != {record.transfer_priority} '
+                          f'Record kept.\n')
 
       # 2018-07-19: The following two tests never fail
       if record.source_institution not in known_institutions:
@@ -420,10 +426,12 @@ for rule_key in rules_dict.keys():
                                   group_number,
                                   source_disciplines,
                                   source_subjects,
+                                  priority,
                                   effective_date)
-                                values (%s, %s, %s, %s, %s, %s, %s) returning id""",
+                                values (%s, %s, %s, %s, %s, %s, %s, %s) returning id""",
                  rule_key + (source_disciplines_str,
                              source_subjects_str,
+                             rules_dict[rule_key].priority,
                              rules_dict[rule_key].effective_date.isoformat()))
   rule_id = cursor.fetchone()[0]
 
