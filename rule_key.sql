@@ -6,7 +6,7 @@ $$
     result text;
 
   BEGIN
-    select source_institution||'-'||destination_institution||'-'||subject_area||'-'||group_number
+    select source_institution||':'||destination_institution||':'||subject_area||':'||group_number
     into result from transfer_rules where id = rule_id;
     return result;
   END;
