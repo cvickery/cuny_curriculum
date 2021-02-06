@@ -475,6 +475,17 @@ for rule_key in rules_dict.keys():
                                   values (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                    """, (rule_id, ) + course)
 
+# Add rule_key string to transfer_rules table.
+if args.progress:
+  print('\nStep 3/2: add rule_keys to transfer rules', file=terminal)
+cursor.execute("""
+update transfer_rules
+  set rule_key =  source_institution ||':'||
+                  destination_institution ||':'||
+                  subject_area ||':'||
+                  group_number::text
+""")
+
 cursor.execute('select count(*) from transfer_rules')
 num_rules = cursor.fetchone()[0]
 if args.progress:

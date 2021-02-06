@@ -2,6 +2,7 @@
 drop table if exists transfer_rules cascade;
 create table transfer_rules (
   id serial primary key,
+  rule_key text,
   source_institution text not null,
   destination_institution text not null,
   subject_area text not null,
