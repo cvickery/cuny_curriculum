@@ -351,7 +351,6 @@ truncate -s0 update*.log
 
   echo -n "CREATE transfer_rules, source_courses, destination_courses... " | tee -a update_psql.log
   psql -X -q -d cuny_curriculum -f create_transfer_rules.sql >> update_psql.log 2>&1
-  psql -X -q -d cuny_curriculum -f view_transfer_rules.sql >> update_psql.log 2>&1
   if [ $? -ne 0 ]
     then send_notice 'ERROR: create/view transfer_rules failed'
          exit 1

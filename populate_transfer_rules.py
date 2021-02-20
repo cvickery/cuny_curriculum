@@ -165,6 +165,7 @@ Rule_Tuple = namedtuple('Rule_Tuple', """
                         source_disciplines
                         source_subjects
                         destination_courses
+                        destination_disciplines
                         priority
                         effective_date""")
 
@@ -173,8 +174,8 @@ def rule_key_to_str(self):
   """ Augment Rule_Key namedtuple with str dunder method.
       Makes error-log file easier to read.
   """
-  return (f'{self.source_institution}-{self.destination_institution}'
-          f'-{self.subject_area}-{self.group_number}')
+  return (f'{self.source_institution}:{self.destination_institution}'
+          f':{self.subject_area}:{self.group_number}')
 
 
 setattr(Rule_Key, '__str__', rule_key_to_str)
@@ -252,9 +253,10 @@ with open(cf_rules_file) as csvfile:
                     record.crse_offer_view_eff_date]]
       effective_date = max([date(month=v[0], day=v[1], year=v[2]) for v in date_vals])
       if rule_key not in rules_dict.keys():
-        # source_courses, source_disciplines, source_subjects, destination_courses,
+        # source_courses, source_disciplines, source_subjects,
+        # destination_courses, destination_disciplines,
         # Rule Priority, Effective Date
-        rules_dict[rule_key] = Rule_Tuple(set(), set(), set(), set(),
+        rules_dict[rule_key] = Rule_Tuple(set(), set(), set(), set(), set(),
                                           record.transfer_priority, effective_date)
       elif effective_date > rules_dict[rule_key].effective_date:
         rules_dict[rule_key].effective_date.replace(year=effective_date.year,
@@ -366,6 +368,7 @@ with open(cf_rules_file) as csvfile:
                                               courses[0].cuny_subject,
                                               record.units_taken)
       rules_dict[rule_key].destination_courses.add(destination_course)
+      rules_dict[rule_key].destination_disciplines.add(destination_course.discipline)
       if len(courses) > 1:
         conflicts.write(
             'Destination course_id {:06} for rule {} is cross-listed {} times. '
@@ -416,7 +419,12 @@ for rule_key in rules_dict.keys():
 
   # Build the colon-delimited discipline and subject strings
   source_disciplines_str = ':' + ':'.join(sorted(rules_dict[rule_key].source_disciplines)) + ':'
+  destination_disciplines_str = ':'.join(sorted(rules_dict[rule_key].destination_disciplines))
   source_subjects_str = ':' + ':'.join(sorted(rules_dict[rule_key].source_subjects)) + ':'
+  sending_courses = ':'.join(sorted([f'{c.course_id:06}.{c.offer_nbr}'
+                                    for c in rules_dict[rule_key].source_courses]))
+  receiving_courses = ':'.join(sorted([f'{c.course_id:06}.{c.offer_nbr}'
+                                      for c in rules_dict[rule_key].destination_courses]))
 
   # Insert the rule, getting back it's id
   cursor.execute("""insert into transfer_rules (
@@ -424,20 +432,29 @@ for rule_key in rules_dict.keys():
                                   destination_institution,
                                   subject_area,
                                   group_number,
+                                  rule_key,
                                   source_disciplines,
                                   source_subjects,
+                                  sending_courses,
+                                  destination_disciplines,
+                                  receiving_courses,
                                   priority,
                                   effective_date)
-                                values (%s, %s, %s, %s, %s, %s, %s, %s) returning id""",
-                 rule_key + (source_disciplines_str,
+                                values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                returning id""",
+                 rule_key + (':'.join([str(part) for part in rule_key]),
+                             source_disciplines_str,
                              source_subjects_str,
+                             sending_courses,
+                             destination_disciplines_str,
+                             receiving_courses,
                              rules_dict[rule_key].priority,
                              rules_dict[rule_key].effective_date.isoformat()))
   rule_id = cursor.fetchone()[0]
 
   # Sort and insert the source_courses
   for course in sorted(rules_dict[rule_key].source_courses,
-                       key=lambda c: (c.discipline, c.cat_num)):
+                       key=lambda c: (c.discipline, c.cat_num, c.offer_nbr)):
     cursor.execute("""insert into source_courses
                                   (
                                     rule_id,
@@ -459,7 +476,7 @@ for rule_key in rules_dict.keys():
 
   # Sort and insert the destination_courses
   for course in sorted(rules_dict[rule_key].destination_courses,
-                       key=lambda c: (c.discipline, c.cat_num)):
+                       key=lambda c: (c.discipline, c.cat_num, c.offer_nbr)):
     cursor.execute("""insert into destination_courses
                                   (
                                     rule_id,
@@ -474,17 +491,6 @@ for rule_key in rules_dict.keys():
                                   )
                                   values (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                    """, (rule_id, ) + course)
-
-# Add rule_key string to transfer_rules table.
-if args.progress:
-  print('\nStep 3/2: add rule_keys to transfer rules', file=terminal)
-cursor.execute("""
-update transfer_rules
-  set rule_key =  source_institution ||':'||
-                  destination_institution ||':'||
-                  subject_area ||':'||
-                  group_number::text
-""")
 
 cursor.execute('select count(*) from transfer_rules')
 num_rules = cursor.fetchone()[0]

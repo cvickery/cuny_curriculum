@@ -8,8 +8,11 @@ create table transfer_rules (
   subject_area text not null,
   group_number integer not null,
   priority integer not null,
-  source_disciplines text not null, -- colon-separated list of all source course disciplines
+  source_disciplines text not null, -- colon-separated list of all source disciplines
   source_subjects text not null, -- colon-separated list of all source course cuny_subjects
+  destination_disciplines text not null, -- colon-separated list of all destination disciplines
+  sending_courses text not null, -- colon-separated list of sending course_id.offer_nbr
+  receiving_courses text not null, -- colon-separated list of receiving course_id.offer_nbr
   review_status integer default 0,
   effective_date date, -- latest effective date of any table/view in CF query
   foreign key (source_institution) references cuny_institutions,
@@ -34,7 +37,7 @@ create table source_courses (
   offer_count integer,  -- greater than 1 for cross-listed courses
   discipline text,
   catalog_number text, -- "the" catalog number
-  cat_num real,        -- for display ordering
+  cat_num real,        -- numeric part for display ordering
   cuny_subject text,
   min_credits real,
   max_credits real,
@@ -51,7 +54,7 @@ create table destination_courses (
   offer_count integer,  -- greater than 1 for cross-listed courses
   discipline text,
   catalog_number text,  -- "the" catalog number
-  cat_num real,         -- for display ordering
+  cat_num real,         -- numeric part for display ordering
   cuny_subject text,
   transfer_credits real);
 
