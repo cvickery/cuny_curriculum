@@ -8,6 +8,7 @@ create view view_courses as (
            offer_nbr,
            discipline,
            catalog_number,
+           title,
            contact_hours,
            min_credits,
            max_credits,
