@@ -1,5 +1,5 @@
 --  View fields of courses that will fit on one line.
---    Truncate title; omit description and attributes.
+--    Truncate title and attributes; omit description.
 --    Used during development to look up courses quickly.
 drop view if exists view_courses cascade;
 create view view_courses as (
