@@ -8,12 +8,14 @@ create view view_courses as (
            offer_nbr,
            discipline,
            catalog_number,
-           title,
+           substr(title, 0, 32)||
+           case when (length(title) > 32) then '...' else '' end as title,
            contact_hours,
            min_credits,
            max_credits,
            designation,
-           attributes,
+           substr(attributes, 0, 16)||
+           case when (length(attributes) > 16) then '...' else '' end as attributes,
            course_status
     from cuny_courses
 order by institution, discipline, catalog_number);
