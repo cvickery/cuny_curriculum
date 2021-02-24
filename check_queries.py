@@ -16,11 +16,17 @@
     But stray files in queries and/or latest_queries are notices, not stops.
 """
 
+import os
 import sys
 from pathlib import Path
 from datetime import date
 from collections import namedtuple
 import argparse
+
+QUERY_CHECK_LIMIT = os.getenv('QUERY_CHECK_LIMIT')
+if QUERY_CHECK_LIMIT is None:
+  QUERY_CHECK_LIMIT = '10'
+QUERY_CHECK_LIMIT = int(QUERY_CHECK_LIMIT) / 100
 
 # This is the definitive list of queries used by the project. The check_references.sh script
 # uses this list to be sure each one is referenced by a Python script.
@@ -199,7 +205,7 @@ if not args.skip_date_check:
         print(new_query.name, 'date ok', file=sys.stderr)
 
 # There has to be one new query for each required query, and its size must not differ by more than
-# 10% from the corresponding latest_query. Missing latest queries are ignored.
+# QUERY_CHECK_LIMIT percent from the corresponding latest_query. Missing latest queries are ignored.
 for query_name in required_query_names:
   target_query = Path(latest_queries_dir, query_name + '.csv')
   if target_query.exists():
@@ -219,9 +225,11 @@ for query_name in required_query_names:
           print(f'ALERT: Deleting {query.name} because it is empty. ', file=sys.stderr)
           query.unlink()
           new_instances.remove(query)
-        elif target_size is not None and abs(target_size - newest_size) > 0.1 * target_size:
-          print(f'ALERT: Ignoring {query.name} because its size ({newest_size}) is not within 10% '
-                f'of the previous query’s size ({target_size:,})', file=sys.stderr)
+        elif (target_size is not None
+              and abs(target_size - newest_size) > QUERY_CHECK_LIMIT * target_size):
+          print(f'ALERT: Ignoring {query.name} because its size ({newest_size}) is not within '
+                f'{QUERY_CHECK_LIMIT * 100}% of the previous query’s size ({target_size:,})',
+                file=sys.stderr)
           if args.cleanup:
             print(f'CLEANUP: deleting {query.name}')
             query.unlink()
@@ -251,9 +259,9 @@ for query_name in required_query_names:
     newest_size = newest_query.stat().st_size
     if newest_size == 0:
       exit(f'{newest_query.name} has zero bytes')
-    if target_size is not None and abs(target_size - newest_size) > 0.1 * target_size:
+    if target_size is not None and abs(target_size - newest_size) > QUERY_CHECK_LIMIT * target_size:
       exit(f'STOP: {newest_query.name} ({newest_size}) differs from {target_query.name} '
-           f'({target_size}) by more than 10%')
+           f'({target_size}) by more than {QUERY_CHECK_LIMIT * 100}%')
     if args.verbose:
       if target_size is not None:
         print(f'{newest_query.name} size compares favorably to {target_query.name}',
