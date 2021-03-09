@@ -24,6 +24,7 @@ CREATE TABLE cuny_courses (
   contact_hours real,
   min_credits real,
   max_credits real,
+  repeatable boolean,
   primary_component text,
   requisites text,
   designation text references designations,

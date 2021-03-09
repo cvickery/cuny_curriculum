@@ -288,6 +288,7 @@ with open(cat_file, newline='') as csvfile:
           requisite_str = requisites[(institution, discipline, catalog_number)]
         description = r.descr.replace("'", "’")
         career = r.career
+        repeatable = r.repeat_for_credit == 'Y'
         course_status = r.crse_catalog_status
         discipline_status = r.subject_eff_status
         can_schedule = r.schedule_course
@@ -302,14 +303,14 @@ with open(cat_file, newline='') as csvfile:
           cursor.execute("""insert into cuny_courses values
                             (%s, %s, %s, %s, %s,
                              %s, %s, %s, %s, %s,
-                             %s, %s, %s, %s,
+                             %s, %s, %s, %s, %s,
                              %s,
                              %s, %s, %s, %s, %s,
                              %s, %s, %s, %s)
                          """,
                          (course_id, offer_nbr, equivalence_group, institution, cuny_subject,
                           department, discipline, catalog_number, title, short_title,
-                          Json(components), contact_hours, min_credits, max_credits,
+                          Json(components), contact_hours, min_credits, max_credits, repeatable,
                           primary_component,
                           requisite_str, designation, description, career, course_status,
                           discipline_status, can_schedule, effective_date, course_attributes))
