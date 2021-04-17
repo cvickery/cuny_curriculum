@@ -12,18 +12,23 @@
   Note rules where the actual source course min/max credits are not in the range specified in the
   rule. To avoid extra course lookups later, the source_courses get the actual course min/max.
 
-  The query includes a “Subject Credit source” field which can have one of the following
+  The query includes a “Subject Credit Source” field which can have one of the following
   values and descriptions:
     C   Use Catalog Units (Catalog)
     E   Specify Maximum Units (External)
     R   Specify Fixed Units (Rule)
-  This field is included in the source_courses table.
+
+  I _think_ this is how to determine the actual number of credits transferred. I now (April 2021)
+  add this to each source and destination course, and a collection of all values found for a rule in
+  the rule itself. I'm also adding a boolean to entries in the destination_courses table to mark
+  blanket credit courses to see how this flag correlates with the value(s) of the Subject Credit
+  Source field..
 
   CF uses a pair of values (a string and an integer) to identify sets of related rule
   components. They call the string part the Component Subject Area, but it turns out to be
   an arbitrary string, which is sometimes an external subject area, maybe is a discipline, or
   maybe is just a string that somebody thought was a good idea, perhaps because it identifies
-  a program ... or something. Anyway, we call it subject_area . They call the number the
+  a program ... or something. Anyway, we call it subject_area. They call the number the
   Src Equivalency Component, and we call it the group_number.
 
   There is a flag called Transfer Rule in the query. If this flag is false, the rule is ignored.
@@ -124,10 +129,14 @@ cursor.execute("""
                       cuny_subject,
                       min_credits,
                       max_credits,
-                      course_status from cuny_courses""")
-course_cache = defaultdict(list)
+                      course_status,
+                      designation in ('MLA', 'MNL') as is_mesg,
+                      attributes ~* 'BKCR' as is_bkcr
+                      from cuny_courses""")
+sparse_cache = defaultdict(list)
 for course in cursor.fetchall():
-  course_cache[course.course_id].append(course)
+  sparse_cache[course.course_id].append(course)
+course_cache = {k: sparse_cache[k] for k in sparse_cache.keys()}
 
 # Logging file
 conflicts = open('transfer_rule_conflicts.log', 'w')
@@ -146,7 +155,7 @@ Source_Course = namedtuple('Source_Course', """
                            cuny_subject
                            min_credits
                            max_credits
-                           credits_source
+                           credit_source
                            min_gpa
                            max_gpa""")
 Destination_Course = namedtuple('Destination_Course', """
@@ -157,15 +166,22 @@ Destination_Course = namedtuple('Destination_Course', """
                                 catalog_number
                                 cat_num
                                 cuny_subject
-                                transfer_credits""")
+                                transfer_credits
+                                credit_source
+                                is_mesg
+                                is_bkcr
+                                """)
 # Rules dict is keyed by Rule_Key. Values are sets of courses and sets of disciplines
 # and subjects. 2021-01-10: add rule priority to handle tied gpa requirements in source courses.
+# 2021-04-17: add credit sources
 Rule_Tuple = namedtuple('Rule_Tuple', """
                         source_courses
                         source_disciplines
                         source_subjects
                         destination_courses
                         destination_disciplines
+                        src_credit_sources
+                        dst_credit_sources
                         priority
                         effective_date""")
 
@@ -181,7 +197,6 @@ def rule_key_to_str(self):
 setattr(Rule_Key, '__str__', rule_key_to_str)
 
 rules_dict = dict()
-num_missing_courses = 0
 
 # Step 1: Go through the CF query file; extract a dict of rules and associated courses.
 # -----------------------------------------------------------------
@@ -255,8 +270,9 @@ with open(cf_rules_file) as csvfile:
       if rule_key not in rules_dict.keys():
         # source_courses, source_disciplines, source_subjects,
         # destination_courses, destination_disciplines,
+        # source_credit_sources, destination_credit_sources,
         # Rule Priority, Effective Date
-        rules_dict[rule_key] = Rule_Tuple(set(), set(), set(), set(), set(),
+        rules_dict[rule_key] = Rule_Tuple(set(), set(), set(), set(), set(), set(), set(),
                                           record.transfer_priority, effective_date)
       elif effective_date > rules_dict[rule_key].effective_date:
         rules_dict[rule_key].effective_date.replace(year=effective_date.year,
@@ -290,38 +306,17 @@ with open(cf_rules_file) as csvfile:
       # ------------------------
       course_id = int(record.source_course_id)
       offer_nbr = int(record.source_offer_nbr)
-      if course_id not in course_cache.keys():
-        conflicts.write('Source course {:06}.{} not in course catalog for rule {}. '
-                        'Rule ignored.\n'.format(course_id, offer_nbr, rule_key))
+      try:
+        courses = course_cache[course_id]
+      except KeyError as ke:
+        conflicts.write(f'{rule_key=} Source course {course_id:06}.{offer_nbr} not in course '
+                        f'catalog. Rule ignored.\n')
         del(rules_dict[rule_key])
-        num_missing_courses += 1
         continue
       # Only one course gets added to the rule, but all (cross-listed) disciplines and
       # subjects
-      courses = course_cache[course_id]
       course = courses[0]
 
-      # Eliminate rules with zero-credit source courses.
-      if float(course.max_credits) < 0.1:
-        conflicts.write(f'Source_course {course_id} in rule {rule_key} is a zero-credit course. '
-                        f'Rule ignored.\n')
-        del(rules_dict[rule_key])
-        continue
-
-      if float(course.min_credits) < float(record.src_min_units):
-        conflicts.write('Source course {:06} has {} min credits, '
-                        'but rule {} speifies {} min units\n'
-                        .format(course.course_id,
-                                course.min_credits,
-                                rule_key,
-                                record.src_min_units))
-      if float(course.max_credits) > float(record.src_max_units):
-        conflicts.write('Source course {:06} has {} max credits, '
-                        'but rule {} speifies {} max units\n'
-                        .format(course.course_id,
-                                course.max_credits,
-                                rule_key,
-                                record.src_max_units))
       source_course = Source_Course(course_id,
                                     offer_nbr,
                                     len(courses),
@@ -335,30 +330,45 @@ with open(cf_rules_file) as csvfile:
                                     record.min_grade_pts,
                                     record.max_grade_pts)
       rules_dict[rule_key].source_courses.add(source_course)
-      fail = False
+      rules_dict[rule_key].src_credit_sources.add(record.subject_credit_source)
+
+      # Add all source disciplines and cuny_subjects to the rule
       for course in courses:
-        if course.cat_num < 0:
-          conflicts.write(
-              'Source course {:06} with non-numeric catalog number {} for rule {}. '
-              'Rule ignored.\n'.format(course_id, course.catalog_number, rule_key))
-          fail = True
-          break
         rules_dict[rule_key].source_disciplines.add(course.discipline)
         rules_dict[rule_key].source_subjects.add(course.cuny_subject)
-      if fail:
-        rules_dict.pop(rule_key)
-        continue
+
+        # Report bogus-looking source courses
+        if course.cat_num < 0 or course.is_mesg or course.is_bkcr:
+          conflicts.write(
+              f'{rule_key=} Source course {course_id:06}: looks bogus {course.catalog_number=} '
+              f'{course.is_mesg=} {course.is_bkcr=}. Rule Kept.\n')
+
+        # Report zero-credit source courses.
+        elif float(course.max_credits) < 0.1:
+          conflicts.write(f'{rule_key=} Source course {course_id:06} is zero credits. '
+                          f'Rule Kept.\n')
+        else:
+          # Report rules with inconsistent min/max source credits
+          if float(course.min_credits) != float(record.src_min_units):
+            conflicts.write(f'{rule_key=} Source course {course.course_id:06}:{course.offer_nbr} '
+                            f'has {course.min_credits} min credits, but rule says '
+                            f'{record.src_min_units=}. Rule Kept.\n')
+          if float(course.max_credits) != float(record.src_max_units):
+            conflicts.write(f'{rule_key=} Source course {course.course_id:06}:{course.offer_nbr} '
+                            f'has {course.max_credits} max credits, but rule says '
+                            f'{record.src_max_units=} Rule Kept.\n')
 
       # Process destination_course_id
       # -----------------------------
       course_id = int(record.destination_course_id)
       offer_nbr = int(record.destination_offer_nbr)
-      if course_id not in course_cache.keys():
-        conflicts.write('Destination course {:06}.{} not in catalog for rule {}. '
-                        'Rule ignored.\n'.format(course_id, offer_nbr, rule_key))
+      try:
+        courses = course_cache[course_id]
+      except KeyError as ke:
+        conflicts.write(f'{rule_key= } Destination course {course_id:06} not in catalog. '
+                        f'Rule Ignored.\n')
         rules_dict.pop(rule_key)
         continue
-      courses = course_cache[course_id]
       destination_course = Destination_Course(course_id,
                                               offer_nbr,
                                               len(courses),
@@ -366,28 +376,27 @@ with open(cf_rules_file) as csvfile:
                                               courses[0].catalog_number,
                                               float(courses[0].cat_num),
                                               courses[0].cuny_subject,
-                                              record.units_taken)
+                                              record.units_taken,
+                                              record.subject_credit_source,
+                                              courses[0].is_mesg,
+                                              courses[0].is_bkcr)
       rules_dict[rule_key].destination_courses.add(destination_course)
       rules_dict[rule_key].destination_disciplines.add(destination_course.discipline)
+      rules_dict[rule_key].dst_credit_sources.add(record.subject_credit_source)
+
       if len(courses) > 1:
         conflicts.write(
-            'Destination course_id {:06} for rule {} is cross-listed {} times. '
-            'Rule retained.\n'.format(destination_course.course_id, rule_key,
-                                      len(course_cache[destination_course.course_id])))
-      fail = False
+            f'{rule_key=} Destination course {destination_course.course_id:06} is cross-listed '
+            f'{len(courses)} times. Rule Kept.\n')
+
+      # Report weirdnesses
       for course in courses:
-        if course.cat_num < 0:
-          conflicts.write('Destination course {:06} with non-numeric catalog number {} '
-                          'for rule {}. Rule ignored.\n'
-                          .format(course_id, course.catalog_number, rule_key))
-          fail = True
-          break
+        if not (course.is_mesg or course.is_bkcr) and course.cat_num < 0:
+          conflicts.write(f'{rule_key=} Destination course {course.course_id:06} with non-numeric '
+                          f'catalog number ‘{course.catalog_number}’. Rule Kept.\n')
         if course.course_status != 'A':
-          conflicts.write('Inactive destination course_id ({:06}) in rule {}. Rule retained.\n'.
-                          format(course_id, rule_key))
-      if fail:
-        rules_dict.pop(rule_key)
-        continue
+          conflicts.write(f'{rule_key=} Destination course {course_id:06} is inactive. '
+                          f'Rule Kept.\n')
 
 if args.progress:
   print(f'\n  Found {len(rules_dict.keys()):,} rules', file=terminal)
@@ -427,6 +436,8 @@ for rule_key in rules_dict.keys():
                                       for c in rules_dict[rule_key].destination_courses]))
 
   # Insert the rule, getting back it's id
+  credit_sources = (f'{"".join(sorted(rules_dict[rule_key].src_credit_sources))}:'
+                    f'{"".join(sorted(rules_dict[rule_key].dst_credit_sources))}')
   cursor.execute("""insert into transfer_rules (
                                   source_institution,
                                   destination_institution,
@@ -438,9 +449,10 @@ for rule_key in rules_dict.keys():
                                   sending_courses,
                                   destination_disciplines,
                                   receiving_courses,
+                                  credit_sources,
                                   priority,
                                   effective_date)
-                                values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                                 returning id""",
                  rule_key + (':'.join([str(part) for part in rule_key]),
                              source_disciplines_str,
@@ -448,6 +460,7 @@ for rule_key in rules_dict.keys():
                              sending_courses,
                              destination_disciplines_str,
                              receiving_courses,
+                             credit_sources,
                              rules_dict[rule_key].priority,
                              rules_dict[rule_key].effective_date.isoformat()))
   rule_id = cursor.fetchone()[0]
@@ -467,7 +480,7 @@ for rule_key in rules_dict.keys():
                                     cuny_subject,
                                     min_credits,
                                     max_credits,
-                                    credits_source,
+                                    credit_source,
                                     min_gpa,
                                     max_gpa
                                   )
@@ -487,9 +500,12 @@ for rule_key in rules_dict.keys():
                                     catalog_number,
                                     cat_num,
                                     cuny_subject,
-                                    transfer_credits
+                                    transfer_credits,
+                                    credit_source,
+                                    is_mesg,
+                                    is_bkcr
                                   )
-                                  values (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                  values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                    """, (rule_id, ) + course)
 
 cursor.execute('select count(*) from transfer_rules')
