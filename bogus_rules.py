@@ -1,19 +1,20 @@
+#! /usr/bin/env python3
+
 # Identify rows from the internal rules query where the discipline/catalog differ
 # between the rule and the actual catalog info. Create and populate the bogus_rules
 # table; generate a log file with same info. (The db table is not used in the app, but
 # is useful for reporting to CUNY.)
 
-import psycopg2
-from psycopg2.extras import NamedTupleCursor
-
 import csv
 import re
-import os
 import sys
 import argparse
 from collections import namedtuple
 from datetime import date
+from pathlib import Path
 from time import perf_counter
+
+from pgconnection import PgConnection
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--debug', '-d', action='store_true')
@@ -24,8 +25,8 @@ start_time = perf_counter()
 if args.progress:
   print('', file=sys.stderr)
 
-db = psycopg2.connect('dbname=cuny_curriculum')
-cursor = db.cursor(cursor_factory=NamedTupleCursor)
+conn = PgConnection()
+cursor = conn.cursor()
 
 # There be some garbage institution "names" in the transfer_rules
 cursor.execute("""select code as institution
@@ -37,13 +38,13 @@ if args.debug:
   print(known_institutions)
 
 # Get most recent transfer_rules query file
-csvfile_name = './latest_queries/QNS_CV_SR_TRNS_INTERNAL_RULES.csv'
-file_date = date.fromtimestamp(os.lstat(csvfile_name).st_birthtime)\
+query_file = Path('./latest_queries/QNS_CV_SR_TRNS_INTERNAL_RULES.csv')
+file_date = date.fromtimestamp(query_file.stat().st_mtime)\
     .strftime('%Y-%m-%d')
-logfile_name = './bogus_rules_report.log'
+logfile_name = './bogus_rules.log'
 
 if args.debug:
-  print('rules file: {}'.format(csvfile_name))
+  print(f'rules file: {query_file}', file=sys.stderr)
 
 cursor.execute('drop table if exists bogus_rules')
 cursor.execute("""
@@ -69,12 +70,12 @@ cursor.execute("""
                  bogus_destination_catalog_number text)
                """)
 
-num_records = sum(1 for line in open(csvfile_name))
+num_records = sum(1 for line in open(query_file))
 count_records = 0
 num_bogus = 0
 with open(logfile_name, 'w') as logfile:
   logfile.write('Query Date: {}\n'.format(file_date))
-  with open(csvfile_name) as csvfile:
+  with open(query_file) as csvfile:
     csv_reader = csv.reader(csvfile)
     cols = None
     row_num = 0
@@ -108,9 +109,7 @@ with open(logfile_name, 'w') as logfile:
           print('\nrow {} len(cols) = {} but len(rows) = {}'.format(row_num, len(cols), len(row)))
           continue
         record = Record._make(row)
-        if args.debug:
-          print()
-          print(record)
+
         # Ignore records that reference nonexistent institutions
         if record.source_institution not in known_institutions or \
            record.destination_institution not in known_institutions:
@@ -223,8 +222,8 @@ with open(logfile_name, 'w') as logfile:
   logfile.write('\nFound {:,} bogus records ({:.2f}%) out of {:,}.\n'
                 .format(num_bogus, 100 * num_bogus / num_records, num_records))
 
-db.commit()
-db.close()
+conn.commit()
+conn.close()
 if args.progress:
   print('', file=sys.stderr)
 print('\rFound {:,} bogus records ({:.2f}%) out of {:,}.'
