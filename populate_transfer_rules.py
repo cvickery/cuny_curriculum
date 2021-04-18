@@ -309,7 +309,7 @@ with open(cf_rules_file) as csvfile:
       try:
         courses = course_cache[course_id]
       except KeyError as ke:
-        conflicts.write(f'{rule_key=} Source course {course_id:06}.{offer_nbr} not in course '
+        conflicts.write(f'{rule_key} Source course {course_id:06}.{offer_nbr} not in course '
                         f'catalog. Rule ignored.\n')
         del(rules_dict[rule_key])
         continue
@@ -340,21 +340,21 @@ with open(cf_rules_file) as csvfile:
         # Report bogus-looking source courses
         if course.cat_num < 0 or course.is_mesg or course.is_bkcr:
           conflicts.write(
-              f'{rule_key=} Source course {course_id:06}: looks bogus {course.catalog_number=} '
+              f'{rule_key} Source course {course_id:06}: looks bogus {course.catalog_number=} '
               f'{course.is_mesg=} {course.is_bkcr=}. Rule Kept.\n')
 
         # Report zero-credit source courses.
         elif float(course.max_credits) < 0.1:
-          conflicts.write(f'{rule_key=} Source course {course_id:06} is zero credits. '
+          conflicts.write(f'{rule_key} Source course {course_id:06} is zero credits. '
                           f'Rule Kept.\n')
         else:
           # Report rules with inconsistent min/max source credits
           if float(course.min_credits) != float(record.src_min_units):
-            conflicts.write(f'{rule_key=} Source course {course.course_id:06}:{course.offer_nbr} '
+            conflicts.write(f'{rule_key} Source course {course.course_id:06}:{course.offer_nbr} '
                             f'has {course.min_credits} min credits, but rule says '
                             f'{record.src_min_units=}. Rule Kept.\n')
           if float(course.max_credits) != float(record.src_max_units):
-            conflicts.write(f'{rule_key=} Source course {course.course_id:06}:{course.offer_nbr} '
+            conflicts.write(f'{rule_key} Source course {course.course_id:06}:{course.offer_nbr} '
                             f'has {course.max_credits} max credits, but rule says '
                             f'{record.src_max_units=} Rule Kept.\n')
 
@@ -386,16 +386,16 @@ with open(cf_rules_file) as csvfile:
 
       if len(courses) > 1:
         conflicts.write(
-            f'{rule_key=} Destination course {destination_course.course_id:06} is cross-listed '
+            f'{rule_key} Destination course {destination_course.course_id:06} is cross-listed '
             f'{len(courses)} times. Rule Kept.\n')
 
       # Report weirdnesses
       for course in courses:
         if not (course.is_mesg or course.is_bkcr) and course.cat_num < 0:
-          conflicts.write(f'{rule_key=} Destination course {course.course_id:06} with non-numeric '
+          conflicts.write(f'{rule_key} Destination course {course.course_id:06} with non-numeric '
                           f'catalog number ‘{course.catalog_number}’. Rule Kept.\n')
         if course.course_status != 'A':
-          conflicts.write(f'{rule_key=} Destination course {course_id:06} is inactive. '
+          conflicts.write(f'{rule_key} Destination course {course_id:06} is inactive. '
                           f'Rule Kept.\n')
 
 if args.progress:

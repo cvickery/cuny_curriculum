@@ -443,9 +443,11 @@ truncate -s0 update*.log
   echo done. | tee -a update_psql.log
 
 
-if [[ ! $no_programs ]]
+if [[ $no_programs ]]
 then
-  echo "And now for CUNY_Programs ... " | tee -a update.log
+  echo "SKIPPING CUNY_Programs" | tee -a update.log
+else
+  echo "UPDATE CUNY_Programs ... " | tee -a update.log
   (
     cd /Users/vickery/CUNY_Programs
     ./update_registered_programs.sh | tee -a update.log

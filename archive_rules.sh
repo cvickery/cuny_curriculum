@@ -12,7 +12,7 @@ psql -Xqd cuny_curriculum -c "copy (select  rule_key(rule_id) as rule_key, \
                               offer_nbr, \
                               min_credits, \
                               max_credits, \
-                              credits_source, \
+                              credit_source, \
                               min_gpa, \
                               max_gpa \
                       from source_courses) to \
