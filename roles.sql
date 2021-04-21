@@ -11,7 +11,7 @@ create table roles (
 create table person_roles (
   id serial primary key,
   institution text references cuny_institutions default null,
-  job_title text,
+  organization text,
   role text references roles,
   email text not null,
   name text not null
@@ -22,17 +22,35 @@ create table person_roles (
 insert into roles values('cuny_registrar', 'University Registrar');
 insert into roles values('college_registrar', 'College  Registrar');
 insert into roles values('college_provost', 'College Provost');
+insert into roles values('department_evaluator', 'Department Evaluator');
 insert into roles values('webmaster', 'Webmaster');
 
+-- An evaluator submits rule evaluations
+insert into person_roles values(default, 'QNS01',
+                                'Computer Science',
+                                'department_evaluator',
+                                'cvickery@qc.cuny.edu')
+
+-- Notify both sending and receiving registrars when rule evaluation is submitted
+-- Notify sending registrar when receiving registrar approves changes, or not
+insert into person_roles values(default, 'QNS01',
+                                'Provost',
+                                'college_provost',
+                                'nobody@qc.cuny.edu', 'Alicia Alvero');
+
+-- Notify receiving registrar when receiving provost approves a change.
+insert into person_roles values(default, 'QNS01',
+                                'Admissions',
+                                'college_registrar',
+                                'nobody@qc.cuny.edu', 'Arpita Paulemon');
+
+-- Notify University Registrar when receiving provost approves a change.
 insert into person_roles values(default, null,
-                                'Executive University Registrar',
+                                'University Registrar',
                                 'cuny_registrar',
                                 'nobody@cuny.edu', 'University Registrar');
+
 insert into person_roles values(default, null,
                                 'Professor of Computer Science',
                                 'webmaster',
                                 'Christopher.Vickery@qc.cuny.edu', 'Christopher Vickery');
-insert into person_roles values(default, 'QNS01',
-                                'Associate Provost',
-                                'college_provost',
-                                'nobody@qc.cuny.edu', 'Alicia Alvero');
