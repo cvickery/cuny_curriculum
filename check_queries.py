@@ -65,9 +65,9 @@ run_control_ids = {
 required_query_names = [key for key in run_control_ids.keys()]
 
 Copacetic = namedtuple('Copacetic', 'notices stops')
-new_queries_dir = Path('/Users/vickery/CUNY_Curriculum/queries')
-latest_queries_dir = Path('/Users/vickery/CUNY_Curriculum/latest_queries/')
-archive_dir = Path('/Users/vickery/CUNY_Curriculum/query_archive')
+new_queries_dir = Path('/Users/vickery/Projects/cuny_curriculum/queries')
+latest_queries_dir = Path('/Users/vickery/Projects/cuny_curriculum/latest_queries/')
+archive_dir = Path('/Users/vickery/Projects/cuny_curriculum/query_archive')
 
 
 def if_copacetic():
