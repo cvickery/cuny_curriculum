@@ -8,7 +8,7 @@
 #   an email containing the two log files is sent to the "webmaster" and the process is aborted.
 
 export WEBMASTER='<Christopher Vickery> christopher.vickery@qc.cuny.edu'
-export PYTHONPATH='/Users/vickery/dgw_processor:/Users/vickery/Transfer_App/'
+export PYTHONPATH='/Users/vickery/dgw_processor:/Users/vickery/Projects/transfer_app/'
 
 function send_notice () {
 
@@ -449,7 +449,7 @@ then
 else
   echo "UPDATE CUNY_Programs ... " | tee -a update.log
   (
-    cd /Users/vickery/CUNY_Programs
+    cd /Users/vickery/Projects/cuny_programs
     ./update_registered_programs.sh | tee -a update.log
     if [ $? -ne 0 ]
     then send_notice 'ERROR: update_registered_programs.sh failed'
@@ -471,6 +471,6 @@ fi
   # Exit update_db mode
   echo -n "END update_db mode: " | tee -a update.log
   redis-cli -h localhost set update_db_started 0
-  ~/Transfer_App/start
+  ~/Projects/transfer_app/start
   echo done. | tee -a update.log
 )
