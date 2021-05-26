@@ -49,13 +49,13 @@ cursor.execute("""
                """)
 departments = [d.department for d in cursor.fetchall()]
 
-# CUNY Subjects table
+# The cuny_subjects table
+# -------------------------------------------------------------------------------------------------
 cursor.execute('drop table if exists cuny_subjects cascade')
 cursor.execute("""
   create table cuny_subjects (
   subject text primary key,
-  subject_name text
-  )
+  subject_name text  )
   """)
 
 # Populate cuny_subjects
@@ -70,13 +70,12 @@ with open(extern_file) as csvfile:
       Row = namedtuple('Row', cols)
     else:
       row = Row._make(line)
-      q = """insert into cuny_subjects values('{}', '{}')""".format(
-          row.external_subject_area,
-          row.description.replace("'", "’"))
-      cursor.execute(q)
+      q = 'insert into cuny_subjects values(%s, %s)'
+      cursor.execute(q, (row.external_subject_area, row.description.replace("'", "’")))
   db.commit()
 
-# Disciplines table
+# The cuny_disciplines table
+# -------------------------------------------------------------------------------------------------
 cursor.execute('drop table if exists cuny_disciplines cascade')
 cursor.execute(
     """
@@ -85,21 +84,26 @@ cursor.execute(
       department text references cuny_departments,
       discipline text,
       discipline_name text,
+      cip_code text default NULL,
+      hegis_code text default NULL,
       status text,
       cuny_subject text default 'missing' references cuny_subjects,
       primary key (institution, discipline))
     """)
 
-# Populate disciplines
+# Populate cuny_disciplines
 
 #
-# TEMPORARY: Add missing disciplines for courses that currently don't have one
+# TEMPORARY: Add missing disciplines for courses that currently don't have one.
+#   These two schools use a non-existent discipline name for certain BKCR/MESG courses.
+#   Two years later: looks like it’s not so temporary.
 #
 Discipline = namedtuple('Discipline',
-                        'institution department discipline discipline_name status cuny_subject')
+                        'institution department discipline discipline_name '
+                        'cip_code hegis_code status cuny_subject')
 missing_disciplines = [Discipline._make(x) for x in [
-    ('SPS01', 'SPS01', 'HESA', 'Temporary Discipline', 'A', 'ELEC'),
-    ('QCC01', 'QCC01', 'ELEC', 'Temporary Discipline', 'A', 'ELEC')]]
+    ('SPS01', 'SPS01', 'HESA', 'Temporary Discipline', None, None, 'A', 'ELEC'),
+    ('QCC01', 'QCC01', 'ELEC', 'Temporary Discipline', None, None, 'A', 'ELEC')]]
 for discp in missing_disciplines:
   cursor.execute(f"""
                   insert into cuny_disciplines values (
@@ -107,6 +111,8 @@ for discp in missing_disciplines:
                   '{discp.department}',
                   '{discp.discipline}',
                   '{discp.discipline_name}',
+                  '{discp.cip_code}',
+                  '{discp.hegis_code}',
                   '{discp.status}',
                   '{discp.cuny_subject}'
                   )
@@ -133,11 +139,13 @@ with open(discp_file) as csvfile:
           if discipline_key in discipline_keys:
             continue
           discipline_keys.add(discipline_key)
-          cursor.execute("""insert into cuny_disciplines values (%s, %s, %s, %s, %s, %s)
+          cursor.execute("""insert into cuny_disciplines values (%s, %s, %s, %s, %s, %s, %s, %s)
                          """, (row.institution,
                                row.acad_org,
                                row.subject,
                                row.formal_description.replace('\'', '’'),
+                               row.cip_code,
+                               row.hegis_code,
                                row.status,
                                external_subject_area))
 db.commit()
