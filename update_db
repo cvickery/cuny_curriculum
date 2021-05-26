@@ -8,7 +8,7 @@
 #   an email containing the two log files is sent to the "webmaster" and the process is aborted.
 
 export WEBMASTER='<Christopher Vickery> christopher.vickery@qc.cuny.edu'
-export PYTHONPATH='/Users/vickery/dgw_processor:/Users/vickery/Projects/transfer_app/'
+export PYTHONPATH='/Users/vickery/Projects/dgw_processor:/Users/vickery/Projects/transfer_app/'
 
 function send_notice () {
 
@@ -140,23 +140,24 @@ function send_notice () {
   # done
 
 truncate -s0 update*.log
-  echo BEGIN UPDATE at `date +"%Y-%m-%d %T"` | tee -a ./update.log
+export update_log=`pwd`/update.log
+  echo BEGIN UPDATE at `date +"%Y-%m-%d %T"` | tee -a $update_log
   SECONDS=0
   send_notice "Started updating database cuny_curriculum on $HOSTNAME"
 
   # # Archive non-CUNYfirst tables
-  # echo "Archive registered programs and requirements tables" | tee -a ./update.log
+  # echo "Archive registered programs and requirements tables" | tee -a $update_log
   # (
   #  cd /Users/vickery/CUNY_Programs
   #  ./archive_tables.sh
-  # ) | tee -a ./update.log
+  # ) | tee -a $update_log
 
   # Try downloading new queries
   if [[ $skip_download ]]
-  then echo "SKIPPING DOWNLOADS." | tee -a update.log
+  then echo "SKIPPING DOWNLOADS." | tee -a $update_log
   else
-    echo -n "DOWNLOAD new query files... " | tee -a update.log
-    /Users/vickery/bin/get_cuny >> update.log
+    echo -n "DOWNLOAD new query files... " | tee -a $update_log
+    /Users/vickery/bin/get_cuny >> $update_log
     if [[ $? -eq 1 ]]
     then  send_notice "Update abandoned: query download failed"
           exit 1
@@ -166,20 +167,20 @@ truncate -s0 update*.log
   # Python scripts process query results, so check that they are all present.
   # Report any mismatched dates, truncated or abnormally-sized queries and abort if not all a-ok
 
-  echo "CHECK & ARCHIVE QUERY FILES... " | tee -a update.log
+  echo "CHECK & ARCHIVE QUERY FILES... " | tee -a $update_log
   args='-v'
   [[ $no_size_check == 1 ]] && args="$args -ss"
   [[ $no_date_check == 1 ]] && args="$args -sd"
   [[ $no_archive == 1 ]] && args="$args -sa"
-  ./check_queries.py $args >> update.log 2>&1
+  ./check_queries.py $args >> $update_log 2>&1
   if [ $? -ne 0 ]
     then send_notice "ERROR: query checks failed"
          exit 1
-    else echo "done." | tee -a update.log
+    else echo "done." | tee -a $update_log
   fi
 
   # Enter update_db mode and give time for running queries to complete
-  echo "START update_db mode" | tee -a update.log
+  echo "START update_db mode" | tee -a $update_log
   redis-cli -h localhost set update_db_started `date +%s`
   # echo -n "WAIT for any running queries to complete ... "
   # sleep 10
@@ -188,7 +189,7 @@ truncate -s0 update*.log
   # # Save events table unless suppressed by command line
   # if [[ $no_events == 1 ]]
   # then
-  #   echo "SKIPPING events table SAVE/RESTORE." | tee -a update.log
+  #   echo "SKIPPING events table SAVE/RESTORE." | tee -a $update_log
   # else
   #   echo -n SAVE events table to $EVENTS_TABLE ... | tee -a update_psql.log
   #   pg_dump --data-only --table=events -f $EVENTS_TABLE cuny_curriculum >> update_psql.log
@@ -258,7 +259,7 @@ truncate -s0 update*.log
   echo done. | tee -a update_psql.log
 
   echo -n "CREATE academic_programs... " | tee -a update_psql.log
-  python3 cuny_programs.py >> update.log 2>&1
+  python3 cuny_programs.py >> $update_log 2>&1
   if [[ $? -ne 0 ]]
     then send_notice 'ERROR: cuny_programs failed'
          exit 1
@@ -267,55 +268,55 @@ truncate -s0 update*.log
 
   # Now regenerate the tables that are based on query results
   #
-  echo -n "CREATE TABLE cuny_careers... " | tee -a update.log
-  python3 cuny_careers.py >> update.log 2>&1
+  echo -n "CREATE TABLE cuny_careers... " | tee -a $update_log
+  python3 cuny_careers.py >> $update_log 2>&1
   if [ $? -ne 0 ]
     then send_notice 'ERROR: cuny_careers failed'
          exit 1
   fi
-  echo done. | tee -a update.log
+  echo done. | tee -a $update_log
 
-  echo -n "CREATE TABLE cuny_divisions... " | tee -a update.log
-  python3 cuny_divisions.py >> update.log 2>&1
+  echo -n "CREATE TABLE cuny_divisions... " | tee -a $update_log
+  python3 cuny_divisions.py >> $update_log 2>&1
   if [ $? -ne 0 ]
     then send_notice 'ERROR: cuny_divisions failed'
          exit 1
   fi
-  echo done. | tee -a update.log
+  echo done. | tee -a $update_log
 
-  echo -n "CREATE TABLE cuny_departments... " | tee -a update.log
-  python3 cuny_departments.py >> update.log 2>&1
+  echo -n "CREATE TABLE cuny_departments... " | tee -a $update_log
+  python3 cuny_departments.py >> $update_log 2>&1
   if [ $? -ne 0 ]
     then send_notice 'ERROR: cuny_departments failed'
          exit 1
   fi
-  echo done. | tee -a update.log
+  echo done. | tee -a $update_log
 
-  echo -n "CREATE TABLE cuny_subjects... " | tee -a update.log
-  python3 cuny_subjects.py >> update.log 2>&1
+  echo -n "CREATE TABLE cuny_subjects... " | tee -a $update_log
+  python3 cuny_subjects.py >> $update_log 2>&1
   if [ $? -ne 0 ]
     then send_notice 'ERROR: cuny_subjects failed'
          exit 1
   fi
-  echo done. | tee -a update.log
+  echo done. | tee -a $update_log
 
-  echo -n "CREATE TABLE designations... " | tee -a update.log
-  python3 designations.py >> update.log 2>&1
+  echo -n "CREATE TABLE designations... " | tee -a $update_log
+  python3 designations.py >> $update_log 2>&1
   if [ $? -ne 0 ]
     then send_notice 'ERROR: designations failed'
          exit 1
   fi
-  echo done. | tee -a update.log
+  echo done. | tee -a $update_log
 
-  echo -n "CREATE TABLE crse_quiv_tbl... " | tee -a update.log
-  python3 mk_crse_equiv_tbl.py $progress 2>> update.log
+  echo -n "CREATE TABLE crse_quiv_tbl... " | tee -a $update_log
+  python3 mk_crse_equiv_tbl.py $progress 2>> $update_log
   if [ $? -ne 0 ]
     then send_notice 'ERROR: mk_crse_equiv_tbl failed'
          exit 1
   fi
-  echo done. | tee -a update.log
+  echo done. | tee -a $update_log
 
-  echo -n "CREATE TABLE courses... " | tee -a update.log
+  echo -n "CREATE TABLE courses... " | tee -a $update_log
   psql -X -q -d cuny_curriculum -f create_cuny_courses.sql >> update_psql.log 2>&1
   if [ $? -ne 0 ]
     then send_notice 'ERROR: create_cuny_courses failed'
@@ -326,23 +327,23 @@ truncate -s0 update*.log
     then send_notice 'ERROR: view_courses failed'
          exit 1
   fi
-  echo done. | tee -a update.log
+  echo done. | tee -a $update_log
 
-  echo -n "POPULATE courses... " | tee -a update.log
-  python3 populate_cuny_courses.py $progress 2>> update.log
+  echo -n "POPULATE courses... " | tee -a $update_log
+  python3 populate_cuny_courses.py $progress 2>> $update_log
   if [ $? -ne 0 ]
     then send_notice 'ERROR: populate_cuny_courses failed'
          exit 1
   fi
-  echo done. | tee -a update.log
+  echo done. | tee -a $update_log
 
-  echo -n "CHECK component contact hours... " | tee -a update.log
+  echo -n "CHECK component contact hours... " | tee -a $update_log
   python3 check_total_hours.py > check_contact_hours.log 2>&1
   if [ $? -ne 0 ]
     then send_notice 'ERROR: check_total_hours failed'
          exit 1
   fi
-  echo done. | tee -a update.log
+  echo done. | tee -a $update_log
 
   # Transfer rules
   echo -n "CREATE TABLE review_status_bits... " | tee -a update_psql.log
@@ -361,30 +362,30 @@ truncate -s0 update*.log
   fi
   echo done. | tee -a update_psql.log
 
-  echo -n "POPULATE transfer_rules... " | tee -a update.log
-  python3 populate_transfer_rules.py $progress $report 2>> update.log
+  echo -n "POPULATE transfer_rules... " | tee -a $update_log
+  python3 populate_transfer_rules.py $progress $report 2>> $update_log
   if [ $? -ne 0 ]
     then send_notice 'ERROR: populate_transfer_rules failed'
          exit 1
   fi
-  echo done. | tee -a update.log
+  echo done. | tee -a $update_log
 
-  echo -n "SPEEDUP transfer_rule lookups... " | tee -a update.log
-  python3 mk_subject-rule_map.py $progress >> update.log 2>&1
+  echo -n "SPEEDUP transfer_rule lookups... " | tee -a $update_log
+  python3 mk_subject-rule_map.py $progress >> $update_log 2>&1
   if [ $? -ne 0 ]
     then send_notice 'ERROR: mk_subject-rule_map failed'
          exit 1
   fi
-  echo done. | tee -a update.log
+  echo done. | tee -a $update_log
 
   # Archive transfer rules
-  echo "Archive transfer rules" | tee -a ./update.log
-  ./archive_rules.sh >> ./update.log 2>&1
+  echo "Archive transfer rules" | tee -a $update_log
+  ./archive_rules.sh >> $update_log 2>&1
 
   # The following takes too long, and doesn't really do more than
   # populate_transfer_rules.py already did. Historical Artifact.
-  # echo -n "CHECK bogus rules... " | tee -a update.log
-  # python3 bogus_rules.py $progress >> update.log 2>&1
+  # echo -n "CHECK bogus rules... " | tee -a $update_log
+  # python3 bogus_rules.py $progress >> $update_log 2>&1
   # if [ $? -ne 0 ]
   #   then send_notice 'ERROR: bogus_rules failed'
   # fi
@@ -423,13 +424,13 @@ truncate -s0 update*.log
   #   echo ARCHIVE the events table.
   #   mv $EVENTS_TABLE ./event_dumps/
 
-  #   echo -n "UPDATE review statuses... " | tee -a update.log
-  #   python3 update_review_statuses.py >> update.log 2>&1
+  #   echo -n "UPDATE review statuses... " | tee -a $update_log
+  #   python3 update_review_statuses.py >> $update_log 2>&1
   #   if [ $? -ne 0 ]
   #     then send_notice 'ERROR: review_statuses failed'
   #          exit 1
   #   fi
-  #   echo done. | tee -a update.log
+  #   echo done. | tee -a $update_log
   # fi
 
   # # User roles and access
@@ -445,32 +446,26 @@ truncate -s0 update*.log
 
 if [[ $no_programs ]]
 then
-  echo "SKIPPING CUNY_Programs" | tee -a update.log
+  echo "SKIPPING CUNY_Programs" | tee -a $update_log
 else
-  echo "UPDATE CUNY_Programs ... " | tee -a update.log
+  echo "UPDATE CUNY Programs and Requirement Blocks... " | tee -a $update_log
   (
     cd /Users/vickery/Projects/cuny_programs
-    ./update_registered_programs.sh | tee -a update.log
+    ./update_registered_programs.sh | tee -a $update_log
     if [ $? -ne 0 ]
     then send_notice 'ERROR: update_registered_programs.sh failed'
          exit 1
     fi
-    cd dgw_info
-    ./update_requirement_blocks | tee -a update.log
-    if [ $? -ne 0 ]
-    then send_notice 'ERROR: update_requirement_blocks failed'
-         exit 1
-    fi
   )
-  echo done. | tee -a update.log
+  echo done. | tee -a $update_log
 fi
 
   echo UPDATE COMPLETED at `date +"%Y-%m-%d %T"` in `gdate -d @"$SECONDS" +'%-Mm %-Ss'` | \
-       tee -a update.log
+       tee -a $update_log
        send_notice "Finished updating database cuny_curriculum on $HOSTNAME"
   # Exit update_db mode
-  echo -n "END update_db mode: " | tee -a update.log
+  echo -n "END update_db mode: " | tee -a $update_log
   redis-cli -h localhost set update_db_started 0
   ~/Projects/transfer_app/start
-  echo done. | tee -a update.log
+  echo done. | tee -a $update_log
 )
