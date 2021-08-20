@@ -466,6 +466,6 @@ fi
   # Exit update_db mode
   echo -n "END update_db mode: " | tee -a $update_log
   redis-cli -h localhost set update_db_started 0
-  ~/Projects/transfer_app/start
+
   echo done. | tee -a $update_log
 )
