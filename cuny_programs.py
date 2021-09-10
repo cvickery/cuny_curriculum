@@ -21,7 +21,12 @@ cursor.execute("""
                description text,
                cip_code text,
                hegis_code text,
-               program_status text)
+               program_status text,
+               career text,
+               effective_date date,
+               first_term_valid text,
+               last_prospect text,
+               last_admit text)
                """)
 
 with open('./latest_queries/QCCV_PROG_PLAN_ORG.csv') as csvfile:
@@ -39,8 +44,8 @@ with open('./latest_queries/QCCV_PROG_PLAN_ORG.csv') as csvfile:
       row = Row._make(line)
       if row.nys_program_code != '' and row.nys_program_code != '0':
         cursor.execute("""
-                       insert into cuny_programs values (
-                                                 default, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                       insert into cuny_programs values (default, %s, %s, %s, %s, %s, %s, %s, %s,
+                                                                  %s, %s, %s, %s, %s, %s)
                        """, (row.nys_program_code,
                              row.institution,
                              row.academic_organization,
@@ -49,7 +54,12 @@ with open('./latest_queries/QCCV_PROG_PLAN_ORG.csv') as csvfile:
                              row.transcript_description,
                              row.cip_code,
                              row.hegis_code,
-                             row.status))
+                             row.status,
+                             row.career,
+                             row.effective_date,
+                             row.first_term_valid,
+                             row.last_prospect,
+                             row.last_admit))
 
 with open('./latest_queries/ACAD_SUBPLN_TBL.csv') as csvfile:
   reader = csv.reader(csvfile)
