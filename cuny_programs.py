@@ -17,6 +17,7 @@ cursor.execute("""
                department text,
                percent_owned float,
                academic_plan text,
+               plan_type text,
                description text,
                cip_code text,
                hegis_code text,
@@ -42,24 +43,27 @@ with open('./latest_queries/QCCV_PROG_PLAN_ORG.csv') as csvfile:
         Row = namedtuple('Row', cols)
     else:
       row = Row._make(line)
-      if row.nys_program_code != '' and row.nys_program_code != '0':
-        cursor.execute("""
-                       insert into cuny_programs values (default, %s, %s, %s, %s, %s, %s, %s, %s,
-                                                                  %s, %s, %s, %s, %s, %s)
-                       """, (row.nys_program_code,
-                             row.institution,
-                             row.academic_organization,
-                             row.percent_owned,
-                             row.academic_plan,
-                             row.transcript_description,
-                             row.cip_code,
-                             row.hegis_code,
-                             row.status,
-                             row.career,
-                             row.effective_date,
-                             row.first_term_valid,
-                             row.last_prospect,
-                             row.last_admit))
+      if row.institution in ['MHC01', 'UAPC1']:
+        continue
+      nys_program_code = '0' if row.nys_program_code == '' else row.nys_program_code
+      cursor.execute("""
+                     insert into cuny_programs values (default, %s, %s, %s, %s, %s, %s, %s, %s,
+                                                                %s, %s, %s, %s, %s, %s, %s)
+                     """, (nys_program_code,
+                           row.institution,
+                           row.academic_organization,
+                           row.percent_owned,
+                           row.academic_plan,
+                           row.plan_type,
+                           row.transcript_description,
+                           row.cip_code,
+                           row.hegis_code,
+                           row.status,
+                           row.career,
+                           row.effective_date,
+                           row.first_term_valid,
+                           row.last_prospect,
+                           row.last_admit))
 
 with open('./latest_queries/ACAD_SUBPLN_TBL.csv') as csvfile:
   reader = csv.reader(csvfile)
