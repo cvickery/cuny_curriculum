@@ -65,6 +65,7 @@ with open('./latest_queries/ACAD_SUBPLN_TBL.csv') as csvfile:
   reader = csv.reader(csvfile)
   cols = None
   for line in reader:
+    line[0] = line[0].replace('\ufeff', '')
     if cols is None:
       if 'Institution' == line[0]:
         cols = [val.lower().replace(' ', '_')
