@@ -1,13 +1,12 @@
 #! /usr/local/bin/python3
 
 import csv
-import psycopg2
-from psycopg2.extras import NamedTupleCursor
+from pgconnection import PgConnection
 
 from collections import namedtuple
 
-db = psycopg2.connect('dbname=cuny_curriculum')
-cursor = db.cursor(cursor_factory=NamedTupleCursor)
+conn = PgConnection()
+cursor = conn.cursor()
 
 cursor.execute("""
                drop table if exists cuny_programs;
@@ -34,6 +33,7 @@ with open('./latest_queries/QCCV_PROG_PLAN_ORG.csv') as csvfile:
   cols = None
   for line in reader:
     if cols is None:
+      line[0] = line[0].replace('\ufeff', '')
       if 'Institution' == line[0]:
         cols = [val.lower().replace(' ', '_')
                            .replace('/', '_')
@@ -86,5 +86,5 @@ with open('./latest_queries/ACAD_SUBPLN_TBL.csv') as csvfile:
                       insert into cuny_subplans values ({values})
                      """)
 
-db.commit()
-db.close()
+conn.commit()
+conn.close()
