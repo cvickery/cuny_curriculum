@@ -157,9 +157,9 @@ export update_log=`pwd`/update.log
   then echo "SKIPPING DOWNLOADS." | tee -a $update_log
   else
     echo -n "DOWNLOAD new query files... " | tee -a $update_log
-    /Users/vickery/bin/get_cuny >> $update_log
+    ./get_cuny >> $update_log
     if [[ $? -eq 1 ]]
-    then  send_notice "Update abandoned: query download failed"
+    then  send_notice "Update abandoned: no new query files"
           exit 1
     fi
   fi
