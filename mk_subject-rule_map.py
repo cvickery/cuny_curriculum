@@ -3,17 +3,21 @@
     1. Create the eponymous subject-rule map table.
     2. Index the rule_id field of source_courses and destination_courses
 """
-import os
-import sys
 import argparse
 import csv
+import os
+import resource
+import sys
 
 from collections import namedtuple
 from datetime import date
 from time import perf_counter
 
-import psycopg2
-from psycopg2.extras import NamedTupleCursor
+import psycopg
+from psycopg.rows import namedtuple_row
+
+soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+resource.setrlimit(resource.RLIMIT_NOFILE, [0x400, hard])
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--debug', '-d', action='store_true')
@@ -28,8 +32,8 @@ except OSError as e:
 
 app_start = perf_counter()
 
-db = psycopg2.connect('dbname=cuny_curriculum')
-cursor = db.cursor(cursor_factory=NamedTupleCursor)
+db = psycopg.connect('dbname=cuny_curriculum')
+cursor = db.cursor(row_factory=namedtuple_row)
 
 # Using the subject_rule_map table (instead of putting source subjects in a colon-delimited string
 # in each rule) gives a 1.97 speedup of rule lookups in do_form_2()

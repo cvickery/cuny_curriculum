@@ -15,8 +15,8 @@ import argparse
 
 from collections import namedtuple
 
-import psycopg2
-from psycopg2.extras import NamedTupleCursor
+import psycopg
+from psycopg.rows import namedtuple_row
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--debug', '-d', action='store_true')
@@ -30,8 +30,8 @@ except OSError as e:
   terminal = open('/dev/null', 'wt')
 
 num_rows = 0
-conn = psycopg2.connect('dbname=cuny_curriculum')
-cursor = conn.cursor(cursor_factory=NamedTupleCursor)
+conn = psycopg.connect('dbname=cuny_curriculum')
+cursor = conn.cursor(row_factory=namedtuple_row)
 
 cursor.execute("""
   drop table if exists crse_equiv_tbl cascade;

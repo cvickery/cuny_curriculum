@@ -1,12 +1,14 @@
 # Generate a report showing active courses where the number of contact hours is not the
 # sum of the component contact hours.
-import psycopg2
-from psycopg2.extras import NamedTupleCursor
+
+import psycopg
+from psycopg.rows import namedtuple_row
+
 from collections import namedtuple
 
 Component = namedtuple('Component', 'component hours')
-db = psycopg2.connect('dbname=cuny_curriculum')
-cursor = db.cursor(cursor_factory=NamedTupleCursor)
+db = psycopg.connect('dbname=cuny_curriculum')
+cursor = db.cursor(row_factory=namedtuple_row)
 
 cursor.execute("""select  course_id,
                           institution,

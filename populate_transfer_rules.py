@@ -47,10 +47,11 @@
     3. Insert rules and course lists into database tables
 """
 
-import os
-import sys
 import argparse
 import csv
+import os
+import resource
+import sys
 
 from collections import namedtuple, defaultdict
 from datetime import date
@@ -59,6 +60,9 @@ from time import perf_counter
 from pgconnection import PgConnection
 
 from cuny_divisions import ignore_institutions
+
+soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+resource.setrlimit(resource.RLIMIT_NOFILE, [0x400, hard])
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--debug', '-d', action='store_true')

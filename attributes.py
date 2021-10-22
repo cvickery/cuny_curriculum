@@ -1,9 +1,9 @@
 # Clear and re-populate the (course) attributes table.
 
-import psycopg2
+import psycopg
 import csv
 
-db = psycopg2.connect('dbname=cuny_curriculum')
+db = psycopg.connect('dbname=cuny_curriculum')
 cur = db.cursor()
 cur.execute('drop table if exists attributes')
 cur.execute(
@@ -18,7 +18,7 @@ with open('./latest_queries/SR742A___CRSE_ATTRIBUTE_VALUE.csv') as csvfile:
   csv_reader = csv.reader(csvfile)
   cols = None
   for row in csv_reader:
-    if cols == None:
+    if cols is None:
       row[0] = row[0].replace('\ufeff', '')
       cols = [val.lower().replace(' ', '_').replace('/', '_') for val in row]
     else:
