@@ -162,12 +162,13 @@ export update_log=`pwd`/update.log
     then  send_notice "Update abandoned: no new query files"
           exit 1
     fi
+    echo done. | tee -a update_psql.log
   fi
 
   # Python scripts process query results, so check that they are all present.
   # Report any mismatched dates, truncated or abnormally-sized queries and abort if not all a-ok
 
-  echo "CHECK & ARCHIVE QUERY FILES... " | tee -a $update_log
+  echo -n "CHECK & ARCHIVE QUERY FILES... " | tee -a $update_log
   args='-v'
   [[ $no_size_check == 1 ]] && args="$args -ss"
   [[ $no_date_check == 1 ]] && args="$args -sd"
@@ -178,6 +179,7 @@ export update_log=`pwd`/update.log
          exit 1
     else echo "done." | tee -a $update_log
   fi
+  echo done. | tee -a update_psql.log
 
   # Enter update_db mode and give time for running queries to complete
   echo "START update_db mode" | tee -a $update_log
@@ -205,6 +207,7 @@ export update_log=`pwd`/update.log
   echo -n "DROP Connections and Tables ... " | tee -a update_psql.log
   psql -X -q -d cuny_curriculum -f drop_connections.sql >> update_psql.log
   psql -X -q -d cuny_curriculum -f drop_tables.sql >> update_psql.log
+  echo done. | tee -a update_psql.log
 
   # brew services restart postgresql >> update_psql.log
   # echo -n "wait for postgres restart to complete... " | tee -a update_psql.log
@@ -381,6 +384,16 @@ export update_log=`pwd`/update.log
   # Archive transfer rules
   echo "Archive transfer rules" | tee -a $update_log
   ./archive_rules.sh >> $update_log 2>&1
+  echo done. | tee -a update_psql.log
+
+  # class_max_term table
+  echo -n "CREATE class_max_term table... " | tee -a $update_log
+  ./class_max_term.py >> $update.log 2>&1
+  if [ $? -ne 0 ]
+    then send_notice 'ERROR: class_max_term failed'
+         exit 1
+  fi
+  echo done. | tee -a update_psql.log
 
   # The following takes too long, and doesn't really do more than
   # populate_transfer_rules.py already did. Historical Artifact.
