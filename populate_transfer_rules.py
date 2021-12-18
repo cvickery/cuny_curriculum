@@ -79,17 +79,6 @@ except OSError as e:
   terminal = open('/dev/null', 'wt')
 
 
-# mk_rule_key()
-# -------------------------------------------------------------------------------------------------
-def mk_rule_key(rule):
-  """ Convert a rule tuple to a hyphen-separated string.
-  """
-  return '{}-{}-{}-{}'.format(rule.source_institution,
-                              rule.destination_institution,
-                              rule.subject_area,
-                              rule.group_number)
-
-
 # Start Execution
 # =================================================================================================
 if args.progress:
@@ -255,7 +244,7 @@ with open(cf_rules_file) as csvfile:
       try:
         rule_key = Rule_Key(record.source_institution,
                             record.destination_institution,
-                            record.component_subject_area,
+                            record.component_subject_area.replace(' ', '_'),
                             int(record.src_equivalency_component))
       except ValueError as e:
         conflicts.write(f'Unable to construct Rule Key for {record}.\n{e}')
@@ -369,7 +358,7 @@ with open(cf_rules_file) as csvfile:
       try:
         courses = course_cache[course_id]
       except KeyError as ke:
-        conflicts.write(f'{rule_key= } Destination course {course_id:06} not in catalog. '
+        conflicts.write(f'{rule_key} Destination course {course_id:06} not in catalog. '
                         f'Rule Ignored.\n')
         rules_dict.pop(rule_key)
         continue
@@ -414,7 +403,6 @@ if args.progress:
 # Step 2
 # -------------------------------------------------------------------------------------------------
 # Clear the three db tables and re-populate them.
-
 cursor.execute('truncate source_courses, destination_courses, transfer_rules cascade')
 # update the update date
 cursor.execute("""
@@ -425,6 +413,8 @@ cursor.execute("""
 total_keys = len(rules_dict.keys())
 keys_so_far = 0
 for rule_key in rules_dict.keys():
+  assert ' ' not in rule_key, f'{rule_key} has a space in it'
+
   keys_so_far += 1
   if args.progress and 0 == keys_so_far % 1000:
     print(f'\r{keys_so_far:,}/{total_keys:,} keys. {100 * keys_so_far / total_keys:.1f}%',
