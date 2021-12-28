@@ -312,6 +312,8 @@ with open(cf_rules_file) as csvfile:
         conflicts.write(f'{rule_key} Source course {course_id:06}.{offer_nbr} institution '
                         f'{courses[0].institution} does not match rule source institution. '
                         f'Rule ignored.\n')
+        del(rules_dict[rule_key])
+        continue
       # Only one course gets added to the rule, but all (cross-listed) disciplines and
       # subjects
       course = courses[0]
