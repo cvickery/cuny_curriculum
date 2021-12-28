@@ -42,6 +42,7 @@
       Note and reject records that reference non-existent institutions
     2. Lookup course_ids
           Note and eliminate rules that specifiy non-existent courses
+          Note and eliminate rules where the sending institution does not match the sending course.
           Note rules that specify inactive destination courses
           Build lists of source disciplines for all rules
     3. Insert rules and course lists into database tables
@@ -306,6 +307,11 @@ with open(cf_rules_file) as csvfile:
                         f'catalog. Rule ignored.\n')
         del(rules_dict[rule_key])
         continue
+      # Ignore rules where the source_institution doesn't match the source course's institution.
+      if courses[0].institution != rule_key.source_institution:
+        conflicts.write(f'{rule_key} Source course {course_id:06}.{offer_nbr} institution '
+                        f'{courses[0].institution} does not match rule source institution. '
+                        f'Rule ignored.\n')
       # Only one course gets added to the rule, but all (cross-listed) disciplines and
       # subjects
       course = courses[0]
