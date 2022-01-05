@@ -97,12 +97,10 @@ with psycopg.connect('dbname=cuny_curriculum', row_factory=namedtuple_row, autoc
   attribute_keys = []
   with open('latest_queries/SR742A___CRSE_ATTRIBUTE_VALUE.csv') as csvfile:
     reader = csv.reader(csvfile)
-    cols = None
     for line in reader:
-      if cols is None:
-        if 'Crse Attr' == line[0]:
-          cols = [val.lower().replace(' ', '_').replace('/', '_') for val in line]
-          Row = namedtuple('Row', cols)
+      if reader.line_num == 1:
+        Row = namedtuple('Row', [val.lower().replace(' ', '_').replace('/', '_') for val in line])
+        cursor.execute('delete from course_attributes')
       else:
         row = Row._make(line)
         key = (row.crse_attr, row.crsatr_val)
@@ -162,16 +160,21 @@ with psycopg.connect('dbname=cuny_curriculum', row_factory=namedtuple_row, autoc
     select contact_hours, primary_component, min_credits, max_credits, components
       from cuny_courses
      where course_id = %s
-       and offer_nbr = %s
-       and discipline = %s
-       and catalog_number = %s"""
+       and offer_nbr = %s"""
   update_components_query = """
     update cuny_courses set components = %s
      where course_id = %s
        and offer_nbr = %s
        and discipline = %s
        and catalog_number = %s"""
-
+  course_insertion_query = """insert into cuny_courses values
+                              (%s, %s, %s, %s, %s,
+                               %s, %s, %s, %s, %s,
+                               %s, %s, %s, %s, %s,
+                               %s,
+                               %s, %s, %s, %s, %s,
+                               %s, %s, %s, %s)
+                            """
   total_lines = sum(1 for line in open(cat_file))
   num_lines = 0
   num_courses = 0
@@ -234,102 +237,97 @@ with psycopg.connect('dbname=cuny_curriculum', row_factory=namedtuple_row, autoc
         contact_hours = float(row.course_contact_hours)
         min_credits = float(row.min_units)
         max_credits = float(row.max_units)
-        lookup_details_args = [course_id, offer_nbr, discipline, catalog_number]
 
         with conn.cursor() as lookup_cursor:
+          lookup_details_args = [course_id, offer_nbr]
           lookup_cursor.execute(lookup_details_query, lookup_details_args)
-        if lookup_cursor.rowcount > 0:
-          if lookup_cursor.rowcount > 1:
-            logs.write(f'{lookup_details_query} returned multiple rows\n')
-            print(f'{lookup_details_query} returned multiple rows', file=sys.stderr)
-            exit(1)
-          else:
-            lookup = lookup_cursor.fetchone()
-            # Make sure contact_hours, primary_component, and credits haven’t changed
-            if contact_hours != lookup.contact_hours or \
-               primary_component != lookup.primary_component or \
-               min_credits != lookup.min_credits or \
-               max_credits != lookup.max_credits:
-              logs.write('Inconsistent hours/credits/component for {}-{} {} {}\n'
-                         .format(course_id, offer_nbr, discipline, catalog_number))
-              print('Inconsistent hours/credits/component for {}-{} {} {}'
-                    .format(course_id, offer_nbr, discipline, catalog_number), file=sys.stderr)
+          if lookup_cursor.rowcount > 0:
+            if lookup_cursor.rowcount > 1:
+              logs.write(f'{lookup_details_query} returned multiple rows\n')
+              print(f'{lookup_details_query} returned multiple rows', file=sys.stderr)
               exit(1)
-
-            components = [Component._make(c) for c in lookup.components]
-            if component not in components:
-              components.append(component)
-              # Do the following at display time, putting the primary_component first.
-              # Order components alphabetically, but LEC is always first if present.
-              # components.sort()
-              # if 'LEC' in components and components[0] != 'LEC':
-              #   components.remove('LEC')
-              #   components = ['LEC'] + components
-              with conn.cursor() as update_cursor:
-                update_components_args = [json.dumps(components), course_id, offer_nbr, discipline,
-                                          catalog_number]
-                update_cursor.execute(update_components_query, update_components_args)
             else:
-              logs.write('Repeated component: {} {} {} {} {} :: {}\n'.format(course_id,
-                                                                             offer_nbr,
-                                                                             institution,
-                                                                             discipline,
-                                                                             catalog_number,
-                                                                             component))
-        else:
-          components = [component]
-          cuny_subject = row.subject_external_area
-          if cuny_subject == '':
-            cuny_subject = 'missing'
-          title = row.long_course_title.replace("'", "’")\
-                                       .replace('\r', '')\
-                                       .replace('\n', ' ')\
-                                       .replace('( ', '(')
-          short_title = row.short_course_title.replace("'", "’")\
-                                              .replace('\r', '')\
-                                              .replace('\n', ' ')\
-                                              .replace('( ', '(')
+              lookup = lookup_cursor.fetchone()
+              # Make sure contact_hours, primary_component, and credits haven’t changed
+              if contact_hours != lookup.contact_hours or \
+                 primary_component != lookup.primary_component or \
+                 min_credits != lookup.min_credits or \
+                 max_credits != lookup.max_credits:
+                logs.write('Inconsistent hours/credits/component for {}-{} {} {}\n'
+                           .format(course_id, offer_nbr, discipline, catalog_number))
+                print('Inconsistent hours/credits/component for {}-{} {} {}'
+                      .format(course_id, offer_nbr, discipline, catalog_number), file=sys.stderr)
+                exit(1)
 
-          designation = row.designation
+              components = [Component._make(c) for c in lookup.components]
+              if component not in components:
+                components.append(component)
+                # Do the following at display time, putting the primary_component first.
+                # Order components alphabetically, but LEC is always first if present.
+                # components.sort()
+                # if 'LEC' in components and components[0] != 'LEC':
+                #   components.remove('LEC')
+                #   components = ['LEC'] + components
+                with conn.cursor() as update_cursor:
+                  update_components_args = [json.dumps(components), course_id, offer_nbr, discipline,
+                                            catalog_number]
+                  update_cursor.execute(update_components_query, update_components_args)
+              else:
+                logs.write('Repeated component: {} {} {} {} {} :: {}\n'.format(course_id,
+                                                                               offer_nbr,
+                                                                               institution,
+                                                                               discipline,
+                                                                               catalog_number,
+                                                                               component))
+          else:
+            components = [component]
+            cuny_subject = row.subject_external_area
+            if cuny_subject == '':
+              cuny_subject = 'missing'
+            title = row.long_course_title.replace("'", "’")\
+                                         .replace('\r', '')\
+                                         .replace('\n', ' ')\
+                                         .replace('( ', '(')
+            short_title = row.short_course_title.replace("'", "’")\
+                                                .replace('\r', '')\
+                                                .replace('\n', ' ')\
+                                                .replace('( ', '(')
 
-          requisite_str = 'None'
-          if (institution, discipline, catalog_number) in requisites.keys():
-            requisite_str = requisites[(institution, discipline, catalog_number)]
-          description = row.descr.replace("'", "’")
-          career = row.career
-          repeatable = row.repeat_for_credit == 'Y'
-          course_status = row.crse_catalog_status
-          discipline_status = row.subject_eff_status
-          can_schedule = row.schedule_course
-          effective_date = row.crse_catalog_effective_date
-          # Report and ignore cases where the institution-discipline pair doesn’t exist in the
-          # cuny_disciplines table.
-          if (institution, discipline) not in discipline_keys:
-            logs.write(f'{discipline} is not a known discipline at {institution}\n'
-                       f'  Ignoring {discipline} {catalog_number}.\n')
-            continue
+            designation = row.designation
 
-          try:
-            conn.execute("""insert into cuny_courses values
-                              (%s, %s, %s, %s, %s,
-                               %s, %s, %s, %s, %s,
-                               %s, %s, %s, %s, %s,
-                               %s,
-                               %s, %s, %s, %s, %s,
-                               %s, %s, %s, %s)
-                           """,
-                         (course_id, offer_nbr, equivalence_group, institution, cuny_subject,
-                          department, discipline, catalog_number, title, short_title,
-                          json.dumps(components), contact_hours, min_credits, max_credits,
-                          repeatable, primary_component, requisite_str, designation, description,
-                          career, course_status, discipline_status, can_schedule, effective_date,
-                          course_attributes))
-            num_courses += 1
-            if args.debug:
-              print(cursor.query)
-          except Exception as err:
-            logs.write(err)
-            sys.exit(err)
+            requisite_str = 'None'
+            if (institution, discipline, catalog_number) in requisites.keys():
+              requisite_str = requisites[(institution, discipline, catalog_number)]
+            description = row.descr.replace("'", "’")
+            career = row.career
+            repeatable = row.repeat_for_credit == 'Y'
+            course_status = row.crse_catalog_status
+            discipline_status = row.subject_eff_status
+            can_schedule = row.schedule_course
+            effective_date = row.crse_catalog_effective_date
+
+            # Report and ignore cases where the institution-discipline pair doesn’t exist in the
+            # cuny_disciplines table.
+            if (institution, discipline) not in discipline_keys:
+              logs.write(f'{discipline} is not a known discipline at {institution}\n'
+                         f'  Ignoring {discipline} {catalog_number}.\n')
+              continue
+
+            try:
+              course_insertion_values = (course_id, offer_nbr, equivalence_group, institution,
+                                         cuny_subject, department, discipline, catalog_number, title,
+                                         short_title, json.dumps(components), contact_hours,
+                                         min_credits, max_credits, repeatable, primary_component,
+                                         requisite_str, designation, description, career,
+                                         course_status, discipline_status, can_schedule,
+                                         effective_date, course_attributes)
+              cursor.execute(course_insertion_query, course_insertion_values)
+              num_courses += 1
+              if args.debug:
+                print(course_insertion_values)
+            except Exception as err:
+              logs.write(f'{err}\n{cursor._query.query}')
+              sys.exit(str(err))
 
   run_time = perf_counter() - start_time
   minutes = int(run_time / 60.)

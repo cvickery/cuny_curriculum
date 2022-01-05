@@ -319,12 +319,13 @@ export update_log=`pwd`/update.log
   fi
   echo done. | tee -a $update_log
 
-  echo -n "CREATE TABLE courses... " | tee -a $update_log
+  echo -n "CREATE TABLE cuny_courses... " | tee -a $update_log
   psql -X -q -d cuny_curriculum -f create_cuny_courses.sql >> update_psql.log 2>&1
   if [ $? -ne 0 ]
     then send_notice 'ERROR: create_cuny_courses failed'
          exit 1
   fi
+  echo -n "CREATE VIEW cuny_courses... " | tee -a $update_log
   psql -X -q -d cuny_curriculum -f view_courses.sql >> update_psql.log 2>&1
   if [ $? -ne 0 ]
     then send_notice 'ERROR: view_courses failed'

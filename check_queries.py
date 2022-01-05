@@ -148,177 +148,183 @@ def if_copacetic():
   return Copacetic(notices, stops)
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument('-v', '--verbose', action='store_true')
-parser.add_argument('-c', '--cleanup', action='store_true')
-parser.add_argument('-d', '--debug', action='store_true')
-parser.add_argument('-l', '--list', action='store_true')
-parser.add_argument('-n', '--num_queries', action='store_true')
-parser.add_argument('-r', '--run_control_ids', action='store_true')
-parser.add_argument('-sd', '--skip_date_check', action='store_true')
-parser.add_argument('-ss', '--skip_size_check', action='store_true')
-parser.add_argument('-sa', '--skip_archive', action='store_true')
-args = parser.parse_args()
+if __name__ == '__main__':
 
-if args.debug:
-  print(args, file=sys.stderr)
+  parser = argparse.ArgumentParser()
+  parser.add_argument('-v', '--verbose', action='store_true')
+  parser.add_argument('-c', '--cleanup', action='store_true')
+  parser.add_argument('-d', '--debug', action='store_true')
+  parser.add_argument('-l', '--list', action='store_true')
+  parser.add_argument('-n', '--num_queries', action='store_true')
+  parser.add_argument('-r', '--run_control_ids', action='store_true')
+  parser.add_argument('-sd', '--skip_date_check', action='store_true')
+  parser.add_argument('-ss', '--skip_size_check', action='store_true')
+  parser.add_argument('-sa', '--skip_archive', action='store_true')
+  args = parser.parse_args()
 
-
-# The list option is used by check_references.sh to get a copy of the query names.
-if args.list:
-  for query_name in required_query_names:
-    print(query_name)
-  if args.num_queries:
-    print(f'{len(required_query_names)} queries')
-  exit()
-
-# Expanded version of -l option, for human reference.
-if args.run_control_ids:
-  for query_name, run_control_id in run_control_ids.items():
-    print(f'{query_name:32} {run_control_id}')
-  if args.num_queries:
-    print(f'{len(required_query_names)} queries')
-  exit()
-
-# Precheck: is there anything to check
-is_copacetic = if_copacetic()
-if len(is_copacetic.stops) == 0:
-  for notice in is_copacetic.notices:
-    print(f'{notice}', file=sys.stderr)
-  print('Copacetic Precheck OK', file=sys.stderr)
-  exit(0)
-
-# All new_queries_dir csv files must have the same modification date (unless suppressed)
-new_mod_date = None
-if not args.skip_date_check:
-  for new_query in new_queries_dir.glob('*.csv'):
-    new_date = date.fromtimestamp(new_query.stat().st_mtime).strftime('%Y-%m-%d')
-    if new_mod_date is None:
-      new_mod_date = new_date
-    if new_date != new_mod_date:
-      # This is a stop if the file is required, but just a notice if it is not
-      if new_query.stem.strip('-123456789') in required_query_names:
-        exit(f'File date problem for {new_query.name}. '
-             f'Expected {new_mod_date}, but got {new_date}.')
-      else:
-        print(f'ALERT stray new csv file with mis-matched date: {new_query.name}')
-    else:
-      if args.verbose:
-        print(new_query.name, 'date ok', file=sys.stderr)
-
-# There has to be one new query for each required query, and its size must not differ by more than
-# QUERY_CHECK_LIMIT percent from the corresponding latest_query. Missing latest queries are ignored.
-for query_name in required_query_names:
-  target_query = Path(latest_queries_dir, query_name + '.csv')
-  if target_query.exists():
-    target_size = target_query.stat().st_size
-  else:
-    target_size = None
-  new_instances = [q for q in new_queries_dir.glob(f'{query_name}*.csv')]
-  newest_query = None
-  if len(new_instances) == 0:
-    exit(f'No new query for {query_name}')
-  if len(new_instances) > 1:
-    # Multiple copies; look at sizes. If size test fails, discard the instance.
-    if not args.skip_size_check:
-      for query in new_instances:
-        newest_size = query.stat().st_size
-        if newest_size == 0:
-          print(f'ALERT: Deleting {query.name} because it is empty. ', file=sys.stderr)
-          query.unlink()
-          new_instances.remove(query)
-        elif (target_size is not None
-              and abs(target_size - newest_size) > QUERY_CHECK_LIMIT * target_size):
-          print(f'ALERT: Ignoring {query.name} because its size ({newest_size}) is not within '
-                f'{QUERY_CHECK_LIMIT * 100}% of the previous query’s size ({target_size:,})',
-                file=sys.stderr)
-          if args.cleanup:
-            print(f'CLEANUP: deleting {query.name}')
-            query.unlink()
-          new_instances.remove(query)
-
-  # Remove all but newest new_instance
-  if len(new_instances) > 0:
-    newest_query = new_instances.pop()
-    newest_timestamp = newest_query.stat().st_mtime
-    for query in new_instances:
-      if query.stat().st_mtime > newest_timestamp:
-        # This one is newer, so get rid of the previous "newest" one, and replace it with this
-        print(f'NOTICE: Ignoring {newest_query.name} because there is a newer one.',
-              file=sys.stderr)
-        newest_query = query
-        newest_time_stamp = newest_query.stat().st_mtime
-      else:
-        # This one is older, so just get rid of it
-        print(f'NOTICE: Ignoring {query.name} because there is a newer one.', file=sys.stderr)
-  if newest_query is None:
-    exit(f'No valid query file found for {query_name}')
   if args.debug:
-    print(f'found new query: {newest_query.name}', file=sys.stderr)
+    print(args, file=sys.stderr)
 
-  # Size check (unless suppressed)
-  if not args.skip_size_check:
-    newest_size = newest_query.stat().st_size
-    if newest_size == 0:
-      exit(f'{newest_query.name} has zero bytes')
-    if target_size is not None and abs(target_size - newest_size) > QUERY_CHECK_LIMIT * target_size:
-      exit(f'STOP: {newest_query.name} ({newest_size}) differs from {target_query.name} '
-           f'({target_size}) by more than {QUERY_CHECK_LIMIT * 100}%')
-    if args.verbose:
-      if target_size is not None:
-        print(f'{newest_query.name} size compares favorably to {target_query.name}',
-              file=sys.stderr)
+  # The list option is used by check_references.sh to get a copy of the query names.
+  if args.list:
+    for query_name in required_query_names:
+      print(query_name)
+    if args.num_queries:
+      print(f'{len(required_query_names)} queries')
+    exit()
+
+  # Expanded version of -l option, for human reference.
+  if args.run_control_ids:
+    for query_name, run_control_id in run_control_ids.items():
+      print(f'{query_name:32} {run_control_id}')
+    if args.num_queries:
+      print(f'{len(required_query_names)} queries')
+    exit()
+
+  # Precheck: is there anything to check
+  is_copacetic = if_copacetic()
+  if len(is_copacetic.stops) == 0:
+    for notice in is_copacetic.notices:
+      print(f'{notice}', file=sys.stderr)
+    print('Copacetic Precheck OK', file=sys.stderr)
+    exit(0)
+  elif args.debug:
+    print(is_copacetic)
+
+  # All new_queries_dir csv files must have the same modification date (unless suppressed)
+  new_mod_date = None
+  if not args.skip_date_check:
+    for new_query in new_queries_dir.glob('*.csv'):
+      new_date = date.fromtimestamp(new_query.stat().st_mtime).strftime('%Y-%m-%d')
+      if new_mod_date is None:
+        new_mod_date = new_date
+      if new_date != new_mod_date:
+        # This is a stop if the file is required, but just a notice if it is not
+        if new_query.stem.strip('-123456789') in required_query_names:
+          exit(f'File date problem for {new_query.name}. '
+               f'Expected {new_mod_date}, but got {new_date}.')
+        else:
+          print(f'ALERT stray new csv file with mis-matched date: {new_query.name}')
       else:
-        print(f'{newest_query.name} has {newest_size:,} bytes.')
+        if args.verbose:
+          print(new_query.name, 'date ok', file=sys.stderr)
 
-# Sizes and dates did not cause a problem: do Archive (unless suppressed)
-if not args.skip_archive:
-  # move each query from latest_queries to query_archive, with stem appended with its
-  # new_mod_date
-  prev_mod_date = None
-  for target_query in [Path(latest_queries_dir, f'{q}.csv') for q in required_query_names]:
+  # There has to be one new query for each required query, and its size must not differ by more than
+  # QUERY_CHECK_LIMIT percent from the corresponding latest_query. Missing latest queries are
+  # ignored.
+  for query_name in required_query_names:
+    target_query = Path(latest_queries_dir, query_name + '.csv')
     if target_query.exists():
-      if prev_mod_date is None:
-        prev_mod_date = date.fromtimestamp(target_query.stat().st_mtime).strftime('%Y-%m-%d')
-      target_query.rename(archive_dir / f'{target_query.stem}_{prev_mod_date}.csv')
+      target_size = target_query.stat().st_size
+    else:
+      target_size = None
+    new_instances = [q for q in new_queries_dir.glob(f'{query_name}*.csv')]
+    newest_query = None
+    if len(new_instances) == 0:
+      exit(f'No new query for {query_name}')
+    if len(new_instances) > 1:
+      # Multiple copies; look at sizes. If size test fails, discard the instance.
+      if not args.skip_size_check:
+        for query in new_instances:
+          newest_size = query.stat().st_size
+          if newest_size == 0:
+            print(f'ALERT: Deleting {query.name} because it is empty. ', file=sys.stderr)
+            query.unlink()
+            new_instances.remove(query)
+          elif (target_size is not None
+                and abs(target_size - newest_size) > QUERY_CHECK_LIMIT * target_size):
+            print(f'ALERT: Ignoring {query.name} because its size ({newest_size}) is not within '
+                  f'{QUERY_CHECK_LIMIT * 100}% of the previous query’s size ({target_size:,})',
+                  file=sys.stderr)
+            if args.cleanup:
+              print(f'CLEANUP: deleting {query.name}')
+              query.unlink()
+            new_instances.remove(query)
+
+    # Remove all but newest new_instance
+    if len(new_instances) > 0:
+      newest_query = new_instances.pop()
+      newest_timestamp = newest_query.stat().st_mtime
+      for query in new_instances:
+        if query.stat().st_mtime > newest_timestamp:
+          # This one is newer, so get rid of the previous "newest" one, and replace it with this
+          print(f'NOTICE: Ignoring {newest_query.name} because there is a newer one.',
+                file=sys.stderr)
+          newest_query = query
+          newest_time_stamp = newest_query.stat().st_mtime
+        else:
+          # This one is older, so just get rid of it
+          print(f'NOTICE: Ignoring {query.name} because there is a newer one.', file=sys.stderr)
+    if newest_query is None:
+      exit(f'No valid query file found for {query_name}')
+    if args.debug:
+      print(f'found new query: {newest_query.name}', file=sys.stderr)
+
+    # Size check (unless suppressed)
+    if not args.skip_size_check:
+      newest_size = newest_query.stat().st_size
+      if newest_size == 0:
+        exit(f'{newest_query.name} has zero bytes')
+      if (target_size is not None
+              and abs(target_size - newest_size) > QUERY_CHECK_LIMIT * target_size):
+        exit(f'STOP: {newest_query.name} ({newest_size}) differs from {target_query.name} '
+             f'({target_size}) by more than {QUERY_CHECK_LIMIT * 100}%')
       if args.verbose:
-        print(f'{target_query} moved to {archive_dir}/{target_query.stem}_{prev_mod_date}.csv',
+        if target_size is not None:
+          print(f'{newest_query.name} size compares favorably to {target_query.name}',
+                file=sys.stderr)
+        else:
+          print(f'{newest_query.name} has {newest_size:,} bytes.')
+
+  # Sizes and dates did not cause a problem: do Archive (unless suppressed)
+  if not args.skip_archive:
+    # move each query from latest_queries to query_archive, with stem appended with its
+    # new_mod_date
+    prev_mod_date = None
+    for target_query in [Path(latest_queries_dir, f'{q}.csv') for q in required_query_names]:
+      if target_query.exists():
+        if prev_mod_date is None:
+          prev_mod_date = date.fromtimestamp(target_query.stat().st_mtime).strftime('%Y-%m-%d')
+        target_query.rename(archive_dir / f'{target_query.stem}_{prev_mod_date}.csv')
+        if args.verbose:
+          print(f'{target_query} moved to {archive_dir}/{target_query.stem}_{prev_mod_date}.csv',
+                file=sys.stderr)
+      else:
+        print(f'NOTICE: Unable to archive {target_query} because it does not exist',
               file=sys.stderr)
-    else:
-      print(f'NOTICE: Unable to archive {target_query} because it does not exist', file=sys.stderr)
 
-  # latest_queries_dir should now be empty
-  remnants = [q.name for q in latest_queries_dir.glob('*')]
-  try:
-    remnants.remove('.DS_Store')
-  except ValueError as ve:
-    pass
-  if len(remnants) != 0:
-    if len(remnants) == 1:
-      suffix = ''
-    else:
-      suffix = 's'
-    print(f'NOTICE: Stray file{suffix} found in latest_queries_dir: '
-          f'{", ".join(remnants)}', file=sys.stderr)
-    if args.cleanup:
-      for file in remnants:
-        print(f'CLEANUP: deleting {file}')
-        Path(file).unlink()
+    # latest_queries_dir should now be empty
+    remnants = [q.name for q in latest_queries_dir.glob('*')]
+    try:
+      remnants.remove('.DS_Store')
+    except ValueError as ve:
+      pass
+    if len(remnants) != 0:
+      if len(remnants) == 1:
+        suffix = ''
+      else:
+        suffix = 's'
+      print(f'NOTICE: Stray file{suffix} found in latest_queries_dir: '
+            f'{", ".join(remnants)}', file=sys.stderr)
+      if args.cleanup:
+        for file in remnants:
+          print(f'CLEANUP: deleting {file}')
+          Path(file).unlink()
 
-  # move each query in queries to latest_queries_dir with process_id removed from its stem
-  for new_query in required_query_names:
-    query = [q for q in Path('queries').glob(f'{new_query}*')][0]
-    query.rename(latest_queries_dir / f'{query.stem.strip("0123456789-")}.csv')
+    # move each query in queries to latest_queries_dir with process_id removed from its stem
+    for new_query in required_query_names:
+      query = [q for q in Path('queries').glob(f'{new_query}*')][0]
+      query.rename(latest_queries_dir / f'{query.stem.strip("0123456789-")}.csv')
 
-# Confirm that everything is copacetic
-is_copacetic = if_copacetic()
-for notice in is_copacetic.notices:
-  print(notice, file=sys.stderr)
-for stop in is_copacetic.stops:
-  print(stop, file=sys.stderr)
-if len(is_copacetic.stops) == 0:
-  print('Copacetic Postcheck OK', file=sys.stderr)
-  exit(0)
-else:
-  print('Copacetic Postcheck NOT OK', file=sys.stderr)
-  exit(1)
+  # Confirm that everything is copacetic
+  is_copacetic = if_copacetic()
+  for notice in is_copacetic.notices:
+    print(notice, file=sys.stderr)
+  for stop in is_copacetic.stops:
+    print(stop, file=sys.stderr)
+  if len(is_copacetic.stops) == 0:
+    print('Copacetic Postcheck OK', file=sys.stderr)
+    exit(0)
+  else:
+    print('Copacetic Postcheck NOT OK', file=sys.stderr)
+    exit(1)
