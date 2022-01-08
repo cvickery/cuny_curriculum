@@ -400,7 +400,7 @@ with open(cf_rules_file) as csvfile:
         continue
       # Ignore rules where the destination is not in our catalog of undergraduate courses
       if len(courses) == 0:
-        conflicts.write('{rule_key}: Destination course {course_id}:{offer_nbr} not in '
+        conflicts.write(f'{rule_key}: Destination course {course_id}:{offer_nbr} not in '
                         f'undergraduate catalog. Rule Ignored\n')
         rules_dict.pop(rule_key)
         continue
