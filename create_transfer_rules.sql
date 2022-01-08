@@ -46,7 +46,8 @@ create table source_courses (
   max_credits real,
   credit_source text references credit_sources,
   min_gpa real,
-  max_gpa real);
+  max_gpa real,
+  aliases jsonb);
 
 -- destination_courses
 drop table if exists destination_courses cascade;
