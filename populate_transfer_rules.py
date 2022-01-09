@@ -405,6 +405,15 @@ with open(cf_rules_file) as csvfile:
         rules_dict.pop(rule_key)
         continue
 
+      # INACCURACY: the number of credits transferred should be record.units_taken only if the
+      # subject_credit_source is 'C'
+      #    C Catalog  Use Catalog Units
+      #    E External Specify Maximum Units
+      #    R Rule     Specify Fixed Units
+      # Vivek says "if the option is set to E then it uses incoming value  else – its hard
+      # coded to local catalog max or specified in the rule."
+      # (The rule has dst_min_units and dst_max_units; the combination of E and 99.0 for max means,
+      # “whatever it takes” for BKCR destination courses.)
       destination_course = Destination_Course(course_id,
                                               offer_nbr,
                                               len(courses),
