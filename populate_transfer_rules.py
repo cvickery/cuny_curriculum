@@ -386,6 +386,33 @@ with open(cf_rules_file) as csvfile:
         #                   f'has {course.max_credits} max credits, but rule says '
         #                   f'{record.src_max_units=} Rule Kept.\n')
 
+        # There are min/max units from CRSE_CATALOG, TRANSFER_FROM, and  TRANSFER_TO, but min_units
+        # never matter.
+        # If the Internal Equiv Course Value from TRNSFR_COMP is:
+        # C — Use CRSE_CATALOG.max_units
+        # R — Use TRANSFER_TO.max_units
+        #
+        # Vivek: If the option is set to E then it uses incoming value  else – its hard coded to
+        # local catalog max or specified in the rule.
+        #
+        # Vivek: For E it always takes lowest of (incoming or transfer_to.max_units ) in
+        # reconciliation
+        #
+        # me:  “incoming” means TRANSFER_FROM.max_units, right?
+        #
+        # Vivek: Correct -  but transfer from joined with care (sic?) catalog Max unit
+        #
+        # subject_credit_source component_credit_source:  frequency
+        #                     R                       R:  1,193,010
+        #                     R                       E:    225,118
+        #                     E                       R:    163,835
+        #                     E                       E:     80,195
+        #                     C                       R:      1,398
+        #                     C                       E:         39
+        #                     R                       C:          5
+        #                     E                       C:          2
+        #                     C                       C:          1
+
       # Process destination_course_id
       # -----------------------------
       course_id = int(record.destination_course_id)
