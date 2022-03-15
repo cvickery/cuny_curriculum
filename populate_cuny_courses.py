@@ -73,7 +73,7 @@ with psycopg.connect('dbname=cuny_curriculum', row_factory=namedtuple_row, autoc
   discipline_keys = [(row.institution, row.discipline) for row in cursor.fetchall()]
 
   # Cache a dictionary of course requisites; key is (institution, discipline, catalog_nbr)
-  with open(req_file, newline='') as csvfile:
+  with open(req_file, newline='', errors='replace') as csvfile:
     req_reader = csv.reader(csvfile)
     requisites = {}
     cols = None
@@ -95,7 +95,8 @@ with psycopg.connect('dbname=cuny_curriculum', row_factory=namedtuple_row, autoc
 
   # Populate the course_attributes table; cache the (name, value) pairs
   attribute_keys = []
-  with open('latest_queries/SR742A___CRSE_ATTRIBUTE_VALUE.csv') as csvfile:
+  with open('latest_queries/SR742A___CRSE_ATTRIBUTE_VALUE.csv', newline='',
+            errors='replace') as csvfile:
     reader = csv.reader(csvfile)
     for line in reader:
       if reader.line_num == 1:
@@ -118,7 +119,7 @@ with psycopg.connect('dbname=cuny_curriculum', row_factory=namedtuple_row, autoc
   # pairs.
   # Report anomalies.
   attribute_pairs = dict()
-  with open(att_file, newline='') as csvfile:
+  with open(att_file, newline='', errors='replace') as csvfile:
     att_reader = csv.reader(csvfile)
     cols = None
     for line in att_reader:
@@ -175,10 +176,10 @@ with psycopg.connect('dbname=cuny_curriculum', row_factory=namedtuple_row, autoc
                                %s, %s, %s, %s, %s,
                                %s, %s, %s, %s)
                             """
-  total_lines = sum(1 for line in open(cat_file))
+  total_lines = sum(1 for line in open(cat_file, errors='replace'))
   num_lines = 0
   num_courses = 0
-  with open(cat_file, newline='') as csvfile:
+  with open(cat_file, newline='', errors='replace') as csvfile:
     cat_reader = csv.reader(csvfile)
     for line in cat_reader:
       num_lines += 1
