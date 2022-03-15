@@ -71,7 +71,9 @@ with psycopg.connect('dbname=cuny_curriculum') as db:
                                  """)
 
     cols = None
-    with open('./latest_queries/QNS_CV_ACADEMIC_ORGANIZATIONS.csv') as csvfile:
+    with open('./latest_queries/QNS_CV_ACADEMIC_ORGANIZATIONS.csv',
+              newline='',
+              errors='replace') as csvfile:
       csv_reader = csv.reader(csvfile)
       for line in csv_reader:
         if cols is None:
@@ -103,7 +105,8 @@ with psycopg.connect('dbname=cuny_curriculum') as db:
     # Open the log file and course catalog query file
     with open('./divisions_report.log', 'w') as report:
       anomalies = 0
-      with open('./latest_queries/QNS_QCCV_CU_CATALOG_NP.csv', newline='') as csvfile:
+      with open('./latest_queries/QNS_QCCV_CU_CATALOG_NP.csv', newline='',
+                errors='replace') as csvfile:
         cat_reader = csv.reader(csvfile)
         cols = None
         for row in cat_reader:
