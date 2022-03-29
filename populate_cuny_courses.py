@@ -10,7 +10,6 @@ import sys
 from argparse import ArgumentParser
 from collections import namedtuple
 from datetime import date
-from icecream import ic
 from math import isclose
 from time import perf_counter
 
