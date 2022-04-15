@@ -452,9 +452,9 @@ export update_log=`pwd`/update.log
   # psql -X -q -d cuny_curriculum -f roles.sql >> update_psql.log 2>&1
   # echo done. | tee -a update_psql.log
 
-  echo -n "(Re-)Grant select access to view_only ROLE ..." | tee -a update_psql.log
-  psql -X -q -d cuny_curriculum -f view_only_role.sql >> update_psql.log 2>&1
-  echo done. | tee -a update_psql.log
+  # echo -n "(Re-)Grant select access to view_only ROLE ..." | tee -a update_psql.log
+  # psql -X -q -d cuny_curriculum -f view_only_role.sql >> update_psql.log 2>&1
+  # echo done. | tee -a update_psql.log
 
 
 if [[ $no_programs ]]
