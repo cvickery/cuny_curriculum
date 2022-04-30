@@ -28,24 +28,7 @@ if QUERY_CHECK_LIMIT is None:
   QUERY_CHECK_LIMIT = '10'
 QUERY_CHECK_LIMIT = int(QUERY_CHECK_LIMIT) / 100
 
-# This is the definitive list of queries used by the project. The check_references.sh script
-# uses this list to be sure each one is referenced by a Python script.
-# required_query_names = ['ACAD_CAREER_TBL',
-#                         'ACAD_SUBPLN_TBL',
-#                         'ACADEMIC_GROUPS',
-#                         'QCCV_PROG_PLAN_ORG',
-#                         'QCCV_RQMNT_DESIG_TBL',
-#                         'QNS_CV_ACADEMIC_ORGANIZATIONS',
-#                         'QNS_CV_CLASS_MAX_TERM',
-#                         'QNS_CV_CRSE_EQUIV_TBL',
-#                         'QNS_CV_CUNY_SUBJECT_TABLE',
-#                         'QNS_CV_CUNY_SUBJECTS',
-#                         'QNS_CV_SR_TRNS_INTERNAL_RULES',
-#                         'QNS_QCCV_COURSE_ATTRIBUTES_NP',
-#                         'QNS_QCCV_CU_CATALOG_NP',
-#                         'QNS_QCCV_CU_REQUISITES_NP',
-#                         'SR701____INSTITUTION_TABLE',
-#                         'SR742A___CRSE_ATTRIBUTE_VALUE']
+# This is the definitive list of queries used by the project.
 run_control_ids = {
     'ACAD_CAREER_TBL': 'acad_career',
     'ACAD_SUBPLN_TBL': 'subplans',
@@ -53,7 +36,7 @@ run_control_ids = {
     'QCCV_PROG_PLAN_ORG': 'qccv_prog_plan_org',
     'QCCV_RQMNT_DESIG_TBL': 'qccv_rqmnt_desig_tbl',
     'QNS_CV_ACADEMIC_ORGANIZATIONS': 'cuny_departments',
-    'QNS_CV_CLASS_MAX_TERM': 'class_max_term',
+    'QNS_CV_CLASS_MAX_TERM': 'qns_cv_class_max_term',
     'QNS_CV_CRSE_EQUIV_TBL': 'crse_equiv',
     'QNS_CV_CUNY_SUBJECT_TABLE': 'subjects',
     'QNS_CV_CUNY_SUBJECTS': 'cuny_subjects',
