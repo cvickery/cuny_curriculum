@@ -63,6 +63,7 @@ create table destination_courses (
   cuny_subject text,
   transfer_credits real,
   credit_source text references credit_sources,
+  course_status text,
   is_mesg boolean,
   is_bkcr boolean);
 

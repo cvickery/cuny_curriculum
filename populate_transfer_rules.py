@@ -164,6 +164,7 @@ Destination_Course = namedtuple('Destination_Course', """
                                 cuny_subject
                                 transfer_credits
                                 credit_source
+                                course_status
                                 is_mesg
                                 is_bkcr
                                 """)
@@ -450,18 +451,18 @@ with open(cf_rules_file) as csvfile:
                                               courses[0].cuny_subject,
                                               record.units_taken,
                                               record.subject_credit_source,
+                                              courses[0].course_status,
                                               courses[0].is_mesg,
                                               courses[0].is_bkcr)
       rules_dict[rule_key].destination_courses.add(destination_course)
       rules_dict[rule_key].destination_disciplines.add(destination_course.discipline)
       rules_dict[rule_key].dst_credit_sources.add(record.subject_credit_source)
 
+      # Report weirdnesses
       if len(courses) > 1:
         conflicts.write(
             f'{rule_key} Destination course {destination_course.course_id:06} is cross-listed '
             f'{len(courses)} times. Rule Kept.\n')
-
-      # Report weirdnesses
       for course in courses:
         if not (course.is_mesg or course.is_bkcr) and course.cat_num < 0:
           conflicts.write(f'{rule_key} Destination course {course.course_id:06} with non-numeric '
@@ -576,10 +577,11 @@ for rule_key in rules_dict.keys():
                                     cuny_subject,
                                     transfer_credits,
                                     credit_source,
+                                    course_status,
                                     is_mesg,
                                     is_bkcr
                                   )
-                                  values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                  values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                    """, (rule_id, ) + course)
 
 cursor.execute('select count(*) from transfer_rules')
