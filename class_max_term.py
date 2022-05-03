@@ -1,5 +1,7 @@
 #! /usr/local/bin/python3
-
+""" Active courses and the term they were last offered.
+    Not currently used, but but potentially useful for prioritizing rules than need to be updated.
+"""
 import csv
 import os
 import sys
