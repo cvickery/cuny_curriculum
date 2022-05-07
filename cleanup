@@ -1,0 +1,13 @@
+# Delete unwanted query outputs from Tumbleweed
+# Usage: lftp -f cleanup
+
+set xfer:clobber on
+set sftp:connect-program "ssh -a -x -o KexAlgorithms=diffie-hellman-group14-sha1"
+open --user CVickery --env-password sftp://st-edge.cuny.edu
+cd ERP_Queens
+mrm -f ACAD*
+mrm -f QCCV_*
+mrm -f QNS_CV_*
+mrm -f QNS_QCCV_*
+mrm -f SR7*
+exit
