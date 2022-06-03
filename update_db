@@ -467,7 +467,13 @@ else
     ./update_registered_programs.sh | tee -a $update_log
     if [ $? -ne 0 ]
     then send_notice 'ERROR: update_registered_programs.sh failed'
-         exit 1
+#         exit 1
+    fi
+    cd /Users/vickery/Projects/cuny_programs/dgw_requirement_blocks
+    ./update_requirement_blocks.py
+    if [ $? -ne 0 ]
+    then send_notice 'ERROR: update_requitement_blocks.py failed'
+ #        exit 1
     fi
   )
   echo done. | tee -a $update_log
