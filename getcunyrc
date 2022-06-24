@@ -1,3 +1,4 @@
+set sftp:connect-program "ssh -a -x -o KexAlgorithms=diffie-hellman-group14-sha256"
 open --user CVickery --env-password sftp://st-edge.cuny.edu
 cd ERP_Queens
 mget -EO /Users/vickery/Projects/cuny_curriculum/query_downloads QNS_CV*.csv \
