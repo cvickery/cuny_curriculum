@@ -25,7 +25,6 @@ cursor.execute("""
                career text,
                effective_date date,
                first_term_valid text,
-               last_prospect text,
                last_admit text)
                """)
 
@@ -47,7 +46,7 @@ with open('./latest_queries/QCCV_PROG_PLAN_ORG.csv') as csvfile:
         continue
       nys_program_code = '0' if row.nys_program_code == '' else row.nys_program_code
       cursor.execute("""
-                     insert into cuny_programs values (default, %s, %s, %s, %s, %s, %s, %s, %s,
+                     insert into cuny_programs values (default, %s, %s, %s, %s, %s, %s, %s,
                                                                 %s, %s, %s, %s, %s, %s, %s)
                      """, (nys_program_code,
                            row.institution,
@@ -62,7 +61,6 @@ with open('./latest_queries/QCCV_PROG_PLAN_ORG.csv') as csvfile:
                            row.career,
                            row.effective_date,
                            row.first_term_valid,
-                           row.last_prospect,
                            row.last_admit))
 
 with open('./latest_queries/ACAD_SUBPLN_TBL.csv') as csvfile:
