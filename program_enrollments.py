@@ -12,20 +12,21 @@ from collections import namedtuple
 from pathlib import Path
 from psycopg.rows import namedtuple_row
 
+query_files = {'cuny_subplans': 'ACAD_SUBPLANS',
+               'cuny_plan_enrollments': 'ACAD_PLAN_ENRL',
+               'cuny_subplan_enrollments': 'ACAD_SUBPLAN_ENRL'}
+
 with psycopg.connect('dbname=cuny_curriculum') as conn:
   with conn.cursor(row_factory=namedtuple_row) as cursor:
-    query_files = {'cuny_subplans': 'ACAD_SUBPLANS',
-                   'cuny_plan_enrollments': 'ACAD_PLAN_ENRL',
-                   'cuny_subplan_enrollments': 'ACAD_SUBPLAN_ENRL'}
-    for table_name, query_name in query_files.items():
-      print(table_name, query_name, end='')
 
+    for table_name, query_name in query_files.items():
       latest = None
       csv_files = Path('.').glob(f'{query_name}*')
+
       for csv_file in csv_files:
         if latest is None or latest.stat().st_mtime < csv_file.stat().st_mtime:
           latest = csv_file
-      print(f' {latest.name}')
+
       with open(latest) as csv_file:
         reader = csv.reader(csv_file)
         for line in reader:
@@ -39,7 +40,6 @@ with psycopg.connect('dbname=cuny_curriculum') as conn:
               if 'subplan' in cols:
                 pkey.append('subplan')
               pkey = ', '.join(pkey)
-            print(col_defs, pkey)
             cursor.execute(f"""
             drop table if exists {table_name};
             create table {table_name} (
