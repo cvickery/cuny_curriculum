@@ -1,8 +1,14 @@
 #! /usr/local/bin/python3
 """ Build three tables:
+      Local Table               CUNYfirst Query     Description
       cuny_subplans             ACAD_SUBPLANS       institution x plan x subplan
       cuny_plan_enrollments     ACAD_PLAN_ENRL      institution x plan x enrollment
       cuny_subplan_enrollments  ACAD_SUBPLAN_ENRL   institution x plan x subplan x enrollment
+
+    These tables are designing to identify what subplans belong to which plans when a Scribe block
+    calls for a nested block from a Major or Minor. In addition, they provided enrollment data for
+    inclusion in the metadata for requirement blocks. The table names were chosen to avoid conflict
+    with tables containing overlapping information already in use in the cuny_curriculum database.
 """
 import csv
 import psycopg
@@ -12,6 +18,8 @@ from collections import namedtuple
 from pathlib import Path
 from psycopg.rows import namedtuple_row
 
+# Since the cuny_curriculum tables are just copies of the CUNYfirst queries, the query_files dict
+# allows us to build all the local tables in a uniform way.
 query_files = {'cuny_subplans': 'ACAD_SUBPLANS',
                'cuny_plan_enrollments': 'ACAD_PLAN_ENRL',
                'cuny_subplan_enrollments': 'ACAD_SUBPLAN_ENRL'}
@@ -31,7 +39,8 @@ with psycopg.connect('dbname=cuny_curriculum') as conn:
         reader = csv.reader(csv_file)
         for line in reader:
           if reader.line_num == 1:
-            cols = [col.lower().replace(' ', '_').replace('-', '').replace('academic_', '') for col in line]
+            cols = [col.lower().replace(' ', '_').replace('-', '').replace('academic_', '')
+                    for col in line]
             Row = namedtuple('Row', cols)
             col_defs = ''
             for col in cols:
