@@ -194,15 +194,13 @@ export update_log=`pwd`/update.log
   psql -X -q -d cuny_curriculum -f rule_key.sql >> update_psql.log
   echo done. | tee -a update_psql.log
 
-  echo -n "LOAD PLANS and SUBPLANS ... " | tee -a update_psql.log
-  ./load_plan-subplan_tables.py >> $update_log 2>&1
+  echo -n "LOAD BASE TABLES ... " | tee -a update_psql.log
+  ./load_cuny_base_tables.py >> $update_log 2>&1
   if [[ $? -ne 0 ]]
     then send_notice 'ERROR: load_plans-subplans failed'
          exit 1
   fi
   echo done. | tee -a update_psql.log
-
-  echo "TODO: load cip tables" | tee -a $update_log
 
   # The following is the organizational structure of the University:
   #   Students are undergraduate or graduate (careers) at a college

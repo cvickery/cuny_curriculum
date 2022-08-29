@@ -1,11 +1,5 @@
 #! /usr/local/bin/python3
-""" Build local copies of CUNYfirst plan/subplan/enrollment tables
-
-    These tables are designing to identify what subplans belong to which plans when a Scribe block
-    calls for a nested block from a Major or Minor. In addition, they provided enrollment data for
-    inclusion in the metadata for requirement blocks. The local table names were chosen to avoid
-    conflict with tables containing overlapping information already in use in the cuny_curriculum
-    database.
+""" Build local copies of CUNYfirst cip_code and plan/subplan/enrollment tables
 
     All table fields are text unless the column name starts with “count” or ends with “date.”
 """
@@ -18,13 +12,15 @@ from datetime import date
 from pathlib import Path
 from psycopg.rows import namedtuple_row
 
-# Since the cuny_curriculum tables are just copies of the CUNYfirst queries, this query_files dict
-# allows us to build all the local tables in a uniform way.
+# For cuny_curriculum tables that are just copies of the CUNYfirst queries, this query_files dict
+# allows us to build all the local tables in a uniform way. Unfortunately, adding CIP codes to the
+# set of "base tables" made this messy.
 #                                                                 Institution x plan x ...
-query_files = {'cuny_acad_plan_tbl': 'ACAD_PLAN_TBL',
-               'cuny_plan_enrollments': 'ACAD_PLAN_ENRL',         # ... enrollment
+query_files = {'cuny_cip_code_tbl': 'CIP_CODE_TBL',
+               'cuny_acad_plan_tbl': 'ACAD_PLAN_TBL',
+               'cuny_plan_enrollments': 'ACAD_PLAN_ENRL',
                'cuny_acad_subplan_tbl': 'ACAD_SUBPLAN_TBL',
-               'cuny_subplan_enrollments': 'ACAD_SUBPLAN_ENRL'}   # ... subplan x enrollment
+               'cuny_subplan_enrollments': 'ACAD_SUBPLAN_ENRL'}
 
 with psycopg.connect('dbname=cuny_curriculum') as conn:
   with conn.cursor(row_factory=namedtuple_row) as cursor:
@@ -53,19 +49,25 @@ with psycopg.connect('dbname=cuny_curriculum') as conn:
             Row = namedtuple('Row', cols)
             col_defs = ''
             for col in cols:
-              col_defs += 'enrollment int,\n' if col.startswith('count') \
+              col_defs += 'enrollment int,\n' if col.startswith('count_') \
                   else f'{col} date,\n' if col.endswith('date') \
                   else f'{col} text,\n'
+            if cols[0] == 'institution':
               pkey = ['institution', 'plan']
               if 'subplan' in cols:
                 pkey.append('subplan')
-              pkey = ', '.join(pkey)
+              pkey = 'primary key(' + ', '.join(pkey) + ')'
+            else:
+              pkey = f'primary key ({cols[0]})'
+              print(f'WARNING: Using first column ({cols[0]}) as primary key for {table_name}',
+                    file=sys.stderr)
             cursor.execute(f"""
             drop table if exists {table_name};
             create table {table_name} (
               {col_defs}
-              primary key ({pkey}))
+              {pkey})
             """)
+
             values_clause = ', '.join(['%s'] * len(cols))
             insert_query = f'insert into {table_name} values({values_clause})'
           else:

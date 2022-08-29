@@ -52,6 +52,7 @@ run_control_ids = {
     'ACAD_SUBPLAN_TBL': 'acad_subplan_tbl',
     'ACAD_SUBPLAN_ENRL': 'acad_subplan_enrl',
     'ACADEMIC_GROUPS': 'groups',
+    'CIP_CODE_TBL': 'cip_code_tbl',
     'QCCV_PROG_PLAN_ORG': 'qccv_prog_plan_org',
     'QCCV_RQMNT_DESIG_TBL': 'qccv_rqmnt_desig_tbl',
     'QNS_CV_ACADEMIC_ORGANIZATIONS': 'cuny_departments',
@@ -159,7 +160,7 @@ if __name__ == '__main__':
     print('Copacetic Precheck NOT OK')
     if args.ignore_new:
       # Pre-check failed with no actions on files: error exit.
-      s = '' if len(copacetic.stops) == 1 else 's'
+      s = '' if len(is_copacetic.stops) == 1 else 's'
       print(f'{len(is_copacetic.stops)} STOP{s}')
       sys.exit(1)
 

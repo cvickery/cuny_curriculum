@@ -63,7 +63,7 @@ with open('./latest_queries/QCCV_PROG_PLAN_ORG.csv') as csvfile:
                            row.first_term_valid,
                            row.last_admit))
 
-with open('./latest_queries/ACAD_SUBPLN_TBL.csv') as csvfile:
+with open('./latest_queries/ACAD_SUBPLAN_TBL.csv') as csvfile:
   reader = csv.reader(csvfile)
   cols = None
   for line in reader:
