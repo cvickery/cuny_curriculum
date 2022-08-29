@@ -1,5 +1,8 @@
 cuny_courses  acad_career               ACAD_CAREER_TBL
-cuny_courses  subplans                  ACAD_SUBPLN_TBL
+cuny_courses  acad_plan_tbl             ACAD_PLAN_TBL
+cuny_courses  acad_plan_enrl            ACAD_PLAN_ENRL
+cuny_courses  acad_subplan_tbl          ACAD_SUBPLAN_TBL
+cuny_courses  acad_subplan_enrl         ACAD_SUBPLAN_ENRL
 cuny_courses                            ACADEMIC_GROUPS
 cuny_courses                            QCCV_PROG_PLAN_ORG
 cuny_courses  rd_table                  QCCV_RQMNT_DESIG_TBL
@@ -13,7 +16,6 @@ cuny_courses  cuny_catalog              QNS_QCCV_CU_CATALOG_NP
 cuny_courses  cuny_reqs                 QNS_QCCV_CU_REQUISITES_NP
 cuny_courses  institutions              SR701____INSTITUTION_TABLE
 cuny_courses  attribute_values          SR742A___CRSE_ATTRIBUTE_VALUE
-not_used      academic_plan             QCCV_ACADEMIC_PLAN_TBL
 curric        catalog_update            QNS_QCCV_CU_CATALOG
 curric        requisite_sched           QNS_QCCV_CU_REQUISITES
 curric        attributes                QNS_QCCV_COURSE_ATTRIBUTES
