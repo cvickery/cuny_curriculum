@@ -112,15 +112,18 @@ def if_copacetic():
 if __name__ == '__main__':
   # Command line options
   parser = argparse.ArgumentParser()
+
   parser.add_argument('-c', '--cleanup', action='store_true')
   parser.add_argument('-d', '--debug', action='store_true')
+
   parser.add_argument('-l', '--list', action='store_true')
-  parser.add_argument('-i', '--ignore_new', action='store_true')
   parser.add_argument('-n', '--num_queries', action='store_true')
   parser.add_argument('-r', '--run_control_ids', action='store_true')
+
+  parser.add_argument('-i', '--ignore_new', action='store_true')
+  parser.add_argument('-sa', '--skip_archive', action='store_true')
   parser.add_argument('-sd', '--skip_date_check', action='store_true')
   parser.add_argument('-ss', '--skip_size_check', action='store_true')
-  parser.add_argument('-sa', '--skip_archive', action='store_true')
   args = parser.parse_args()
 
   if args.debug:
@@ -244,7 +247,7 @@ if __name__ == '__main__':
       print(f'found new query: {newest_query.name}', file=sys.stderr)
 
     # Size check (unless suppressed)
-    if check_size:
+    if not args.skip_size_check:
       newest_size = newest_query.stat().st_size
       if newest_size == 0:
         stops.append(f'STOP: {newest_query.name} has zero bytes')
