@@ -1,7 +1,7 @@
 #! /usr/local/bin/python3
-""" Build local copies of CUNYfirst cip_code and plan/subplan/enrollment tables
+""" Delete and re-build local copies of CUNYfirst cip_code and plan/subplan/enrollment tables
 
-    All table fields are text unless the column name starts with “count” or ends with “date.”
+    All table fields are text unless the column name starts with “count” or ends with “date.
 """
 import csv
 import psycopg
