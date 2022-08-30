@@ -28,6 +28,7 @@ from cuny_divisions import ignore_institutions
 with psycopg.connect('dbname=cuny_curriculum') as db:
   with db.cursor(row_factory=namedtuple_row) as cursor:
 
+    # Departments that have proven themselves to be problematic
     ignore_departments = ['PEES-BKL', 'SOC-YRK', 'JOUR-GRD']
 
     # Get list of known institutions

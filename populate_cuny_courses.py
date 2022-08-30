@@ -269,8 +269,8 @@ with psycopg.connect('dbname=cuny_curriculum', row_factory=namedtuple_row, autoc
                 #   components.remove('LEC')
                 #   components = ['LEC'] + components
                 with conn.cursor() as update_cursor:
-                  update_components_args = [json.dumps(components), course_id, offer_nbr, discipline,
-                                            catalog_number]
+                  update_components_args = [json.dumps(components), course_id, offer_nbr,
+                                            discipline, catalog_number]
                   update_cursor.execute(update_components_query, update_components_args)
               else:
                 logs.write('Repeated component: {} {} {} {} {} :: {}\n'.format(course_id,
