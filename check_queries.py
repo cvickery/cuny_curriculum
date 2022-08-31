@@ -210,7 +210,7 @@ if __name__ == '__main__':
       continue
     if len(new_instances) > 1:
       # Multiple copies; look at sizes. If size test fails, discard the instance.
-      if not args.ignore_size:
+      if not args.skip_size_check:
         for query in new_instances:
           newest_size = query.stat().st_size
           if newest_size == 0:
