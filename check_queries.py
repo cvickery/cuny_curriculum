@@ -42,7 +42,8 @@ import argparse
 QUERY_CHECK_LIMIT = os.getenv('QUERY_CHECK_LIMIT')
 if QUERY_CHECK_LIMIT is None:
   QUERY_CHECK_LIMIT = '10'
-QUERY_CHECK_LIMIT = int(QUERY_CHECK_LIMIT) / 100
+
+query_check_limit = float(QUERY_CHECK_LIMIT) / 100.0
 
 # This is the definitive list of queries and their CUNYfirst run_control_ids used by the project.
 run_control_ids = {
@@ -124,7 +125,11 @@ if __name__ == '__main__':
   parser.add_argument('-sa', '--skip_archive', action='store_true')
   parser.add_argument('-sd', '--skip_date_check', action='store_true')
   parser.add_argument('-ss', '--skip_size_check', action='store_true')
+  parser.add_argument('-qs', '--query_check_limit', type=int)
   args = parser.parse_args()
+
+  if args.query_check_limit:
+    query_check_limit = float(args.query_check_limit) / 100.0
 
   if args.debug:
     print(args, file=sys.stderr)
@@ -149,7 +154,10 @@ if __name__ == '__main__':
     print('Copaceticity not checked')
     sys.exit(1)
 
-  # Precheck: is there anything to check?
+  # Precheck
+  # ===============================================================================================
+  # Verify that latest_queries folder is okay, a necessary precondition for archiving it and
+  # moving in new queries from the (new) queries folder.
   is_copacetic = if_copacetic()
   for notice in is_copacetic.notices:
     print(notice)
@@ -159,6 +167,9 @@ if __name__ == '__main__':
 
   if len(is_copacetic.stops) == 0:
     print('Copacetic Precheck OK')
+    if args.ignore_new:
+      # This is a normal exit when pre-check is okay and new queries are not to be processed
+      sys.exit(0)
   else:
     print('Copacetic Precheck NOT OK')
     if args.ignore_new:
@@ -170,16 +181,18 @@ if __name__ == '__main__':
   # New query integrity checks
   # ===============================================================================================
   # All new_queries_dir csv files must have the same modification date (unless suppressed)
-  if args.ignore_new:
-    # This is a normal exit when pre-check is okay and new queries are not to be processed
-    sys.exit(0)
 
   print('Check new queries')
   stops = []
   notices = []
 
+  # Check new query dates
+  # -----------------------------------------------------------------------------------------------
+  # To creare a valid cache of CUNYfirst data, all queries must have been run on the same day.
   new_mod_date = None
-  if not args.skip_date_check:
+  if args.skip_date_check:
+    print('Skip checking dates of new queries')
+  else:
     for new_query in new_queries_dir.glob('*.csv'):
       new_date = date.fromtimestamp(new_query.stat().st_mtime).strftime('%Y-%m-%d')
       if new_mod_date is None:
@@ -189,14 +202,19 @@ if __name__ == '__main__':
         if new_query.stem.strip('-123456789') in required_query_names:
           stops.append(f'STOP: {new_query.name}. Expected {new_mod_date}, but got {new_date}.')
         else:
-          notices.append(f'NOTICE: Stray new csv file with mis-matched date: {new_query.name}')
+          notices.append(f'NOTICE: Stray file in queries dir with mis-matched date: '
+                         f'{new_query.name}')
       else:
         if args.debug:
           print(new_query.name, 'date ok', file=sys.stderr)
 
-  # There has to be one new query for each required query, and its size must not differ by more
-  # than QUERY_CHECK_LIMIT percent from the corresponding latest_query. Missing latest queries are
-  # ignored.
+  # Check for complete set of new queries, and their sizes.
+  # -----------------------------------------------------------------------------------------------
+  #   There has to be one new query for each required query, and its size must be within ± 10% of
+  #   the size of the corresponding file in latest_queries (if there is one). The 10% value can be
+  #   overridden by the QUERY_CHECK_LIMIT environment variable or the --query_check_limit (-qs)
+  #   command line option. The size check can be suppressed altogether with the --skip_size_check
+  #   (-ss) command line option.
   for query_name in required_query_names:
     target_query = Path(latest_queries_dir, query_name + '.csv')
     if target_query.exists():
@@ -204,68 +222,54 @@ if __name__ == '__main__':
     else:
       target_size = None
     new_instances = [q for q in new_queries_dir.glob(f'{query_name}*.csv')]
-    newest_query = None
-    if len(new_instances) == 0:
-      stops.append(f'STOP: No new query for {query_name}')
-      continue
-    if len(new_instances) > 1:
-      # Multiple copies; look at sizes. If size test fails, discard the instance.
-      if not args.skip_size_check:
-        for query in new_instances:
-          newest_size = query.stat().st_size
-          if newest_size == 0:
-            notices.append(f'NOTICE: Deleting {query.name} because it is empty. ')
-            query.unlink()
-            new_instances.remove(query)
-          elif (target_size is not None
-                and abs(target_size - newest_size) > QUERY_CHECK_LIMIT * target_size):
-            notices.append(f'NOTICE: Ignoring {query.name} because its size ({newest_size}) is '
-                           f'not within {QUERY_CHECK_LIMIT * 100}% of the previous query’s size '
-                           f'({target_size:,})')
-            if args.cleanup:
-              notices.append(f'NOTICE: Deleting {query.name}')
-              query.unlink()
-            new_instances.remove(query)
 
-    # Remove all but newest new_instance
-    if len(new_instances) > 0:
-      newest_query = new_instances.pop()
-      newest_timestamp = newest_query.stat().st_mtime
-      for query in new_instances:
-        if query.stat().st_mtime > newest_timestamp:
-          # This one is newer, so get rid of the previous "newest" one, and replace it with this
-          notices.append(f'NOTICE: Ignoring {newest_query.name} because there is a newer one.')
-          newest_query = query
-          newest_time_stamp = newest_query.stat().st_mtime
-        else:
-          # This one is older, so just get rid of it
-          notices.append(f'NOTICE: Ignoring {query.name} because there is a newer one.')
+    # There might be multiple copies (or none!)
+    newest_query = None
+    for query in new_instances:
+      newest_size = query.stat().st_size
+      if newest_size == 0:
+        notices.append(f'NOTICE: Deleting {query.name} because it is empty. ')
+        query.unlink()
+        new_instances.remove(query)
+        continue
+      if args.skip_size_check or (target_size is None):
+        notices.append(f'NOTICE: size check skipped for {query}')
+        continue
+
+      if abs(target_size - newest_size) > (query_check_limit * target_size):
+        new_instances.remove(query)
+        notices.append(f'NOTICE: Ignoring {query.name} because its size ({newest_size:,}) is '
+                       f'not within {int(query_check_limit * 100)}% of the previous query’s '
+                       f'size ({target_size:,})')
+        if args.cleanup:
+          # The --cleanup (-c) option can be used to delete mal-sized files.
+          notices.append(f'NOTICE: Deleting {query.name}')
+          query.unlink()
+        continue
+
+      if newest_query is None:
+        newest_query = query
+        continue
+
+      if query.stat().st_mtime > newest_query.stat().st_mtime:
+        # Keep only the newest instance
+        notices.append(f'NOTICE: Deleting {newest_query} because there is a newer one.')
+        newest_query.unlink()
+        newest_query = query
+      else:
+        # This one is not newer, so just get rid of it
+        notices.append(f'NOTICE: Deleting {query} because there is a newer one.')
+        query.unlink()
+
     if newest_query is None:
       stops.append(f'STOP: No valid query file found for {query_name}')
       continue
-    if args.debug:
-      print(f'found new query: {newest_query.name}', file=sys.stderr)
+    else:
+      notices.append(f'NOTICE: found new query file {newest_query}')
 
-    # Size check (unless suppressed)
-    if not args.skip_size_check:
-      newest_size = newest_query.stat().st_size
-      if newest_size == 0:
-        stops.append(f'STOP: {newest_query.name} has zero bytes')
-      if (target_size is not None
-              and abs(target_size - newest_size) > QUERY_CHECK_LIMIT * target_size):
-        stops.append(f'STOP: {newest_query.name} ({newest_size}) differs from {target_query.name} '
-                     f'({target_size}) by more than {QUERY_CHECK_LIMIT * 100}%')
-      if args.debug:
-        if target_size is not None:
-          print(f'{newest_query.name} size compares favorably to {target_query.name}',
-                file=sys.stderr)
-        else:
-          print(f'{newest_query.name} has {newest_size:,} bytes.', file=sys.stderr)
-
-  # Sizes and dates did not cause a problem: do Archive (unless suppressed)
+  # If there is a full set of valid new queries, archive the latest_queries and move in the new ones
   if len(stops) == 0 and not args.skip_archive:
-    # move each query from latest_queries to query_archive, with stem appended with its
-    # new_mod_date
+    # Move each latest_queries file to query_archive, with the file's date appended to its name
     print('Archiving')
     prev_mod_date = None
     for target_query in [Path(latest_queries_dir, f'{q}.csv') for q in required_query_names]:
@@ -277,6 +281,7 @@ if __name__ == '__main__':
           print(f'{target_query} moved to {archive_dir}/{target_query.stem}_{prev_mod_date}.csv',
                 file=sys.stderr)
       else:
+        # This happens when new queries are to the project: there is no 'latest' query available yet
         notices.append(f'NOTICE: Unable to archive {target_query} because it does not exist')
 
     # latest_queries_dir should now be empty
@@ -295,14 +300,15 @@ if __name__ == '__main__':
       if args.cleanup:
         for file in remnants:
           notices.append(f'CLEANUP: deleting {file}')
-          Path(file).unlink()
+          file.unlink()
 
-    # Move each query in queries to latest_queries_dir with process_id removed from its stem
+    # Move each new query to latest_queries_dir with process_id removed from its stem
     print('Moving new queries to latest_queries')
     for new_query in required_query_names:
-      new_copies = Path('queries').glob(f'{new_query}*')
-      for new_copy in new_copies:
-        query.rename(latest_queries_dir / f'{new_copy.stem.strip("0123456789-")}.csv')
+      new_copies = [qf for qf in Path('queries').glob(f'{new_query}*')]
+      assert len(new_copies) == 1, f'ERROR: no file for {new_query}'
+      new_copy = new_copies[0]
+      new_copy.rename(latest_queries_dir / f'{new_copy.stem.strip("0123456789-")}.csv')
 
   # Any notices to report?
   for notice in notices:

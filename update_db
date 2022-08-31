@@ -128,12 +128,6 @@ function send_notice () {
     shift
   done
 
-  # Can't do downloads except from a cuny.edu host.
-  if [[ ! ( `hostname` =~ cuny.edu ) ]]
-  then echo "Cannot access Tumbleweed from `hostname`"
-       skip_download=true
-  fi
-
   # # Uncomment for debugging
   # for arg in no_events skip_download no_size_check no_date_check no_archive no_programs
   # do
@@ -151,6 +145,12 @@ function send_notice () {
   SECONDS=0
   send_notice "Started updating database cuny_curriculum on $HOSTNAME"
 
+  # Can't do downloads except from a cuny.edu host.
+  if [[ ! ( `hostname` =~ cuny.edu ) ]]
+  then echo "Cannot access Tumbleweed from `hostname`" | tee -a $update_log
+       skip_download=true
+  fi
+
   # Try downloading new queries
   if [[ $skip_download ]]
   then echo "SKIPPING DOWNLOADS." | tee -a $update_log
@@ -158,8 +158,8 @@ function send_notice () {
     echo -n "DOWNLOAD new query files... " | tee -a $update_log
     ./get_cuny >> $update_log
     if [[ $? -eq 1 ]]
-    then  send_notice "Update abandoned: no new query files"
-          exit 1
+    then  # May want to update db with existing set of queries, but make note of it.
+          send_notice "NOTE: No new query files"
     fi
     echo done. | tee -a $update_log
   fi
