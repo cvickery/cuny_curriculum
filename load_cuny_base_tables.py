@@ -18,9 +18,9 @@ from psycopg.rows import namedtuple_row
 #                                                                 Institution x plan x ...
 query_files = {'cuny_cip_code_tbl': 'CIP_CODE_TBL',
                'cuny_acad_plan_tbl': 'ACAD_PLAN_TBL',
-               'cuny_plan_enrollments': 'ACAD_PLAN_ENRL',
+               'cuny_acad_plan_enrollments': 'ACAD_PLAN_ENRL',
                'cuny_acad_subplan_tbl': 'ACAD_SUBPLAN_TBL',
-               'cuny_subplan_enrollments': 'ACAD_SUBPLAN_ENRL'}
+               'cuny_acad_subplan_enrollments': 'ACAD_SUBPLAN_ENRL'}
 
 with psycopg.connect('dbname=cuny_curriculum') as conn:
   with conn.cursor(row_factory=namedtuple_row) as cursor:
