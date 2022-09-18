@@ -1,5 +1,8 @@
-drop view if exists view_courses;
-create view view_courses as (
+-- course and requirement block views
+
+-- Shorten field names to make lines less wide
+DROP VIEW IF EXISTS view_courses;
+CREATE VIEW view_courses AS (
 SELECT cuny_courses.institution,
     cuny_courses.course_id as id,
     cuny_courses.offer_nbr as nr,
@@ -21,4 +24,16 @@ SELECT cuny_courses.institution,
         END AS attr
    FROM cuny_courses
   ORDER BY cuny_courses.institution, cuny_courses.discipline, cuny_courses.catalog_number
+);
+
+DROP VIEW IF EXISTS view_blocks;
+CREATE VIEW view_blocks AS (
+SELECT institution,
+       requirement_id,
+       block_type as type,
+       block_value as value,
+       title,
+       period_stop,
+       major1
+  FROM requirement_blocks
 );
