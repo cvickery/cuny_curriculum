@@ -32,6 +32,9 @@ function send_notice () {
 }
 
 (
+  # Support execution from other dirs than the project directory
+  cd /Users/vickery/Projects/cuny_curriculum
+
   export PGOPTIONS='--client-min-messages=warning'
   #   --client-min-messages=warning to suppress NOTICE messages
   #   -X suppress reading .psqlrc (where I set timing)
