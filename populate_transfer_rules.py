@@ -178,6 +178,7 @@ Rule_Tuple = namedtuple('Rule_Tuple', """
                         source_subjects
                         destination_courses
                         destination_disciplines
+                        destination_subjects
                         src_credit_sources
                         dst_credit_sources
                         priority
@@ -270,7 +271,7 @@ with open(cf_rules_file) as csvfile:
         # destination_courses, destination_disciplines,
         # source_credit_sources, destination_credit_sources,
         # Rule Priority, Effective Date
-        rules_dict[rule_key] = Rule_Tuple(set(), set(), set(), set(), set(), set(), set(),
+        rules_dict[rule_key] = Rule_Tuple(set(), set(), set(), set(), set(), set(), set(), set(),
                                           record.transfer_priority, effective_date)
       elif effective_date > rules_dict[rule_key].effective_date:
         rules_dict[rule_key].effective_date.replace(year=effective_date.year,
@@ -456,6 +457,7 @@ with open(cf_rules_file) as csvfile:
                                               courses[0].is_bkcr)
       rules_dict[rule_key].destination_courses.add(destination_course)
       rules_dict[rule_key].destination_disciplines.add(destination_course.discipline)
+      rules_dict[rule_key].destination_subjects.add(destination_course.cuny_subject)
       rules_dict[rule_key].dst_credit_sources.add(record.subject_credit_source)
 
       # Report weirdnesses
@@ -484,6 +486,7 @@ if args.progress:
 # -------------------------------------------------------------------------------------------------
 # Clear the three db tables and re-populate them.
 cursor.execute('truncate source_courses, destination_courses, transfer_rules cascade')
+
 # update the update date
 cursor.execute("""
                update updates
@@ -504,6 +507,7 @@ for rule_key in rules_dict.keys():
   source_disciplines_str = ':' + ':'.join(sorted(rules_dict[rule_key].source_disciplines)) + ':'
   destination_disciplines_str = ':'.join(sorted(rules_dict[rule_key].destination_disciplines))
   source_subjects_str = ':' + ':'.join(sorted(rules_dict[rule_key].source_subjects)) + ':'
+  destination_subjects_str = ':' + ':'.join(sorted(rules_dict[rule_key].destination_subjects)) + ':'
   sending_courses = ':'.join(sorted([f'{c.course_id:06}.{c.offer_nbr}'
                                     for c in rules_dict[rule_key].source_courses]))
   receiving_courses = ':'.join(sorted([f'{c.course_id:06}.{c.offer_nbr}'
@@ -522,17 +526,19 @@ for rule_key in rules_dict.keys():
                                   source_subjects,
                                   sending_courses,
                                   destination_disciplines,
+                                  destination_subjects,
                                   receiving_courses,
                                   credit_sources,
                                   priority,
                                   effective_date)
-                                values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                                 returning id""",
                  rule_key + (':'.join([str(part) for part in rule_key]),
                              source_disciplines_str,
                              source_subjects_str,
                              sending_courses,
                              destination_disciplines_str,
+                             destination_subjects_str,
                              receiving_courses,
                              credit_sources,
                              rules_dict[rule_key].priority,

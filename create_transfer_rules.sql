@@ -22,6 +22,7 @@ create table transfer_rules (
   source_disciplines text not null, -- colon-separated list of all source disciplines
   source_subjects text not null, -- colon-separated list of all source course cuny_subjects
   destination_disciplines text not null, -- colon-separated list of all destination disciplines
+  destination_subjects text not null, -- colon-separated list of all destination course cuny_subjs
   sending_courses text not null, -- colon-separated list of sending course_id.offer_nbr
   receiving_courses text not null, -- colon-separated list of receiving course_id.offer_nbr
   credit_sources text not null, -- colon-separated src:dst CER values
