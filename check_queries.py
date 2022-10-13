@@ -65,6 +65,7 @@ run_control_ids = {
     'QNS_QCCV_COURSE_ATTRIBUTES_NP': 'cuny_attrs',
     'QNS_QCCV_CU_CATALOG_NP': 'cuny_catalog',
     'QNS_QCCV_CU_REQUISITES_NP': 'cuny_reqs',
+    'SESSION_TABLE': 'session_table',
     'SR701____INSTITUTION_TABLE': 'institutions',
     'SR742A___CRSE_ATTRIBUTE_VALUE': 'attribute_values'}
 
