@@ -14,7 +14,7 @@ cuny_curriculum  transfer_rules_complete   QNS_CV_SR_TRNS_INTERNAL_RULES
 cuny_curriculum  cuny_attrs                QNS_QCCV_COURSE_ATTRIBUTES_NP
 cuny_curriculum  cuny_catalog              QNS_QCCV_CU_CATALOG_NP
 cuny_curriculum  cuny_reqs                 QNS_QCCV_CU_REQUISITES_NP
-cuny_curriculum  session_table             SESSION_TABLE
+cuny_curriculum  cuny_sessions             QNS_CV_SESSION_TABLE
 cuny_curriculum  institutions              SR701____INSTITUTION_TABLE
 cuny_curriculum  attribute_values          SR742A___CRSE_ATTRIBUTE_VALUE
 curric           catalog_update            QNS_QCCV_CU_CATALOG
