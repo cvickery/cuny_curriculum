@@ -22,7 +22,7 @@
     queries and, unless the --no_size_check option was specified, that these queries are
     approximately the same sizes as the corresponding query files in the latest_queries folder. If
     this step succeeds, the files in the latest_queries folder are archived and replaced with the
-    files from the queries foler.
+    files from the queries folder.
 
     If this programs completes normally, the queries folder will be "empty"; latest_queries folder
     will contain all the latest queries, with the same dates and assured size correctness; and all
