@@ -361,7 +361,7 @@ function send_notice () {
   echo done. | tee -a ${update_log}
 
   # cuny_sessions
-  echo -n "(RE-)CREATE cuny_sessions table... " | tee -a ${update_log}
+  echo -n "RECREATE cuny_sessions table... " | tee -a ${update_log}
   ./load_sessions_table.py >> ${update_log} 2>&1
   if [ $? -ne 0 ]
     then send_notice 'ERROR: load_sessions_table failed'
