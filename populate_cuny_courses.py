@@ -18,6 +18,7 @@ from psycopg.rows import namedtuple_row
 
 from cuny_divisions import ignore_institutions
 from cuny_departments import ignore_departments
+from smartify import smartify
 
 soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
 resource.setrlimit(resource.RLIMIT_NOFILE, [0x200, hard])
@@ -288,10 +289,15 @@ with psycopg.connect('dbname=cuny_curriculum', row_factory=namedtuple_row, autoc
                                          .replace('\r', '')\
                                          .replace('\n', ' ')\
                                          .replace('( ', '(')
+            title = smartify(title)
+
             short_title = row.short_course_title.replace("'", "’")\
                                                 .replace('\r', '')\
                                                 .replace('\n', ' ')\
                                                 .replace('( ', '(')
+            short_title = smartify(short_title)
+            if course_id == 146407:
+              print(f'{title=}\n{short_title=}')
 
             designation = row.designation
 
