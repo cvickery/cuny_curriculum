@@ -296,8 +296,6 @@ with psycopg.connect('dbname=cuny_curriculum', row_factory=namedtuple_row, autoc
                                                 .replace('\n', ' ')\
                                                 .replace('( ', '(')
             short_title = smartify(short_title)
-            if course_id == 146407:
-              print(f'{title=}\n{short_title=}')
 
             designation = row.designation
 
