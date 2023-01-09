@@ -35,6 +35,6 @@ SELECT institution,
        title,
        major1,
        period_stop,
-       is_active
+       term_info is not null as is_active
   FROM requirement_blocks
 );
