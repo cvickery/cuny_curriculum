@@ -30,10 +30,11 @@ DROP VIEW IF EXISTS view_blocks;
 CREATE VIEW view_blocks AS (
 SELECT institution,
        requirement_id,
-       block_type as type,
-       block_value as value,
+       block_type,
+       block_value,
        title,
+       major1,
        period_stop,
-       major1
+       is_active
   FROM requirement_blocks
 );
