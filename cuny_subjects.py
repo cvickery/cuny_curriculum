@@ -1,21 +1,19 @@
 #! /usr/local/bin/python3
-# Clear and re-populate the table of internal subjects at all cuny colleges (cuny_disciplines).
-# Clear and re-populate the table of external subject areas (cuny_subjects).
-
-import os
-import re
-import sys
-import csv
-
-from datetime import date
-from collections import namedtuple
-
-import psycopg
-from psycopg.rows import namedtuple_row
-
-from cuny_divisions import ignore_institutions
+"""Populate the tables of internal (cuny_disciplines) and external (cuny_subjects) subject areas."""
 
 import argparse
+import csv
+import os
+import psycopg
+import re
+import sys
+
+from collections import namedtuple
+from cuny_divisions import ignore_institutions
+from datetime import date
+from pathlib import Path
+from psycopg.rows import namedtuple_row
+
 
 parser = argparse.ArgumentParser('Create internal and external subject tables')
 parser.add_argument('--debug', '-d', action='store_true')
@@ -25,19 +23,21 @@ with psycopg.connect('dbname=cuny_curriculum') as db:
   with db.cursor(row_factory=namedtuple_row) as cursor:
 
     # Internal subject (disciplines) and external subject area (cuny_subjects) queries
-    discp_file = './latest_queries/QNS_CV_CUNY_SUBJECT_TABLE.csv'
-    extern_file = './latest_queries/QNS_CV_CUNY_SUBJECTS.csv'
-    discp_date = date.fromtimestamp(os.lstat(discp_file).st_birthtime).strftime('%Y-%m-%d')
-    extern_date = date.fromtimestamp(os.lstat(extern_file).st_birthtime).strftime('%Y-%m-%d')
+    discp_file = Path('./latest_queries/QNS_CV_CUNY_SUBJECT_TABLE.csv')
+    extern_file = Path('./latest_queries/QNS_CV_CUNY_SUBJECTS.csv')
+    for file in [discp_file, extern_file]:
+      assert file.is_file(), f'{file.name} does not exist'
+    discp_date = date.fromtimestamp(discp_file.stat().st_ctime)
+    extern_date = date.fromtimestamp(extern_file.stat().st_ctime)
 
     cursor.execute("""
                    update updates
-                   set update_date = '{}', file_name = '{}'
-                   where table_name = 'disciplines'""".format(discp_date, discp_file))
+                   set update_date = %s, file_name = %s
+                   where table_name = 'disciplines'""", (discp_date, discp_file.name))
     cursor.execute("""
                    update updates
-                   set update_date = '{}', file_name = '{}'
-                   where table_name = 'subjects'""".format(extern_date, extern_file))
+                   set update_date = %s, file_name = %s
+                   where table_name = 'subjects'""", (extern_date, extern_file.name))
 
     if args.debug:
       print(f'cuny_subjects.py:\n  cuny_disciplines: {discp_file}\n  cuny_subjects: {extern_file}')
