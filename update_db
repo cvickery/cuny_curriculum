@@ -7,7 +7,7 @@
 #   database manipulation steps (which used to be logged separately early in the development
 #   process). If any step fails to complete normally, an email containing the log file is sent to
 #   the "webmaster" and the process is aborted.
-if [[ $HOSTNAME =~ lehman.edu ]]
+if [[ $HOSTNAME =~ trexlabs ]]
 then export HOME_DIR=/home/chris
 else export HOME_DIR=/Users/vickery
 fi
