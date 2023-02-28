@@ -14,7 +14,7 @@ from psycopg.rows import namedtuple_row
 if __name__ == "__main__":
   conn = psycopg.connect('dbname=cuny_curriculum')
   cursor = conn.cursor(row_factory=namedtuple_row)
-  with open('./latest_queries/qns_cv_class_max_term.csv') as csv_file:
+  with open('./latest_queries/QNS_CV_CLASS_MAX_TERM.csv') as csv_file:
     csv_reader = csv.reader(csv_file)
     for line in csv_reader:
       if 1 == csv_reader.line_num:
