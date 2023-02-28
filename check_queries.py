@@ -74,10 +74,11 @@ required_query_names = [key for key in run_control_ids.keys()]
 
 Copacetic = namedtuple('Copacetic', 'notices stops')
 home_dir = Path.home()
-new_queries_dir = Path(home_dir, '/Projects/cuny_curriculum/queries')
-latest_queries_dir = Path(home_dir, '/Projects/cuny_curriculum/latest_queries/')
-archive_dir = Path(home_dir, '/Projects/cuny_curriculum/query_archive')
-
+new_queries_dir = Path(home_dir, 'Projects/cuny_curriculum/queries')
+latest_queries_dir = Path(home_dir, 'Projects/cuny_curriculum/latest_queries/')
+archive_dir = Path(home_dir, 'Projects/cuny_curriculum/query_archive')
+for dir in [home_dir, new_queries_dir, latest_queries_dir, archive_dir]:
+  assert dir.is_dir(), f'{dir.name} does not exist'
 
 def if_copacetic():
   """Check whether everything is copacetic.
