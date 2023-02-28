@@ -1,9 +1,10 @@
 #! /usr/local/bin/python3
-"""
-    This is a manager/utility for CUNYfirst queries used by the transfer_app project. As a utility,
-    it provides reporting facilities for the "definitive list" of CUNYfirst queries that it manages
-    and maintains an archive of previous queries. When one of the reporting options is used, none of
-    the other features listed next are run.
+"""Check integrity of CUNYfirst query files.
+
+This is a manager/utility for CUNYfirst queries used by the transfer_app project. As a utility,
+it provides reporting facilities for the "definitive list" of CUNYfirst queries that it manages
+and maintains an archive of previous queries. When one of the reporting options is used, none of
+the other features listed next are run.
 
     When not reporting, the program exits normally only if the latest_queries folder contains a full
     set of query files. The update_db script will not touch the cuny_curriculum database unless this
@@ -72,14 +73,17 @@ run_control_ids = {
 required_query_names = [key for key in run_control_ids.keys()]
 
 Copacetic = namedtuple('Copacetic', 'notices stops')
-new_queries_dir = Path('/Users/vickery/Projects/cuny_curriculum/queries')
-latest_queries_dir = Path('/Users/vickery/Projects/cuny_curriculum/latest_queries/')
-archive_dir = Path('/Users/vickery/Projects/cuny_curriculum/query_archive')
+home_dir = Path.home()
+new_queries_dir = Path(home_dir, '/Projects/cuny_curriculum/queries')
+latest_queries_dir = Path(home_dir, '/Projects/cuny_curriculum/latest_queries/')
+archive_dir = Path(home_dir, '/Projects/cuny_curriculum/query_archive')
 
 
 def if_copacetic():
-  """ Checks if everything is copascetic, which is defined as all needed queries are in the
-      latest_queries folder with the same dates and non-zero sizes.
+  """Check whether everything is copacetic.
+
+  Copacetic is defined as all needed queries are in the latest_queries folder with the same dates
+  and non-zero sizes.
   """
   notices = []
   stops = []
