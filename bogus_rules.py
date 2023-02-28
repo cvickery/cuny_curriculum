@@ -1,20 +1,22 @@
 #! /usr/bin/env python3
+"""Create and populate the bogus_rules table.
 
-# Identify rows from the internal rules query where the discipline/catalog differ
-# between the rule and the actual catalog info. Create and populate the bogus_rules
-# table; generate a log file with same info. (The db table is not used in the app, but
-# is useful for reporting to CUNY.)
+Identify rows from the internal rules query where the discipline/catalog differ between the rule and
+the actual catalog info. Generate a log file with same info as the table. (The db table is not used
+in the app, but could be useful for reporting to CUNY.)
+"""
 
+import argparse
 import csv
+import psycopg
 import re
 import sys
-import argparse
+
 from collections import namedtuple
 from datetime import date
 from pathlib import Path
+from psycopg.rows import namedtuple_row
 from time import perf_counter
-
-from pgconnection import PgConnection
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--debug', '-d', action='store_true')
@@ -25,8 +27,8 @@ start_time = perf_counter()
 if args.progress:
   print('', file=sys.stderr)
 
-conn = PgConnection()
-cursor = conn.cursor()
+conn = psycopg.connect('dbname=cuny_curriculum')
+cursor = conn.cursor(row_factory=namedtuple_row)
 
 # There be some garbage institution "names" in the transfer_rules
 cursor.execute("""select code as institution

@@ -7,9 +7,13 @@
 #   database manipulation steps (which used to be logged separately early in the development
 #   process). If any step fails to complete normally, an email containing the log file is sent to
 #   the "webmaster" and the process is aborted.
+if [[ $HOSTNAME =~ lehman.edu ]]
+then export HOME_DIR=/home/chris
+else export HOME_DIR=/Users/vickery
+fi
 
 export WEBMASTER='<Christopher Vickery> christopher.vickery@qc.cuny.edu'
-export PYTHONPATH='/Users/vickery/Projects/dgw_processor:/Users/vickery/Projects/transfer_app/'
+export PYTHONPATH='$HOME_DIR/Projects/dgw_processor:$HOME_DIR/Projects/transfer_app/'
 
 # send_notice()
 # -------------------------------------------------------------------------------------------------
@@ -25,7 +29,7 @@ function send_notice () {
   # done
 
   # sendemail must be in the PATH as a (hard) link to sendemail.py in transfer-app.
-  /Users/vickery/bin/sendemail -s "Update_db Notice: $1" -t ./notification_report "$WEBMASTER"
+  $HOME_DIR/bin/sendemail -s "Update_db Notice: $1" -t ./notification_report "$WEBMASTER"
 
   rm -f ./notification_report
   echo -e "$1.\nUpdate logfile sent to $WEBMASTER."
@@ -33,7 +37,7 @@ function send_notice () {
 
 (
   # Support execution from other dirs than the project directory
-  cd /Users/vickery/Projects/cuny_curriculum
+  cd $HOME_DIR/Projects/cuny_curriculum
 
   export PGOPTIONS='--client-min-messages=warning'
   #   --client-min-messages=warning to suppress NOTICE messages
@@ -449,13 +453,13 @@ then
 else
   echo "UPDATE CUNY Programs and Requirement Blocks... " | tee -a ${update_log}
   (
-    cd /Users/vickery/Projects/cuny_programs
+    cd $HOME_DIR/Projects/cuny_programs
     ./update_registered_programs.sh | tee -a ${update_log}
     if [ $? -ne 0 ]
     then send_notice 'NOTICE: update_registered_programs.sh failed'
 #         exit 1
     fi
-    cd /Users/vickery/Projects/cuny_programs/dgw_requirement_blocks
+    cd $HOME_DIR/Projects/cuny_programs/dgw_requirement_blocks
     ./update_requirement_blocks.py
     if [ $? -ne 0 ]
     then send_notice 'NOTICE: update_requitement_blocks.py failed'

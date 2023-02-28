@@ -1,17 +1,19 @@
 #! /usr/local/bin/python3
-""" Active courses and the term they were last offered.
-    Not currently used, but but potentially useful for prioritizing rules than need to be updated.
+"""Create table of active courses and the term they were last offered.
+
+Not currently used, but but potentially useful for prioritizing rules than need to be updated.
 """
 import csv
 import os
+import psycopg
 import sys
 
 from collections import namedtuple
-from pgconnection import PgConnection
+from psycopg.rows import namedtuple_row
 
 if __name__ == "__main__":
-  conn = PgConnection()
-  cursor = conn.cursor()
+  conn = psycopg.connect('dbname=cuny_curriculum')
+  cursor = conn.cursor(row_factory=namedtuple_row)
   with open('./latest_queries/qns_cv_class_max_term.csv') as csv_file:
     csv_reader = csv.reader(csv_file)
     for line in csv_reader:

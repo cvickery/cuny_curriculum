@@ -1,12 +1,14 @@
 #! /usr/local/bin/python3
+"""Build the cuny_programs table."""
 
 import csv
-from pgconnection import PgConnection
+import psycopg
+from psycopg.rows import namedtuple_row
 
 from collections import namedtuple
 
-conn = PgConnection()
-cursor = conn.cursor()
+conn = psycopg.connect('dbname=cuny_curriculum')
+cursor = conn.cursor(row_factory=namedtuple_row)
 
 cursor.execute("""
                drop table if exists cuny_programs;

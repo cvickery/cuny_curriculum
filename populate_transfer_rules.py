@@ -1,7 +1,7 @@
 #! /usr/local/bin/python3
-"""
-  Clear and re-populate the transfer_rules, source_courses, and destination_courses tables using
-  the result of the CUNYfirst query, QNS_CV_SR_TRNS_INTERNAL_RULES.
+"""Clear and re-populate the transfer_rules, source_courses, and destination_courses tables.
+
+Uses the result of the CUNYfirst query, QNS_CV_SR_TRNS_INTERNAL_RULES.
 
   Note and ignore query records that have invalid course_id fields (lookup fails).
 
@@ -52,6 +52,7 @@ import argparse
 import csv
 import json
 import os
+import psycopg
 import resource
 import sys
 
@@ -59,9 +60,8 @@ from collections import namedtuple, defaultdict
 from datetime import date
 from time import perf_counter
 
-from pgconnection import PgConnection
-
 from cuny_divisions import ignore_institutions
+from psycopg.rows import namedtuple_row
 
 soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
 resource.setrlimit(resource.RLIMIT_NOFILE, [0x400, hard])
@@ -86,8 +86,8 @@ except OSError as e:
 if args.progress:
   print('\nInitializing.', file=terminal)
 
-conn = PgConnection()
-cursor = conn.cursor()
+conn = psycopg.connect('dbname=cuny_curriculum')
+cursor = conn.cursor(row_factory=namedtuple_row)
 
 # Get most recent transfer_rules query file
 cf_rules_file = './latest_queries/QNS_CV_SR_TRNS_INTERNAL_RULES.csv'
