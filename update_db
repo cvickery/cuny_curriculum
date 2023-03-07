@@ -13,7 +13,7 @@ else export HOME_DIR=/Users/vickery
 fi
 
 export WEBMASTER='<Christopher Vickery> christopher.vickery@qc.cuny.edu'
-export PYTHONPATH='$HOME_DIR/Projects/dgw_processor:$HOME_DIR/Projects/transfer_app/'
+export PYTHONPATH="$HOME_DIR/Projects/dgw_processor:$HOME_DIR/Projects/transfer_app/"
 
 # send_notice()
 # -------------------------------------------------------------------------------------------------
