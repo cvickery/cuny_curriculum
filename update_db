@@ -365,6 +365,8 @@ function send_notice () {
   echo done. | tee -a ${update_log}
 
   # cuny_sessions
+  # THIS TABLE IS NOT USED BY THE TRANSFER APP, BUT IT IS REFERENCED BY THE COURSE MAPPER.
+  # THE TIMELINE APP MAINTAINS SAME TABLE IN THE CUNY TRANSFERS DB.
   echo -n "RECREATE cuny_sessions table... " | tee -a ${update_log}
   ./load_sessions_table.py >> ${update_log} 2>&1
   if [ $? -ne 0 ]
