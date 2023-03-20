@@ -33,12 +33,15 @@ the other features listed next are run.
     queries folder from being declared "empty."
 """
 
+import argparse
 import os
 import sys
-from pathlib import Path
-from datetime import date
+
 from collections import namedtuple
-import argparse
+from datetime import date
+from pathlib import Path
+
+DEBUG = os.getenv('DEBUG_CHECK_QUERIES')
 
 QUERY_CHECK_LIMIT = os.getenv('QUERY_CHECK_LIMIT')
 if QUERY_CHECK_LIMIT is None:
@@ -73,12 +76,15 @@ run_control_ids = {
 required_query_names = [key for key in run_control_ids.keys()]
 
 Copacetic = namedtuple('Copacetic', 'notices stops')
+
 home_dir = Path.home()
 new_queries_dir = Path(home_dir, 'Projects/cuny_curriculum/queries')
 latest_queries_dir = Path(home_dir, 'Projects/cuny_curriculum/latest_queries/')
 archive_dir = Path(home_dir, 'Projects/cuny_curriculum/query_archive')
+
 for dir in [home_dir, new_queries_dir, latest_queries_dir, archive_dir]:
   assert dir.is_dir(), f'{dir.name} does not exist'
+
 
 def if_copacetic():
   """Check whether everything is copacetic.
@@ -138,7 +144,10 @@ if __name__ == '__main__':
     query_check_limit = float(args.query_check_limit) / 100.0
 
   if args.debug:
-    print(args, file=sys.stderr)
+    DEBUG = True
+
+  if DEBUG:
+    exit(args)
 
   # Reporting Functions
   # ===============================================================================================
@@ -211,7 +220,7 @@ if __name__ == '__main__':
           notices.append(f'NOTICE: Stray file in queries dir with mis-matched date: '
                          f'{new_query.name}')
       else:
-        if args.debug:
+        if DEBUG:
           print(new_query.name, 'date ok', file=sys.stderr)
 
   # Check for complete set of new queries, and their sizes.
@@ -283,7 +292,7 @@ if __name__ == '__main__':
         if prev_mod_date is None:
           prev_mod_date = date.fromtimestamp(target_query.stat().st_mtime).strftime('%Y-%m-%d')
         target_query.rename(archive_dir / f'{target_query.stem}_{prev_mod_date}.csv')
-        if args.debug:
+        if DEBUG:
           print(f'{target_query} moved to {archive_dir}/{target_query.stem}_{prev_mod_date}.csv',
                 file=sys.stderr)
       else:
