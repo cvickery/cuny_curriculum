@@ -9,7 +9,9 @@
 #   the "webmaster" and the process is aborted.
 if [[ $HOSTNAME =~ trexlabs ]]
 then export HOME_DIR=/home/chris
+     export TREX_LABS='Welcome to T-Rex Labs!'
 else export HOME_DIR=/Users/vickery
+     export TREX_LABS=
 fi
 
 export WEBMASTER='<Christopher Vickery> christopher.vickery@qc.cuny.edu'
@@ -115,7 +117,7 @@ function send_notice () {
          report='--report'
     elif [[ ( "$1" == "--no-events" ) || ( "$1" == "-ne" ) ]]
     then no_events=true
-    elif [[ ( "$1" == "--skip-download") || ( "$1" == "-sd" ) ]]
+    elif [[ ( "$1" == "--skip-download") || ( "$1" == "-sd" ) || $TREX_LABS ]]
       then skip_download=true
     elif [[ ( "$1" == "--no-size-check") || ( "$1" == "-ns" ) ]]
       then no_size_check=true
@@ -125,7 +127,7 @@ function send_notice () {
       then no_archive=true
     elif [[ ( "$1" == "--no-programs" ) || ( "$1" == "-np" ) ]]
       then no_programs=true
-    elif [[ ( "$1" == "--ignore-new" ) || ( "$1" == "-in" ) ]]
+    elif [[ ( "$1" == "--ignore-new" ) || ( "$1" == "-in" ) || $TREX_LABS ]]
       then ignore_new=true
     else
       echo "Usage: $0 [-ne | --no-events] [-ns | --no-size-check] [-nd | --no-date-check]

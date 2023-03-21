@@ -147,7 +147,7 @@ if __name__ == '__main__':
     DEBUG = True
 
   if DEBUG:
-    exit(args)
+    print(f'{args=}', file=sys.stderr)
 
   # Reporting Functions
   # ===============================================================================================
