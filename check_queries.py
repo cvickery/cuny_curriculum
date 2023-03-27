@@ -215,7 +215,7 @@ if __name__ == '__main__':
       if new_date != new_mod_date:
         # This is a stop if the file is required, but just a notice if it is not
         if new_query.stem.strip('-123456789') in required_query_names:
-          stops.append(f'STOP: {new_query.name}. Expected {new_mod_date}, but got {new_date}.')
+          stops.append(f'STOP: {new_query.name:>36} Expected {new_mod_date}, but got {new_date}.')
         else:
           notices.append(f'NOTICE: Stray file in queries dir with mis-matched date: '
                          f'{new_query.name}')
