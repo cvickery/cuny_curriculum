@@ -150,27 +150,28 @@ function send_notice () {
             ;;
 
       *)
-        echo -e "Options: [-sd | --skip_download]\n\
-           [-po | --precheck_only]\n\
-           [-ns | --no_size_check]\n\
-           [-nd | --no_date_check]\n\
-           [-na | --no_archive]\n\
-           [-i  | --interactive]\n\
-           [-np | --no_programs] "
+        echo -e "Unknown option: “$1”\n\
+Options: [-sd | --skip_download]\n\
+         [-po | --precheck_only]\n\
+         [-ns | --no_size_check]\n\
+         [-nd | --no_date_check]\n\
+         [-na | --no_archive]\n\
+         [-i  | --interactive]\n\
+         [-np | --no_programs] "
         exit 1
         ;;
     esac
     shift
   done
 
-  # Uncomment for debugging
-  [[ $skip_download ]] && echo skip_download is TRUE
-  [[ $precheck_only ]] && echo precheck_only is TRUE
-  [[ $no_size_check ]] && echo no_size_check is TRUE
-  [[ $no_date_check ]] && echo no_date_check is TRUE
-  [[ $no_archive ]] && echo no_archive is TRUE
-  [[ $no_programs ]] && echo no_programs is TRUE
-  exit
+  # # Uncomment for debugging
+  # [[ $skip_download ]] && echo skip_download is TRUE
+  # [[ $precheck_only ]] && echo precheck_only is TRUE
+  # [[ $no_size_check ]] && echo no_size_check is TRUE
+  # [[ $no_date_check ]] && echo no_date_check is TRUE
+  # [[ $no_archive ]] && echo no_archive is TRUE
+  # [[ $no_programs ]] && echo no_programs is TRUE
+  # exit
 
   # Include path to update.log file so script can be invoked from any directory.
   export update_log=`pwd`/update.log
