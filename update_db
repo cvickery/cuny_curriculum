@@ -113,7 +113,6 @@ function send_notice () {
   # Registered Programs option
   export no_programs=''
 
-  echo "There is/are $# command line arg(s)"
   while [ $# -gt 0 ]
   do
     if [[ ( "$1" == "--skip-download") || ( "$1" == "-sd" ) || $TREX_LABS ]]

@@ -138,11 +138,11 @@ if __name__ == '__main__':
   parser.add_argument('-n', '--num_queries', action='store_true')
   parser.add_argument('-r', '--run_control_ids', action='store_true')
 
-  parser.add_argument('-i', '--precheck_only', action='store_true')
-  parser.add_argument('-sa', '--skip_archive', action='store_true')
+  parser.add_argument('-po', '--precheck_only', action='store_true')
   parser.add_argument('-sd', '--skip_date_check', action='store_true')
   parser.add_argument('-ss', '--skip_size_check', action='store_true')
-  parser.add_argument('-qs', '--size_check_limit', type=int)
+  parser.add_argument('-sa', '--skip_archive', action='store_true')
+  parser.add_argument('-scl', '--size_check_limit', type=int)
   args = parser.parse_args()
 
   if args.size_check_limit:
