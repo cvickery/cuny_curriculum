@@ -12,25 +12,30 @@ the other features listed next are run.
 
     Normally, the program performs a sequence of management tasks, which can be overridden by
     command line options. During these operation "notices" may be generated, which are displayed,
-    but do not prevent an successful exit. But several "stop" conditions may be found. These are
-    displayed and cause the program to exit with an error code as a signal to update_db.
+    but do not prevent a successful exit. But several "stop" conditions may be found. These are
+    displayed and cause the program to exit with an error code as a signal not to update the db.
 
-    The --ignore_new option causes the program to exit normally if the latest_queries folder is in a
-    copacetic state (all queries present and with the same last-modified date), without doing any of
-    the following operations.
+    The --precheck_only option causes the program to exit normally if the latest_queries folder is
+    already in a copacetic state (all queries present and have the same last-modified date), without
+    doing any of the following operations. The queries, latest_queries, and query_archive
+    directories will not be changed, whether the precheck passes or not.
 
-    The queries folder is checked to be sure it contains at least one copy of each of the required
-    queries and, unless the --no_size_check option was specified, that these queries are
-    approximately the same sizes as the corresponding query files in the latest_queries folder. If
-    this step succeeds, the files in the latest_queries folder are archived and replaced with the
-    files from the queries folder.
+    Without the --precheck_only option:
+      * The queries folder is checked to be sure it contains at least one copy of each of the
+        required queries and, unless the --no_size_check option was specified, that these queries
+        are approximately the same sizes as the corresponding query files in the latest_queries
+        folder. If this step succeeds, the files in the latest_queries folder are archived and
+        replaced with the files from the queries folder. The --no_date_check option can be used to
+        suppress checking that all the query files were created on the same date.
 
-    If this programs completes normally, the queries folder will be "empty"; latest_queries folder
-    will contain all the latest queries, with the same dates and assured size correctness; and all
-    previous queries will have been archived. Otherwise, nothing will be changed from the way things
-    were when the program started.
-    Stray files in the queries and/or latest_queries folders are noted, but do not prevent the
-    queries folder from being declared "empty."
+      * Stray files in the queries and/or latest_queries folders are noted, but do not prevent the
+        queries folder from being declared "empty."
+
+      * Normal exit means the queries folder will be "empty"; the latest_queries
+        folder will contain all the latest queries, with the same dates and assured size
+        correctness; and all previous queries will have been archived.
+
+      * Otherwise, nothing will be changed from the way things were when the program started.
 """
 
 import argparse
@@ -43,11 +48,11 @@ from pathlib import Path
 
 DEBUG = os.getenv('DEBUG_CHECK_QUERIES')
 
-QUERY_CHECK_LIMIT = os.getenv('QUERY_CHECK_LIMIT')
-if QUERY_CHECK_LIMIT is None:
-  QUERY_CHECK_LIMIT = '10'
+SIZE_CHECK_LIMIT = os.getenv('SIZE_CHECK_LIMIT')
+if SIZE_CHECK_LIMIT is None:
+  SIZE_CHECK_LIMIT = '10'
 
-query_check_limit = float(QUERY_CHECK_LIMIT) / 100.0
+size_check_limit = float(SIZE_CHECK_LIMIT) / 100.0
 
 # This is the definitive list of queries and their CUNYfirst run_control_ids used by the project.
 run_control_ids = {
@@ -133,15 +138,15 @@ if __name__ == '__main__':
   parser.add_argument('-n', '--num_queries', action='store_true')
   parser.add_argument('-r', '--run_control_ids', action='store_true')
 
-  parser.add_argument('-i', '--ignore_new', action='store_true')
+  parser.add_argument('-i', '--precheck_only', action='store_true')
   parser.add_argument('-sa', '--skip_archive', action='store_true')
   parser.add_argument('-sd', '--skip_date_check', action='store_true')
   parser.add_argument('-ss', '--skip_size_check', action='store_true')
-  parser.add_argument('-qs', '--query_check_limit', type=int)
+  parser.add_argument('-qs', '--size_check_limit', type=int)
   args = parser.parse_args()
 
-  if args.query_check_limit:
-    query_check_limit = float(args.query_check_limit) / 100.0
+  if args.size_check_limit:
+    size_check_limit = float(args.size_check_limit) / 100.0
 
   if args.debug:
     DEBUG = True
@@ -182,12 +187,12 @@ if __name__ == '__main__':
 
   if len(is_copacetic.stops) == 0:
     print('Copacetic Precheck OK')
-    if args.ignore_new:
+    if args.precheck_only:
       # This is a normal exit when pre-check is okay and new queries are not to be processed
       sys.exit(0)
   else:
     print('Copacetic Precheck NOT OK')
-    if args.ignore_new:
+    if args.precheck_only:
       # Pre-check failed with no actions on files: error exit.
       s = '' if len(is_copacetic.stops) == 1 else 's'
       print(f'{len(is_copacetic.stops)} STOP{s}')
@@ -196,8 +201,6 @@ if __name__ == '__main__':
   # New query integrity checks
   # ===============================================================================================
   # All new_queries_dir csv files must have the same modification date (unless suppressed)
-
-  print('Check new queries')
   stops = []
   notices = []
 
@@ -206,8 +209,9 @@ if __name__ == '__main__':
   # To creare a valid cache of CUNYfirst data, all queries must have been run on the same day.
   new_mod_date = None
   if args.skip_date_check:
-    print('Skip checking dates of new queries')
+    print('Skip date checking')
   else:
+    print('Checking dates')
     for new_query in new_queries_dir.glob('*.csv'):
       new_date = date.fromtimestamp(new_query.stat().st_mtime).strftime('%Y-%m-%d')
       if new_mod_date is None:
@@ -227,9 +231,10 @@ if __name__ == '__main__':
   # -----------------------------------------------------------------------------------------------
   #   There has to be one new query for each required query, and its size must be within ± 10% of
   #   the size of the corresponding file in latest_queries (if there is one). The 10% value can be
-  #   overridden by the QUERY_CHECK_LIMIT environment variable or the --query_check_limit (-qs)
+  #   overridden by the SIZE_CHECK_LIMIT environment variable or the --size_check_limit (-qs)
   #   command line option. The size check can be suppressed altogether with the --skip_size_check
   #   (-ss) command line option.
+  print('Check all queries present')  # This can’t be overridden
   for query_name in required_query_names:
     target_query = Path(latest_queries_dir, query_name + '.csv')
     if target_query.exists():
@@ -251,10 +256,10 @@ if __name__ == '__main__':
         notices.append(f'NOTICE: size check skipped for {query}')
         continue
 
-      if abs(target_size - newest_size) > (query_check_limit * target_size):
+      if abs(target_size - newest_size) > (size_check_limit * target_size):
         new_instances.remove(query)
         notices.append(f'NOTICE: Ignoring {query.name} because its size ({newest_size:,}) is '
-                       f'not within {int(query_check_limit * 100)}% of the previous query’s '
+                       f'not within {int(size_check_limit * 100)}% of the previous query’s '
                        f'size ({target_size:,})')
         if args.cleanup:
           # The --cleanup (-c) option can be used to delete mal-sized files.
@@ -285,7 +290,7 @@ if __name__ == '__main__':
   # If there is a full set of valid new queries, archive the latest_queries and move in the new ones
   if len(stops) == 0 and not args.skip_archive:
     # Move each latest_queries file to query_archive, with the file's date appended to its name
-    print('Archiving')
+    print('Archive previous queries')
     prev_mod_date = None
     for target_query in [Path(latest_queries_dir, f'{q}.csv') for q in required_query_names]:
       if target_query.exists():
@@ -318,7 +323,7 @@ if __name__ == '__main__':
           file.unlink()
 
     # Move each new query to latest_queries_dir with process_id removed from its stem
-    print('Moving new queries to latest_queries')
+    print('Move new queries to latest_queries')
     for new_query in required_query_names:
       new_copies = [qf for qf in Path('queries').glob(f'{new_query}*')]
       assert len(new_copies) == 1, f'ERROR: no file for {new_query}'

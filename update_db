@@ -11,14 +11,14 @@ if [[ $HOSTNAME =~ trexlabs ]]
 then export HOME_DIR=/home/chris
      export TREX_LABS='Welcome to T-Rex Labs!'
 else export HOME_DIR=/Users/vickery
-     export TREX_LABS=
+     export TREX_LABS=''
 fi
 
 export WEBMASTER='<Christopher Vickery> christopher.vickery@qc.cuny.edu'
 export PYTHONPATH="$HOME_DIR/Projects/dgw_processor:$HOME_DIR/Projects/transfer_app/"
 
 # send_notice()
-# -------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------
 # Email the current state of the update.log file to the WEBMASTER.
 #
 function send_notice () {
@@ -47,7 +47,7 @@ function send_notice () {
   #   -f rather than < to get line numbers when a command fails
   #   -q to suppress CREATE TABLE, etc messages
 
-  # COMMAND LINE ARGUMENTS AND ENVIRONMENT VARIABLES
+  # COMMAND LINE ARGUMENTS
   # This update_db command normally runs with no arguments, but the normal process can be modified
   # to help manual recovery from abnormalities in the processes of running CUNYfirst queries and
   # transferring the resulting .CSV files to Tumbleweed.
@@ -60,11 +60,7 @@ function send_notice () {
   #   file is restored near the end of the update process.
   #
   #   The NO_EVENTS environment variable, the -ne, or the --no-events command line option can be
-  #   used to suppress the dump restore of the dumps table.
-  #
-  # Archive tables that don't come from CUNYfirst. (NO LONGER USED)
-  #   These have to be preserved in case they get corrupted during the actions that happen in
-  #   CUNY_Programs.
+  #   used to suppress the dump restore of the events table.
   #
   # Download queries from Tumbleweed.
   #   The 21 CUNYfirst queries that are used to build the database are saved as .CSV files
@@ -74,8 +70,8 @@ function send_notice () {
   #   CUNYfirst run_control ids. All queries are scheduled to run in the CUNYfirst reporting
   #   instance each Tuesday morning at 7 am.
   #
-  #   The SKIP_DOWNLOAD environment variable, the -sd, or the --skip-download command line option
-  #   can be used to skip the download from Tumbleweed, iconv, and move into queries steps.
+  #   The -sd or the --skip-download command line option can be used to skip the download from
+  #   Tumbleweed, iconv, and move into queries steps.
   #
   # Check the integrity of the query files.
   #   Once the query files are in the queries folder, they are checked to be sure they are all
@@ -86,65 +82,84 @@ function send_notice () {
   #   CUNYfirst process id in their file names, and moved into the latest_queries folder with their
   #   process ids removed for subsequent access by the update process steps to follow.
   #
-  #   NO_SIZE_CHECK -ns --no-size-check
-  #   NO_DATE_CHECK -nd --no-date-check
-  #   NO_ARCHIVE -na --no-archive
-  #   These three can be used to suppress their respective steps.
+  #     -po --precheck-only
+  #     -ns --no-size-check
+  #     -nd --no-date-check
+  #     -na --no-archive
   #
   # Update registered programs.
   #   After the cuny_curriculum database update is finished, the table of academic programs
   #   registered with the NYS Department of Education (registered_programs) takes place.
   #
-  #   NO_PROGRAMS -np --no-programs
-  #   Suppress the registered_programs table update.
-
-  # Environment variables, which can be overridden by command line options
-  for env_var in NO_EVENTS SKIP_DOWNLOAD NO_SIZE_CHECK NO_DATE_CHECK NO_ARCHIVE NO_PROGRAMS
-  do
-    if [[ `printenv` =~ $env_var ]]
-    then export `echo $env_var | tr A-Z a-z`=1
-    fi
-  done
+  #     -np --no-programs
+  #     Suppress the registered_programs table update.
 
   # Command line option processing
+  # ------------------------------
+
+  # Update_db options
+  # skip_download=
+
+  # Check Queries options
+  export precheck_only=''
+  export no_size_check=''
+  export no_date_check=''
+  export no_archive=''
+
+  # Common subcommand options
   export progress=''
   export report=''
-  unset progress report no_events skip_download no_size_check no_date_check no_archive no_programs
+
+  # Registered Programs option
+  export no_programs=''
+
+  echo "There is/are $# command line arg(s)"
   while [ $# -gt 0 ]
   do
-    if [[ ( "$1" == "--interactive" ) || ( "$1" == '-i' ) ]]
+    if [[ ( "$1" == "--skip-download") || ( "$1" == "-sd" ) || $TREX_LABS ]]
+    then skip_download=true
+
+    elif [[ ( "$1" == "--precheck-only" ) || ( "$1" == "-po" ) || $TREX_LABS ]]
+    then precheck_only=true
+
+    elif [[ ( "$1" == "--no-size-check") || ( "$1" == "-ns" ) ]]
+    then no_size_check=true
+
+    elif [[ ( "$1" == "--no-date-check") || ( "$1" == "-nd" ) ]]
+    then no_date_check=true
+
+    elif [[ ( "$1" == "--no-archive") || ( "$1" == "-na" ) ]]
+    then no_archive=true
+
+    elif [[ ( "$1" == "--interactive" ) || ( "$1" == '-i' ) ]]
     then progress='--progress'
          report='--report'
-    elif [[ ( "$1" == "--no-events" ) || ( "$1" == "-ne" ) ]]
-    then no_event=true
-    elif [[ ( "$1" == "--skip-download") || ( "$1" == "-sd" ) || $TREX_LABS ]]
-      then skip_download=true
-    elif [[ ( "$1" == "--no-size-check") || ( "$1" == "-ns" ) ]]
-      then no_size_check=true
-    elif [[ ( "$1" == "--no-date-check") || ( "$1" == "-nd" ) ]]
-      then no_date_check=true
-    elif [[ ( "$1" == "--no-archive") || ( "$1" == "-na" ) ]]
-      then no_archive=true
+
     elif [[ ( "$1" == "--no-programs" ) || ( "$1" == "-np" ) ]]
-      then no_programs=true
-    elif [[ ( "$1" == "--ignore-new" ) || ( "$1" == "-in" ) || $TREX_LABS ]]
-      then ignore_new=true
+    then no_programs=true
+
     else
-      echo "Usage: $0 [-ne | --no-events] [-ns | --no-size-check] [-nd | --no-date-check]
-       [-na | --no-archive] [-sd | --skip_download] [-np | --no_programs] [-i | --interactive]"
+      echo -e "Options: [-sd | --skip_download]\n\
+         [-po | --precheck_only]\n\
+         [-ns | --no-size-check]\n\
+         [-nd | --no-date-check]\n\
+         [-na | --no-archive]\n\
+         [-i  | --interactive]\n\
+         [-np | --no_programs] "
       exit 1
     fi
     shift
   done
 
   # # Uncomment for debugging
-#   for arg in no_events skip_download no_size_check no_date_check no_archive no_programs
-#   do
-#     if [[ `printenv` =~ $arg ]]
-#     then echo $arg is set
-#     else echo $arg is not set
-#     fi
-#   done
+  # [[ $no_events ]] && echo no_events is TRUE
+  # [[ $skip_download ]] && echo skip_download is TRUE
+  # [[ $precheck_only ]] && echo precheck_only is TRUE
+  # [[ $no_size_check ]] && echo no_size_check is TRUE
+  # [[ $no_date_check ]] && echo no_date_check is TRUE
+  # [[ $no_archive ]] && echo no_archive is TRUE
+  # [[ $no_programs ]] && echo no_programs is TRUE
+  # exit
 
   # Include path to update.log file so script can be invoked from any directory.
   export update_log=`pwd`/update.log
@@ -178,10 +193,10 @@ function send_notice () {
 
   echo -n "CHECK & ARCHIVE QUERY FILES... " | tee -a ${update_log}
   args=''
+  [[ $precheck_only ]] && args="$args --precheck_only"
   [[ $no_size_check ]] && args="$args -ss"
   [[ $no_date_check ]] && args="$args -sd"
   [[ $no_archive ]] && args="$args -sa"
-  [[ $ignore_new ]] && args="$args --ignore_new"
 
   ./check_queries.py $args >> ${update_log} 2>&1
   if [ $? -ne 0 ]
