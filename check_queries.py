@@ -124,6 +124,9 @@ def if_copacetic():
   for file in latest_query_names:
     notices.append(f'NOTICE: Stray file in latest_queries: {file}')
 
+  if len(stops) == 0:
+    print('Query files are all dated', required_query_date)
+
   return Copacetic(notices, stops)
 
 
