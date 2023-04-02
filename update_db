@@ -111,52 +111,66 @@ function send_notice () {
   # Registered Programs option
   export no_programs=''
 
+  # At T-Rex Labs, query files come from Lehman, so no Tumbleweed; only precheck.
+  if [[ $TREX_LABS ]]
+  then  skip_download=true
+        precheck_only=true
+  fi
+
   while [ $# -gt 0 ]
   do
-    if [[ ( "$1" == "--skip_download") || ( "$1" == "-sd" ) || $TREX_LABS ]]
-    then skip_download=true
+    case $1 in
+      --skip_download | -sd)
+            skip_download=true
+            ;;
 
-    elif [[ ( "$1" == "--precheck_only" ) || ( "$1" == "-po" ) || $TREX_LABS ]]
-    then precheck_only=true
+      --precheck_only | -po)
+            precheck_only=true
+            ;;
 
-    elif [[ ( "$1" == "--no_size_check") || ( "$1" == "-ns" ) ]]
-    then no_size_check=true
+      --no_size_check | -ns)
+            no_size_check=true
+            ;;
 
-    elif [[ ( "$1" == "--no_date_check") || ( "$1" == "-nd" ) ]]
-    then no_date_check=true
+      --no_date_check | -nd)
+            no_date_check=true
+            ;;
 
-    elif [[ ( "$1" == "--no_archive") || ( "$1" == "-na" ) ]]
-    then no_archive=true
+      --no_archive | -na)
+            no_archive=true
+            ;;
 
-    elif [[ ( "$1" == "--interactive" ) || ( "$1" == '-i' ) ]]
-    then progress='--progress'
-         report='--report'
+      --interactive | -i)
+            progress='--progress'
+            report='--report'
+            ;;
 
-    elif [[ ( "$1" == "--no_programs" ) || ( "$1" == "-np" ) ]]
-    then no_programs=true
+      --no_programs | -np)
+            no_programs=true
+            ;;
 
-    else
-      echo -e "Options: [-sd | --skip_download]\n\
-         [-po | --precheck_only]\n\
-         [-ns | --no_size_check]\n\
-         [-nd | --no_date_check]\n\
-         [-na | --no_archive]\n\
-         [-i  | --interactive]\n\
-         [-np | --no_programs] "
-      exit 1
-    fi
+      *)
+        echo -e "Options: [-sd | --skip_download]\n\
+           [-po | --precheck_only]\n\
+           [-ns | --no_size_check]\n\
+           [-nd | --no_date_check]\n\
+           [-na | --no_archive]\n\
+           [-i  | --interactive]\n\
+           [-np | --no_programs] "
+        exit 1
+        ;;
+    esac
     shift
   done
 
-  # # Uncomment for debugging
-  # [[ $no_events ]] && echo no_events is TRUE
-  # [[ $skip_download ]] && echo skip_download is TRUE
-  # [[ $precheck_only ]] && echo precheck_only is TRUE
-  # [[ $no_size_check ]] && echo no_size_check is TRUE
-  # [[ $no_date_check ]] && echo no_date_check is TRUE
-  # [[ $no_archive ]] && echo no_archive is TRUE
-  # [[ $no_programs ]] && echo no_programs is TRUE
-  # exit
+  # Uncomment for debugging
+  [[ $skip_download ]] && echo skip_download is TRUE
+  [[ $precheck_only ]] && echo precheck_only is TRUE
+  [[ $no_size_check ]] && echo no_size_check is TRUE
+  [[ $no_date_check ]] && echo no_date_check is TRUE
+  [[ $no_archive ]] && echo no_archive is TRUE
+  [[ $no_programs ]] && echo no_programs is TRUE
+  exit
 
   # Include path to update.log file so script can be invoked from any directory.
   export update_log=`pwd`/update.log
@@ -166,7 +180,7 @@ function send_notice () {
   SECONDS=0
   send_notice "Started updating database cuny_curriculum on $HOSTNAME"
 
-  # Can't do downloads except from a cuny.edu host.
+  # Can’t do downloads except from a cuny.edu host.
   if [[ ! ( `hostname` =~ cuny.edu ) ]]
   then echo "Cannot access Tumbleweed from `hostname`" | tee -a ${update_log}
        skip_download=true
