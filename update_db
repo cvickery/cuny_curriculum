@@ -116,7 +116,7 @@ function send_notice () {
     then progress='--progress'
          report='--report'
     elif [[ ( "$1" == "--no-events" ) || ( "$1" == "-ne" ) ]]
-    then no_events=true
+    then no_event=true
     elif [[ ( "$1" == "--skip-download") || ( "$1" == "-sd" ) || $TREX_LABS ]]
       then skip_download=true
     elif [[ ( "$1" == "--no-size-check") || ( "$1" == "-ns" ) ]]
@@ -138,13 +138,13 @@ function send_notice () {
   done
 
   # # Uncomment for debugging
-  # for arg in no_events skip_download no_size_check no_date_check no_archive no_programs
-  # do
-  #   if [[ `printenv` =~ $arg ]]
-  #   then echo $arg is set
-  #   else echo $arg is not set
-  #   fi
-  # done
+#   for arg in no_events skip_download no_size_check no_date_check no_archive no_programs
+#   do
+#     if [[ `printenv` =~ $arg ]]
+#     then echo $arg is set
+#     else echo $arg is not set
+#     fi
+#   done
 
   # Include path to update.log file so script can be invoked from any directory.
   export update_log=`pwd`/update.log
