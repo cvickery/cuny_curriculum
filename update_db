@@ -48,6 +48,7 @@ function send_notice () {
   #   -q to suppress CREATE TABLE, etc messages
 
   # COMMAND LINE ARGUMENTS
+  # ------------------------------------------------------------------------------------------------
   # This update_db command normally runs with no arguments, but the normal process can be modified
   # to help manual recovery from abnormalities in the processes of running CUNYfirst queries and
   # transferring the resulting .CSV files to Tumbleweed.
@@ -94,11 +95,8 @@ function send_notice () {
   #     -np --no-programs
   #     Suppress the registered_programs table update.
 
-  # Command line option processing
-  # ------------------------------
-
-  # Update_db options
-  # skip_download=
+  # Update_db option
+  export skip_download=''
 
   # Check Queries options
   export precheck_only=''
@@ -115,34 +113,34 @@ function send_notice () {
 
   while [ $# -gt 0 ]
   do
-    if [[ ( "$1" == "--skip-download") || ( "$1" == "-sd" ) || $TREX_LABS ]]
+    if [[ ( "$1" == "--skip_download") || ( "$1" == "-sd" ) || $TREX_LABS ]]
     then skip_download=true
 
-    elif [[ ( "$1" == "--precheck-only" ) || ( "$1" == "-po" ) || $TREX_LABS ]]
+    elif [[ ( "$1" == "--precheck_only" ) || ( "$1" == "-po" ) || $TREX_LABS ]]
     then precheck_only=true
 
-    elif [[ ( "$1" == "--no-size-check") || ( "$1" == "-ns" ) ]]
+    elif [[ ( "$1" == "--no_size_check") || ( "$1" == "-ns" ) ]]
     then no_size_check=true
 
-    elif [[ ( "$1" == "--no-date-check") || ( "$1" == "-nd" ) ]]
+    elif [[ ( "$1" == "--no_date_check") || ( "$1" == "-nd" ) ]]
     then no_date_check=true
 
-    elif [[ ( "$1" == "--no-archive") || ( "$1" == "-na" ) ]]
+    elif [[ ( "$1" == "--no_archive") || ( "$1" == "-na" ) ]]
     then no_archive=true
 
     elif [[ ( "$1" == "--interactive" ) || ( "$1" == '-i' ) ]]
     then progress='--progress'
          report='--report'
 
-    elif [[ ( "$1" == "--no-programs" ) || ( "$1" == "-np" ) ]]
+    elif [[ ( "$1" == "--no_programs" ) || ( "$1" == "-np" ) ]]
     then no_programs=true
 
     else
       echo -e "Options: [-sd | --skip_download]\n\
          [-po | --precheck_only]\n\
-         [-ns | --no-size-check]\n\
-         [-nd | --no-date-check]\n\
-         [-na | --no-archive]\n\
+         [-ns | --no_size_check]\n\
+         [-nd | --no_date_check]\n\
+         [-na | --no_archive]\n\
          [-i  | --interactive]\n\
          [-np | --no_programs] "
       exit 1
