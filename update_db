@@ -23,12 +23,9 @@ export PYTHONPATH="$HOME_DIR/Projects/dgw_processor:$HOME_DIR/Projects/transfer_
 #
 function send_notice () {
   rm -f ./notification_report
-  echo Notice from `hostname` > ./notification_report
-  # for file in update*.log
-  # do
-  echo -e "\n--- ${update_log} ---" >> ./notification_report
-  cat ${update_log} >> ./notification_report
-  # done
+  echo "<h1>Notice from `hostname`</h1>" > ./notification_report
+  echo -e "<h2>${update_log}</h2>" >> ./notification_report
+  echo "<pre>`cat ${update_log}`</pre>" >> ./notification_report
 
   # sendemail must be in the PATH as a (hard) link to sendemail.py in transfer-app.
   $HOME_DIR/bin/sendemail -s "Update_db Notice: $1" -t ./notification_report "$WEBMASTER"
