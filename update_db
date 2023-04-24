@@ -108,10 +108,9 @@ function send_notice () {
   # Registered Programs option
   export no_programs=''
 
-  # At T-Rex Labs, query files come from Lehman, so no Tumbleweed; only precheck.
+  # At T-Rex Labs, query files come from Lehman, so no Tumbleweed.
   if [[ $TREX_LABS ]]
   then  skip_download=true
-        precheck_only=true
   fi
 
   while [ $# -gt 0 ]
