@@ -479,19 +479,12 @@ if [[ $no_programs ]]
 then
   echo "SKIPPING CUNY_Programs" | tee -a ${update_log}
 else
-  echo "UPDATE CUNY Programs and Requirement Blocks... " | tee -a ${update_log}
+  echo "UPDATE CUNY Programs ... " | tee -a ${update_log}
   (
     cd $HOME_DIR/Projects/cuny_programs
     ./update_registered_programs.sh | tee -a ${update_log}
     if [ $? -ne 0 ]
     then send_notice 'NOTICE: update_registered_programs.sh failed'
-#         exit 1
-    fi
-    cd $HOME_DIR/Projects/cuny_programs/dgw_requirement_blocks
-    ./update_requirement_blocks.py
-    if [ $? -ne 0 ]
-    then send_notice 'NOTICE: update_requitement_blocks.py failed'
- #        exit 1
     fi
   )
   echo done. | tee -a ${update_log}
