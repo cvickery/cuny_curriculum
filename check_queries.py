@@ -255,11 +255,10 @@ if __name__ == '__main__':
         query.unlink()
         new_instances.remove(query)
         continue
+
       if args.skip_size_check or (target_size is None):
         notices.append(f'NOTICE: size check skipped for {query}')
-        continue
-
-      if abs(target_size - newest_size) > (size_check_limit * target_size):
+      elif abs(target_size - newest_size) > (size_check_limit * target_size):
         new_instances.remove(query)
         notices.append(f'NOTICE: Ignoring {query.name} because its size ({newest_size:,}) is '
                        f'not within {int(size_check_limit * 100)}% of the previous query’s '
