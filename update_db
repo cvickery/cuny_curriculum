@@ -199,7 +199,7 @@ Options: [-sd | --skip_download]\n\
   # Python scripts process query results, so check that they are all present.
   # Report any mismatched dates, truncated or abnormally-sized queries and abort if not all a-ok
 
-  echo -n "CHECK & ARCHIVE QUERY FILES... " | tee -a ${update_log}
+  echo "CHECK & ARCHIVE QUERY FILES... " | tee -a ${update_log}
   args=''
   [[ $precheck_only ]] && args="$args --precheck_only"
   [[ $no_size_check ]] && args="$args -ss"
