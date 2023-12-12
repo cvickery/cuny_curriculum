@@ -3,8 +3,6 @@
 (
   cd ~/Projects/cuny_curriculum/query_downloads
 
-  let num_converted=0
-
   # Get any new course catalog query results
   export LFTP_PASSWORD=`cat /Users/vickery/.lftpwd`
   if [[ `hostname` =~ cuny.edu  ]]
@@ -13,12 +11,14 @@
   fi
 
   # Strip non-UTF-8 chars from query results
+  let num_converted=0
+
   for file in *.csv
   do
     if [[ -e $file ]]
     then
       echo -n "Converting $file ..."
-      iconv -c $file > ../queries/$file
+      iconv -c -t utf-8 $file > ../queries/$file
       rm $file
       echo ' done.'
       let num_converted=num_converted+1
