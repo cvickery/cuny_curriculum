@@ -7,7 +7,7 @@
   export LFTP_PASSWORD=`cat /Users/vickery/.lftpwd`
   if [[ `hostname` =~ cuny.edu  ]]
   then /usr/local/bin/lftp -f ../getcunyrc
-  else echo "Cannot access Tumbleweed from `hostname`"
+  else echo "Skip Tumbleweed access from `hostname`"
   fi
 
   # Strip non-UTF-8 chars from query results
@@ -19,7 +19,7 @@
     then
       echo -n "Converting $file ..."
       iconv -c -t utf-8 $file > ../queries/$file
-      rm $file
+      rm $file 
       echo ' done.'
       let num_converted=num_converted+1
     else
