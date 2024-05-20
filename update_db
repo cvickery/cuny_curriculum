@@ -64,7 +64,7 @@ function send_notice () {
   #   The 21 CUNYfirst queries that are used to build the database are saved as .CSV files
   #   and transferred to Tumbleweed by the CUNYfirst query scheduling system.
   #
-  #   The ./check_query.py script can be run with the -r option to see the query names and their
+  #   The ./check_queries.py script can be run with the -r option to see the query names and their
   #   CUNYfirst run_control ids. All queries are scheduled to run in the CUNYfirst reporting
   #   instance each Tuesday morning at 7 am.
   #
