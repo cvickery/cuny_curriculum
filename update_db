@@ -60,7 +60,7 @@ function send_notice () {
   #   The NO_EVENTS environment variable, the -ne, or the --no-events command line option can be
   #   used to suppress the dump restore of the events table.
   #
-  # Download queries from Tumbleweed.
+  # Download queries from Tumbleweed. (NO LONGER USED)
   #   The 21 CUNYfirst queries that are used to build the database are saved as .CSV files
   #   and transferred to Tumbleweed by the CUNYfirst query scheduling system.
   #
@@ -69,7 +69,7 @@ function send_notice () {
   #   instance each Tuesday morning at 7 am.
   #
   #   The -sd or the --skip-download command line option can be used to skip the download from
-  #   Tumbleweed, iconv, and move into queries steps.
+  #   Tumbleweed, iconv, and move into queries steps. (NO LONGER USED)
   #
   # Check the integrity of the query files.
   #   Once the query files are in the queries folder, they are checked to be sure they are all
@@ -85,7 +85,7 @@ function send_notice () {
   #     -nd --no-date-check
   #     -na --no-archive
   #
-  # Update registered programs.
+  # Update registered programs. (NO LONGER USED: RUN IT AS A SEPARATE JOB)
   #   After the cuny_curriculum database update is finished, the table of academic programs
   #   registered with the NYS Department of Education (registered_programs) takes place.
   #
@@ -474,20 +474,20 @@ Options: [-sd | --skip_download]\n\
   # echo done. | tee -a ${update_log}
 
 
-if [[ $no_programs ]]
-then
-  echo "SKIPPING CUNY_Programs" | tee -a ${update_log}
-else
-  echo "UPDATE CUNY Programs ... " | tee -a ${update_log}
-  (
-    cd $HOME_DIR/Projects/cuny_programs
-    ./update_registered_programs.sh | tee -a ${update_log}
-    if [ $? -ne 0 ]
-    then send_notice 'NOTICE: update_registered_programs.sh failed'
-    fi
-  )
-  echo done. | tee -a ${update_log}
-fi
+  # if [[ $no_programs ]]
+  # then
+  #   echo "SKIPPING CUNY_Programs" | tee -a ${update_log}
+  # else
+  #   echo "UPDATE CUNY Programs ... " | tee -a ${update_log}
+  #   (
+  #     cd $HOME_DIR/Projects/cuny_programs
+  #     ./update_registered_programs.sh | tee -a ${update_log}
+  #     if [ $? -ne 0 ]
+  #     then send_notice 'NOTICE: update_registered_programs.sh failed'
+  #     fi
+  #   )
+  #   echo done. | tee -a ${update_log}
+  # fi
 
   # Exit update_db mode
   echo -n "END update_db mode: " | tee -a ${update_log}
