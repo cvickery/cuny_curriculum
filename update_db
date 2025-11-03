@@ -14,7 +14,7 @@ else export HOME_DIR=/Users/vickery
      export TREX_LABS=''
 fi
 
-export WEBMASTER='<Christopher Vickery> christopher.vickery@qc.cuny.edu'
+export WEBMASTER='christopher.vickery@qc.cuny.edu'
 export PYTHONPATH="$HOME_DIR/Projects/dgw_processor:$HOME_DIR/Projects/transfer_app/"
 
 # send_notice()
@@ -101,6 +101,7 @@ function send_notice () {
 
   # Check Queries options
   export precheck_only=''
+  export no_precheck=''
   export no_size_check=''
   export no_date_check=''
   export no_archive=''
@@ -126,6 +127,10 @@ function send_notice () {
 
       --precheck_only | -po)
             precheck_only=true
+            ;;
+
+      --no_precheck | -np)
+            no_precheck=true
             ;;
 
       --no_size_check | -ns)
@@ -154,6 +159,7 @@ function send_notice () {
         echo -e "Unknown option: “$1”\n\
 Options: [-sd | --skip_download]\n\
          [-po | --precheck_only]\n\
+         [-np | --no_precheck]\n\
          [-ns | --no_size_check]\n\
          [-nd | --no_date_check]\n\
          [-na | --no_archive]\n\
@@ -168,6 +174,7 @@ Options: [-sd | --skip_download]\n\
   # # Uncomment for debugging
   # [[ $skip_download ]] && echo skip_download is TRUE
   # [[ $precheck_only ]] && echo precheck_only is TRUE
+  # [[ $no_precheck ]] && echo no_precheck is TRUE
   # [[ $no_size_check ]] && echo no_size_check is TRUE
   # [[ $no_date_check ]] && echo no_date_check is TRUE
   # [[ $no_archive ]] && echo no_archive is TRUE
@@ -199,20 +206,24 @@ Options: [-sd | --skip_download]\n\
     echo done. | tee -a ./update.log
   fi
 
-  # Python scripts process query results, so check that they are all present.
-  # Report any mismatched dates, truncated or abnormally-sized queries and abort if not all a-ok
+  if [[ $no_precheck ]]
+  then echo "NO PRECHECKS" | tee -a ./update.log
+  else
+    # Python scripts process query results, so check that they are all present.
+    # Report any mismatched dates, truncated or abnormally-sized queries and abort if not all a-ok
 
-  echo "CHECK & ARCHIVE QUERY FILES... " | tee -a ./update.log
-  args=()
-  [[ $precheck_only ]] && args+=("-po")
-  [[ $no_size_check ]] && args+=("-ss")
-  [[ $no_date_check ]] && args+=("-sd")
-  [[ $no_archive ]] && args+=("-sa")
+    echo "CHECK & ARCHIVE QUERY FILES... " | tee -a ./update.log
+    args=()
+    [[ $precheck_only ]] && args+=("-po")
+    [[ $no_size_check ]] && args+=("-ss")
+    [[ $no_date_check ]] && args+=("-sd")
+    [[ $no_archive ]] && args+=("-sa")
 
-  if ! ./check_queries.py "${args[@]}" >> ./update.log 2>&1
-    then send_notice "ERROR: query checks failed"
-         exit 1
-    else echo "done." | tee -a ./update.log
+    if ! ./check_queries.py "${args[@]}" >> ./update.log 2>&1
+      then send_notice "ERROR: query checks failed"
+          exit 1
+      else echo "done." | tee -a ./update.log
+    fi
   fi
 
   # Enter update_db mode and give time for running queries to complete
