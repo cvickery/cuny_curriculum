@@ -4,13 +4,9 @@
     2. Index the rule_id field of source_courses and destination_courses
 """
 import argparse
-import csv
 import os
 import resource
 import sys
-
-from collections import namedtuple
-from datetime import date
 from time import perf_counter
 
 import psycopg
@@ -26,7 +22,7 @@ args = parser.parse_args()
 
 try:
   terminal = open(os.ttyname(0), 'wt')
-except OSError as e:
+except OSError:
   # No progress reporting unless run from command line
   terminal = open('/dev/null', 'wt')
 
