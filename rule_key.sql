@@ -1,4 +1,4 @@
--- Consturuct the rule key for a transfer rule, given its id.
+-- Construct the rule key for a transfer rule, given its id.
 CREATE OR REPLACE FUNCTION rule_key(rule_id int)
   RETURNS text AS
 $$
