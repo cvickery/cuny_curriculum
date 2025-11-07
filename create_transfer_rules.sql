@@ -13,7 +13,7 @@ insert into credit_sources values ('R', 'Rule', 'Specify Fixed Units');
 drop table if exists transfer_rules cascade;
 create table transfer_rules (
   id serial primary key,
-  rule_key text,
+  rule_key text unique,
   source_institution text not null,
   destination_institution text not null,
   subject_area text not null,
