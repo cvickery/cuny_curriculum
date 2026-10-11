@@ -1,4 +1,4 @@
-#! /usr/local/bin/python3
+#! /usr/bin/env python3
 """ Speed up transfer rule lookups.
     1. Create the eponymous subject-rule map table.
     2. Index the rule_id field of source_courses and destination_courses

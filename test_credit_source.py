@@ -1,4 +1,4 @@
-#! /usr/local/bin/python3
+#! /usr/bin/env python3
 
 """ Experiments in the structure of transfer rules’ credit information.
     Current version builds a copy of a CUNYfirst CSV query result as a table in the vickery db;

@@ -1,4 +1,4 @@
-#! /usr/local/bin/python3
+#! /usr/bin/env python3
 """Populate the tables of internal (cuny_disciplines) and external (cuny_subjects) subject areas."""
 
 import argparse

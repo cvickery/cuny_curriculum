@@ -1,4 +1,4 @@
-#! /usr/local/bin/python3
+#! /usr/bin/env python3
 """Check integrity of CUNYfirst query files.
 
 This is a manager/utility for CUNYfirst queries used by the transfer_app project. As a utility,

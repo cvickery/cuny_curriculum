@@ -1,4 +1,4 @@
-#! /usr/local/bin/python3
+#! /usr/bin/env python3
 """Create table of active courses and the term they were last offered.
 
 Not currently used, but but potentially useful for prioritizing rules than need to be updated.

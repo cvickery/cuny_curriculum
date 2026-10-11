@@ -1,4 +1,4 @@
-#! /usr/local/bin/python3
+#! /usr/bin/env python3
 """Create sessions table for 2010 to now.
 
 Renaming CUNYfirst fields:

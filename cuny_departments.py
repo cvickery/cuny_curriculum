@@ -1,4 +1,4 @@
-#! /usr/local/bin/python3
+#! /usr/bin/env python3
 # Clear and re-populate the cuny_departments table.
 # This table includes {institution, division, department} tuples.
 #

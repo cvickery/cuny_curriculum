@@ -1,4 +1,4 @@
-#! /usr/local/bin/python3
+#! /usr/bin/env python3
 """Clear and re-populate the transfer_rules, source_courses, and destination_courses tables.
 
 Uses the result of the CUNYfirst query, QNS_CV_SR_TRNS_INTERNAL_RULES.

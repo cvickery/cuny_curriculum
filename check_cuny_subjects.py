@@ -1,4 +1,4 @@
-#! /usr/local/bin/python3
+#! /usr/bin/env python3
 """ Is there a relationship among external subject areas, CIP codes, and HEGIS codes?
     This is a tool for exploring them, and how they relate to college's subjects. The conclusion
     I got was that they correlate, but not perfectly enough to be useful.

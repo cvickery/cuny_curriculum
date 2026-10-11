@@ -1,4 +1,4 @@
-#! /usr/local/bin/python3
+#! /usr/bin/env python3
 """ Count patterns of subject credit source and component credit source across rules.
     C = Catalog
     R = Я забув

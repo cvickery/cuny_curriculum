@@ -1,4 +1,4 @@
-#! /usr/local/bin/python3
+#! /usr/bin/env python3
 """ Delete and re-build local copies of CUNYfirst cip_code and plan/subplan/enrollment tables
 
     All table fields are text unless the column name starts with “count” or ends with “date.
